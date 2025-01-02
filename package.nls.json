@@ -1,0 +1,23 @@
+{
+  "jswyll-vscode-rtthread.makeBaseDirectory.markdownDescription": "make's working root directory. It should be an absolute path, otherwise will not be able to locate the failed file.",
+  "jswyll-vscode-rtthread.generate.title": "生成",
+  "jswyll-vscode-rtthread.studioInstallPath.markdownDescription": "The folder of RT-Thread Studio Install. Select or manually enter the path, which may contain environment variables, such as ${'env:RTTHREAD_STUDIO_HOME} .",
+  "jswyll-vscode-rtthread.makeToolPath.markdownDescription": "The folder of make tool. Select or manually enter the path, which may contain environment variables, such as `${env:MAKE_HOME}` .",
+  "jswyll-vscode-rtthread.compilerPath.markdownDescription": "The GCC compiler file path, such as `D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc` .",
+  "jswyll-vscode-rtthread.toolchainPath.markdownDescription": "The GCC compiler folder path, such as `D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin` .",
+  "jswyll-vscode-rtthread.debuggerAdapter.markdownDescription": "The selected debugger type.",
+  "jswyll-vscode-rtthread.debuggerInterface.markdownDescription": "Debugger interface type.",
+  "jswyll-vscode-rtthread.chipName.markdownDescription": "Chip name to download or debug the program, 11-character for STM32 (e.g. `STM32F407ZG` )",
+  "jswyll-vscode-rtthread.buildConfigName.markdownDescription": "Different configurations are available for different environments or targets, such as `Debug` and `Release` .",
+  "jswyll-vscode-rtthread.defaultBuildTask.markdownDescription": "The default build task to execute when you press the key shortcut (`Ctrl+Shift+B`).",
+  "jswyll-vscode-rtthread.debuggerServerPath.markdownDescription": "The selected debugger server type.",
+  "jswyll-vscode-rtthread.cmsisPack.markdownDescription": "File path of the Cmsis package corresponding to the chip. If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.",
+  "jswyll-vscode-rtthread.makefileProcessor.title": "Makefile Processor",
+  "jswyll-vscode-rtthread.makefileProcessor.watch.markdownDescription": "Listen for changes to the makefile and handle them.",
+  "jswyll-vscode-rtthread.action.tasks.build": "Run default build task",
+  "jswyll-vscode-rtthread.command.developmentTest": "development test command",
+  "jswyll-vscode-rtthread.command.diagnosticInterrupt":"jswyll-vscode-rtthread - Diagnostic Interrupt Function",
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.title": "Auto Diagnostic Interrupt",
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.enable.description": "Whether to initiate diagnostics automatically. If enabled, The path meet `#jswyll-vscode-rtthread.diagnosticInterrupt.globPattern#` file appears RT-Thread fragment will automatically diagnosis if the interrupt function has been called `rt_interrupt_enter()` and `rt_interrupt_leave()`.",
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "The relative path pattern [Glob expression](https://code.visualstudio.com/docs/editor/glob-patterns) of file to be diagnosed."
+}

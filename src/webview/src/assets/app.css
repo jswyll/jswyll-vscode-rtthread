@@ -1,0 +1,291 @@
+/* 默认浅色主题 */
+:root {
+    --theme-text: black;
+    --theme-body-background: #EEEEEE;
+    --theme-titlebar-background: #E5E5E5;
+    --theme-titlebar-action-hover-background: #C7C7C7;
+    --theme-card-background: #F1F1F1;
+    --theme-body-background-medium: rgba(0, 0, 0, .03);
+    --theme-header: rgba(0, 0, 0, .03);
+    --theme-border: #c6cbd1;
+    --theme-breadcrumb-background: #e9ecef;
+    --theme-blockquote-text: #999;
+    --theme-blockquote-strong-text: #666;
+    --theme-blockquote-left-border: #dfe2e5;
+    --theme-blockquote-background: #F1F1F1;
+    --theme-inline-code--text: #F28576;
+    --theme-inline-code--background: #F1F1F1;
+    --theme-blockquote-code-background: #dfe2e5;
+    --theme-hljs-text: #000;
+    --theme-hljs-background: #fff;
+    --theme-hljs-keyword: #007bff;
+    --theme-hljs-string: #7F007F;
+    --theme-hljs-comment-keyword: #804020;
+    --theme-hljs-title: black;
+    --theme-hljs-number: #007F7F;
+    --theme-hljs-meta: #7F7F00;
+    --theme-table-even: #F6F8FA;
+    --theme-table-border: #c6c6c6;
+    --theme-table-th: #F6F8FA;
+    --theme-h2-text: #f0f0f0;
+    --theme-h2-background: #169fe6;
+    --theme-navbar-background: #F1F1F1;
+    --theme-header-menu-background: #c0c0c0;
+    --theme-statusbar-text: #f0f0f0;
+    --theme-terminal-background: #fff;
+    --m-color-primary: #10AEFF;
+    --m-color-success: #07C160;
+    --m-color-danger: #FA5151;
+    --m-color-error: #ff0000;
+    --m-color-disabled: #8b8b8b;
+    --theme-scrollbar-thumb-background: #C1C1C1;
+}
+
+/* 深色主题 */
+:root[theme='dark'],
+:root[theme-mode="dark"] {
+    --theme-text: #c0c0c0;
+    --theme-titlebar-background: #323233;
+    --theme-titlebar-action-hover-background: #4D4D4E;
+    --theme-body-background: #171717;
+    --theme-card-background: #2B2B2B;
+    --theme-body-background-medium: #303030;
+    --theme-header: #404040;
+    --theme-border: #404040;
+    --theme-code-header: #2f2f2f;
+    --theme-breadcrumb-background: #404040;
+    --theme-blockquote-text: #c0c0c0;
+    --theme-blockquote-strong-text: #c0c0c0;
+    --theme-blockquote-left-border: #505050;
+    --theme-blockquote-background: #2b2b2b;
+    --theme-inline-code--text: #ce9178;
+    --theme-inline-code--background: #404040;
+    --theme-blockquote-code-background: #404040;
+    --theme-hljs-text: #c2c2c2;
+    --theme-hljs-background: #2f2f2f;
+    --theme-hljs-keyword: #569cd6;
+    --theme-hljs-string: #ce9178;
+    --theme-hljs-comment-keyword: #569cd6;
+    --theme-hljs-title: #dcdcaa;
+    --theme-hljs-number: #b5cea8;
+    --theme-hljs-meta: #c586c0;
+    --theme-table-even: #2f2f2f;
+    --theme-table-border: #505050;
+    --theme-table-th: #404040;
+    --theme-h2-text: #c0c0c0;
+    --theme-h2-background: #404040;
+    --theme-navbar-background: #F1F1F1;
+    --theme-header-menu-background: #212529;
+    --theme-statusbar-text: #f0f0f0;
+    --theme-terminal-background: #181818;
+    --m-color-primary: #10AEFF;
+    --m-color-success: #07C160;
+    --m-color-danger: #FA5151;
+    --m-color-error: #ff0000;
+    --m-color-disabled: #8b8b8b;
+    --td-text-color-primary: #c0c0c0;
+    --theme-scrollbar-thumb-background: #424242;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--theme-text);
+    background-color: var(--theme-body-background);
+}
+
+/* 自定义的flex布局 */
+.m-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.m-row-center {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 前景色、背景色 */
+.m-text-link {
+    color: #5473b4;
+}
+
+.m-text-primary {
+    color: var(--m-color-primary);
+}
+
+.m-text-success {
+    color: var(--m-color-success);
+}
+
+.m-text-danger {
+    color: var(--m-color-danger);
+}
+
+.m-text-error {
+    color: var(--m-color-error);
+}
+
+.m-text-disabled {
+    color: var(--m-color-disabled);
+}
+
+.m-text-center {
+    text-align: center;
+}
+
+.m-bg-primary {
+    background-color: var(--m-color-primary);
+}
+
+.m-bg-disabled {
+    background-color: var(--m-color-disabled);
+}
+
+.m-fullscreen {
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    -moz-transform: translate3d(0, 0, 0) !important;
+    -ms-transform: translate3d(0, 0, 0) !important;
+    transform: translate3d(0, 0, 0) !important;
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000;
+}
+
+/* 外边距、内边距 */
+.mt1 {
+    margin-top: 0.5rem !important;
+}
+
+.mt2 {
+    margin-top: 1rem !important;
+}
+
+.mt3 {
+    margin-top: 1.5rem !important;
+}
+
+.mb1 {
+    margin-bottom: 0.5rem !important;
+}
+
+.mb2 {
+    margin-bottom: 1rem !important;
+}
+
+.mb3 {
+    margin-bottom: 1.5rem !important;
+}
+
+.ml1 {
+    padding-left: 0.5rem !important;
+}
+
+.ml2 {
+    padding-left: 1rem !important;
+}
+
+.ml3 {
+    padding-left: 1.5rem !important;
+}
+
+.mr1 {
+    padding-right: 0.5rem !important;
+}
+
+.mr2 {
+    padding-right: 1rem !important;
+}
+
+.mr3 {
+    padding-right: 1.5rem !important;
+}
+
+.pt1 {
+    padding-top: 0.5rem !important;
+}
+
+.pt2 {
+    padding-top: 1rem !important;
+}
+
+.pt3 {
+    padding-top: 1.5rem !important;
+}
+
+.pb1 {
+    padding-bottom: 0.5rem !important;
+}
+
+.pb2 {
+    padding-bottom: 1rem !important;
+}
+
+.pb3 {
+    padding-bottom: 1.5rem !important;
+}
+
+.pl1 {
+    padding-left: 0.5rem !important;
+}
+
+.pl2 {
+    padding-left: 1rem !important;
+}
+
+.pl3 {
+    padding-left: 1.5rem !important;
+}
+
+.pr1 {
+    padding-right: 0.5rem !important;
+}
+
+.pr2 {
+    padding-right: 1rem !important;
+}
+
+.pr3 {
+    padding-right: 1.5rem !important;
+}
+
+.ptb1 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.ptb2 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.ptb3 {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+}
+
+.plr1 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+.plr2 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+.plr3 {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+}

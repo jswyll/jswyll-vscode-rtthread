@@ -1,0 +1,17 @@
+.vscode/
+build/
+docs/
+images/
+src/
+temp/
+eslint.config.mjs
+.gitignore
+.prettierrc.json
+.vscodeignore
+package-lock.json
+vite.config.mts
+**/*.map
+**/*.ts
+node_modules/
+out/webview/index.html
+temp/

@@ -1,0 +1,23 @@
+{
+  "jswyll-vscode-rtthread.makeBaseDirectory.markdownDescription": "make的工作根目录。应为绝对路径，否则无法定位出错的文件。",
+  "jswyll-vscode-rtthread.generate.title": "生成",
+  "jswyll-vscode-rtthread.studioInstallPath.markdownDescription": "RT-Thread Studio的安装文件夹。选择或手动输入路径，路径中可以包含环境变量，例如 `${env:RTTHREAD_STUDIO_HOME}` 。",
+  "jswyll-vscode-rtthread.makeToolPath.markdownDescription": "make工具的所在文件夹。选择或手动输入路径，路径中可以包含环境变量，例如 `${env:MAKE_HOME}` 。",
+  "jswyll-vscode-rtthread.compilerPath.markdownDescription": "GCC编译器的所在路径，例如`D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc` 。",
+  "jswyll-vscode-rtthread.toolchainPath.markdownDescription": "GCC编译器的所在文件夹，例如`D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin` 。",
+  "jswyll-vscode-rtthread.debuggerAdapter.markdownDescription": "选择的调试器类型。",
+  "jswyll-vscode-rtthread.debuggerInterface.markdownDescription": "调试器接口类型。",
+  "jswyll-vscode-rtthread.chipName.markdownDescription": "下载或调试程序的芯片名称，对于STM32应为11字符的（例如 `STM32F407ZG` ）。",
+  "jswyll-vscode-rtthread.buildConfigName.markdownDescription": "不同的配置可用于不同的环境或目标，例如 `Debug`、`Release` 。",
+  "jswyll-vscode-rtthread.defaultBuildTask.markdownDescription": "按快捷键（`Ctrl+Shift+B`）时执行的默认构建任务。",
+  "jswyll-vscode-rtthread.debuggerServerPath.markdownDescription": "调试器服务器的类型。",
+  "jswyll-vscode-rtthread.cmsisPack.markdownDescription": "芯片对应的Cmsis包的文件路径。如果芯片名称不是[pyocd内置目标](https://pyocd.io/docs/builtin-targets.html)则应指定。",
+  "jswyll-vscode-rtthread.makefileProcessor.title": "makefile处理",
+  "jswyll-vscode-rtthread.makefileProcessor.watch.markdownDescription": "监听makefile文件的变化并处理。",
+  "jswyll-vscode-rtthread.action.tasks.build": "运行默认的构建任务",
+  "jswyll-vscode-rtthread.command.developmentTest": "开发测试命令",
+  "jswyll-vscode-rtthread.command.diagnosticInterrupt":"jswyll-vscode-rtthread - 诊断中断函数",
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.title": "自动诊断中断",
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.enable.description": "如果启用，路径符合`#jswyll-vscode-rtthread.diagnosticInterrupt.globPattern#`的文件出现RT-Thread片段时将自动诊断中断函数是否已调用了 `rt_interrupt_enter()` 和 `rt_interrupt_leave()` 。",
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "自动诊断的文件相对路径的[Glob表达式](https://code.visualstudio.com/docs/editor/glob-patterns)。"
+}

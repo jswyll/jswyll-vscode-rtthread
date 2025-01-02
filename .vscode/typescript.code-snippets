@@ -1,0 +1,49 @@
+{
+  "logger.debug": {
+    "scope": "typescript,javascript",
+    "prefix": "logd",
+    "body": [
+      "logger.debug('$1:', $1$2);$0"
+    ],
+    "description": "log.debug"
+  },
+  "logger.info": {
+    "scope": "typescript,javascript",
+    "prefix": "logi",
+    "body": [
+      "logger.info('$1:', $1$2);$0"
+    ],
+    "description": "log.info"
+  },
+  "logger.warn": {
+    "scope": "typescript,javascript",
+    "prefix": "logw",
+    "body": [
+      "logger.warn('$1:', $1$2);$0"
+    ],
+    "description": "log.warn"
+  },
+  "logger.error": {
+    "scope": "typescript,javascript",
+    "prefix": "loge",
+    "body": [
+      "logger.error(error);$0"
+    ],
+    "description": "log.error"
+  },
+  "vscode.l10n.t": {
+    "scope": "typescript,javascript",
+    "prefix": "vslt",
+    "body": [
+      "vscode.l10n.t('$1'$0)"
+    ],
+    "description": "vscode.l10n.t",
+  },
+  "doxygen link": {
+    "prefix": "@link",
+    "body": [
+      "{@link $1}$0"
+    ],
+    "description": "doxygen link",
+  },
+}
