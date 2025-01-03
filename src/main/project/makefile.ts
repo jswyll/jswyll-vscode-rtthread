@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 import { readTextFile, writeTextFile } from '../base/fs';
 import { Logger } from '../base/logger';
-import { escapeRegExp } from '../../common/utils';
+import { findLastMatch } from '../../common/utils';
 import { basename, extname, join, relative } from 'path';
-import { getConfig } from '../base/workspace';
+import { getConfig, normalizePathForWorkspace } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqual } from '../../common/platform';
-import { BuildConfig, ProjcfgIni } from '../../common/type';
-import { debounce } from 'lodash';
+import { BuildConfig, ProjcfgIni } from '../../common/types/type';
+import { debounce, escapeRegExp } from 'lodash';
+import { Cproject } from './cproject';
+import { processCCppPropertiesConfig } from './cCppProperties';
 
 /**
  * 源文件的相对路径
@@ -127,6 +129,15 @@ export class MakefileProcessor {
   }
 
   /**
+   * 获取全部subdir.mk文件的uri。
+   * @returns uri
+   */
+  private static GetSubdirMkUris() {
+    const buildUri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name);
+    return vscode.workspace.findFiles(new vscode.RelativePattern(buildUri, '**/subdir.mk'));
+  }
+
+  /**
    * 处理单个Makefile文件，不抛出出现的错误。
    *
    * 1. 在编译文件的gcc或g++指令前添加提示正在编译的文件，并使用`@`屏蔽命令及其参数，例如：
@@ -143,11 +154,11 @@ export class MakefileProcessor {
    *
    * ```makefile
    * applications/%.o: ../applications/%.c
-   *     @echo compiling $<...
+   *     -@echo compiling $<...
    *     @arm-none-eabi-gcc ...
    *
    * rt-thread/libcpu/arm/cortex-m4/%.o: ../rt-thread/libcpu/arm/cortex-m4/%.S
-   *     @echo compiling $<...
+   *     -@echo compiling $<...
    *     @arm-none-eabi-gcc ...
    * ```
    *
@@ -174,10 +185,10 @@ export class MakefileProcessor {
       const compileRegex = new RegExp(`^(.*?\\.o:.*\\r\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'gm');
       const oldContent = await readTextFile(uri);
       let newContent = oldContent.replace(linkRegex, (...match) => {
-        return `${match[1]}\t@echo linking ...\r\n\t@${toolchainPrefix}${match[2]}`;
+        return `${match[1]}\t-@echo linking ...\r\n\t@${toolchainPrefix}${match[2]}`;
       });
       newContent = newContent.replace(compileRegex, (...match) => {
-        return `${match[1]}\t@echo compiling $<...\r\n\t@${toolchainPrefix}${match[2]}`;
+        return `${match[1]}\t-@echo compiling $<...\r\n\t@${toolchainPrefix}${match[2]}`;
       });
       const { projectRootDir } = this.ProjcfgIni;
       const gccIncludeDirRegex = /(\s+-I|-include|-T\s*)"([^"]*)"/g;
@@ -221,11 +232,57 @@ export class MakefileProcessor {
     }
     logger.info('processMakefiles...');
     const makefileUris: vscode.Uri[] = [this.GetMakefileUri(), this.GetMakefileTargetsUri()];
-    const buildUri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name);
-    const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(buildUri, '**/subdir.mk'));
+    const uris = await this.GetSubdirMkUris();
     makefileUris.push(...uris);
-    logger.debug('makefileUris:', makefileUris);
+    logger.trace('makefileUris:', makefileUris);
     await Promise.all(makefileUris.map((uri) => this.ProcessMakefile(uri)));
+  }
+
+  /**
+   * 向全部subdir.mk文件中添加头文件路径。
+   * @param paths 待添加的头文件绝对路径列表
+   */
+  public static async AddIncludePaths(paths: string[]) {
+    const buildUri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name);
+    const relativeDirs = paths.map((path) => normalizePathForWorkspace(this.CurrentProjectRoot, path));
+    const relativeDirsForBuild = paths.map((path) => normalizePathForWorkspace(buildUri, path));
+    const uris = await this.GetSubdirMkUris();
+    const fn = async (subdirMkUri: vscode.Uri) => {
+      const includeSet = new Set<string>(relativeDirsForBuild);
+      const fileContent = await readTextFile(subdirMkUri);
+      const compileRegex = new RegExp(`(^\\t@?${this.BuildConfig.toolchainPrefix}(gcc|g\\+\\+))\\s+.*`, 'gm');
+      const newFileContent = fileContent.replaceAll(compileRegex, (...match) => {
+        let compileLine = match[0];
+        const includeRegex = /( -I\s*)"([^"]*)"/g;
+        compileLine = compileLine.replaceAll(includeRegex, (...includeMatch) => {
+          const includePath = convertPathToUnixLike(includeMatch[2]);
+          includeSet.add(includePath);
+          return '';
+        });
+        const newIncludePathsString = Array.from(includeSet)
+          .map((v) => ` -I"${v}"`)
+          .sort()
+          .join('');
+        const defineRegex = /( -D\s*)([\w_]+)(=[^ ]*)?/g;
+        const lastMatch = findLastMatch(defineRegex, compileLine);
+        if (lastMatch) {
+          const insertIndex = lastMatch.index + lastMatch[0].length;
+          compileLine = compileLine.slice(0, insertIndex) + newIncludePathsString + compileLine.slice(insertIndex);
+        } else {
+          const insertIndex = match[1].length;
+          compileLine = compileLine.slice(0, insertIndex) + newIncludePathsString + compileLine.slice(insertIndex);
+        }
+        return compileLine;
+      });
+      if (newFileContent !== fileContent) {
+        logger.info(`change ${subdirMkUri.fsPath} to: ${newFileContent}'`);
+        await writeTextFile(subdirMkUri, newFileContent);
+      }
+    };
+    await Promise.all(uris.map((uri) => fn(uri)));
+    const compilerPath = getConfig(this.CurrentProjectRoot, 'generate.compilerPath', 'arm-none-eabi-gcc');
+    await processCCppPropertiesConfig(this.CurrentProjectRoot, compilerPath, this.BuildConfig);
+    await Cproject.AddIncludePaths(this.CurrentProjectRoot, this.BuildConfig.name, relativeDirs);
   }
 
   /**
@@ -375,7 +432,7 @@ export class MakefileProcessor {
     try {
       if (this.BuildConfig.excludingPaths.some((v) => isPathUnderOrEqual(v, relativeDir))) {
         logger.info('is excludingPath:', relativeDir);
-        // TODO: 如果原来编译了，需要移除编译？
+        // TODO: 如果原来编译了，需要清除编译？
         return;
       }
       const sourceFiles = await this.GetSourceFilesOfDir(relativeDir);
@@ -464,6 +521,7 @@ export class MakefileProcessor {
    * @param uri 文件uri
    */
   public static async HandleFileChange(uri: vscode.Uri) {
+    // TODO: 如果不是RT-Thread Studio类型则忽略
     logger.trace('HandleFileChange:', uri.fsPath);
     if (
       !this.HasBuildConfig ||

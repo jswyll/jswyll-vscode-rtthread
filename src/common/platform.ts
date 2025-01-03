@@ -69,3 +69,16 @@ export function isPathUnderOrEqual(refPath: string, p: string): boolean {
 export function removeExeSuffix(path: string) {
   return path.replace(/\.exe$/i, '');
 }
+
+/**
+ * 计算环境变量PATH的字符串。
+ *
+ * 结果使用{@link convertPathToUnixLike}规范化。
+ *
+ * @param paths 路径字符串
+ * @param delimiter 分隔符
+ * @returns 去重的形如`foo;bar`或`foo:bar`的字符串
+ */
+export function calculateEnvPathString(paths: string[], delimiter: ';' | ':') {
+  return Array.from(new Set(paths)).map(convertPathToUnixLike).join(delimiter);
+}

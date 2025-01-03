@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { minimatch } from 'minimatch';
 import { getConfig } from '../base/workspace';
 import { Logger } from '../base/logger';
+import { findLastMatch } from '../../common/utils';
 
 /**
  * 诊断项1
@@ -108,26 +109,6 @@ function findMatchingRightBrace(input: string, leftBraceIndex: number): number {
     throw new Error('Unmatched left brace at index ' + leftBraceIndex);
   }
   throw new Error('No matching right brace found');
-}
-
-/**
- * 在给定文本中查找最后一个匹配项。
- *
- * 此函数使用正则表达式来查找文本中的匹配项，并返回最后一个匹配项。
- * 它从文本的开头开始查找匹配项，并在找到匹配项时更新匹配项。
- * 如果没有找到匹配项，则返回`undefined`。
- *
- * @param regex 正则表达式对象，用于查找匹配项，应包含g标志
- * @param text 要查找的文本
- * @returns 最后一个匹配项
- */
-function findLastMatch(regex: RegExp, text: string) {
-  let lastMatch: RegExpExecArray | null = null;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(text)) !== null) {
-    lastMatch = match;
-  }
-  return lastMatch;
 }
 
 /**

@@ -2,21 +2,34 @@ import * as vscode from 'vscode';
 import {
   getConfig,
   getGlobalState,
+  getIsConfigUpdateByExtension,
   getOrPickAWorkspaceFolder as getOrPickWorkspaceFolder,
   onWorkspaceFolderChange,
+  parsePath,
   pickWorkspaceFolder,
   setExtensionContext,
   updateGlobalState,
   workspaceFolderChangeEmitter,
 } from './base/workspace';
-import { checkAndOpenGenerateWebview, parseProjcfgIni, parseSelectedBuildConfigs } from './project/generate';
+import {
+  checkAndOpenGenerateWebview,
+  onDidEnvRootChange,
+  parseProjcfgIni,
+  parseSelectedBuildConfigs,
+} from './project/generate';
 import { ExecuteTaskError, TaskNotFoundError } from './base/error';
-import { BUILD_TASKS, CONFIG_GROUP } from './base/constants';
+import { TASKS, COMMANDS, CONFIG_GROUP } from './base/constants';
 import { EXTENSION_ID } from '../common/constants';
 import { MakefileProcessor } from './project/makefile';
 import { buildTaskManager, findTaskInTasksJson, runBuildTask } from './task/build';
 import { Logger } from './base/logger';
 import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './project/diagnostic';
+import { MenuConfig } from './project/menuconfig';
+import { dirname, join } from 'path';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import { getFileType } from './base/fs';
+import { platform } from 'os';
+import { debounce } from 'lodash';
 
 /**
  * 日志记录器
@@ -29,15 +42,66 @@ const logger = new Logger('extension');
 const buildStatusBarItems: vscode.StatusBarItem[] = [];
 
 /**
- * 判断当前工作区是否为RT-Thread项目。
- *
- * @returns 是否为RT-Thread项目
+ * ConEmu进程
  */
-async function getIsRtthreadProject() {
-  // TOOD: 添加更精确的判断
-  const files = await vscode.workspace.findFiles('.cproject');
-  logger.debug('.cproject files:', files);
-  return files.length > 0;
+let conEmuProcess: ChildProcessWithoutNullStreams | null;
+
+/**
+ * RT-Thread Env终端
+ */
+let rtthreadEnvTerminal: vscode.Terminal | null;
+
+/**
+ * 更新软件包消抖
+ */
+const debouncedPkgsUpdate = debounce(
+  async () => {
+    await runTaskAndHandle(TASKS.PKGS_UPDATE.name);
+  },
+  3000,
+  { leading: true, trailing: true },
+);
+
+/**
+ * 设置扩展的when语句上下文
+ */
+async function setWhenContext() {
+  // TODO: 添加更精确的判断
+  const [cprojectUris, rtconfigPyUris] = await Promise.all([
+    vscode.workspace.findFiles('.cproject'),
+    // TODO: 支持子目录？
+    vscode.workspace.findFiles('rtconfig.py'),
+  ]);
+  const isRtthreadProject = cprojectUris.length > 0 || rtconfigPyUris.length > 0;
+  vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadProject`, isRtthreadProject);
+  vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadEnvProject`, rtconfigPyUris.length > 0);
+  return isRtthreadProject;
+}
+
+/**
+ * 根据配置情况显示或隐藏各个状态栏及右键菜单。
+ * @param wsFolder 当前工作区文件夹
+ */
+function changeShowStatusBars(wsFolder: vscode.Uri) {
+  const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
+  for (const statusbar of buildStatusBarItems) {
+    if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.MENUCONFIG}`) {
+      if (projectType === 'Env') {
+        statusbar.show();
+      } else {
+        statusbar.hide();
+      }
+    } else if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.PICK_A_WORKSPACEFOLDER}`) {
+      if ((vscode.workspace.workspaceFolders ?? []).length > 1) {
+        statusbar.show();
+      } else {
+        statusbar.hide();
+      }
+    } else {
+      statusbar.show();
+    }
+  }
+  vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadEnvProject`, projectType === 'Env');
 }
 
 /**
@@ -46,9 +110,7 @@ async function getIsRtthreadProject() {
  */
 async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   await checkAndOpenGenerateWebview(wsFolder);
-  for (const buildStatusBarItem of buildStatusBarItems) {
-    buildStatusBarItem.show();
-  }
+  changeShowStatusBars(wsFolder);
 }
 
 /**
@@ -63,7 +125,7 @@ async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
  * @param taskName 任务名称{@link BuildTaskName}
  * @throws 出现除了{@link TaskNotFoundError}和{@link ExecuteTaskError}以外的错误时抛出
  */
-async function runBuildTaskAndHandle(taskName: string) {
+async function runTaskAndHandle(taskName: string) {
   const workspaceFolder = await getOrPickWorkspaceFolder();
   try {
     // 等待之前的任务运行完成
@@ -116,7 +178,7 @@ async function runBuildTaskAndHandle(taskName: string) {
   } catch (error) {
     if (error instanceof TaskNotFoundError) {
       await doCheckAndOpenGenerateWebview(workspaceFolder.uri);
-      await runBuildTaskAndHandle(taskName);
+      await runTaskAndHandle(taskName);
     } else if (!(error instanceof ExecuteTaskError)) {
       throw error;
     }
@@ -130,22 +192,28 @@ async function runBuildTaskAndHandle(taskName: string) {
  *
  * @param context 扩展的上下文
  * @param command 命令的基本名称，它将被添加前缀`${EXTENSION_ID}.`
- * @param text 按钮显示的文本
+ * @param icon 形如`$(name)`的图标文本
+ * @param title 按钮显示的文本
  * @param tooltip 悬停的提示
+ * @param priority 按钮的优先级，最大越靠左
  * @param onClick 点击按钮时的回调函数
  * @param isShow 初始时是否显示
  */
 function createStatusbarCommand(
   context: vscode.ExtensionContext,
   command: string,
-  text: string,
+  icon: string,
+  title: string,
   tooltip: string,
+  priority: number,
   onClick: () => Thenable<void>,
   isShow: boolean,
 ) {
   const cmd = `${EXTENSION_ID}.${command}`;
+  const showStatusBarTitle = getConfig(null, 'appearance.showStatusBarTitle', true);
+  const text = showStatusBarTitle ? `${icon} ${title}` : icon;
   context.subscriptions.push(vscode.commands.registerCommand(cmd, onClick));
-  const statusBarItem = vscode.window.createStatusBarItem(command, vscode.StatusBarAlignment.Left, 50);
+  const statusBarItem = vscode.window.createStatusBarItem(command, vscode.StatusBarAlignment.Left, priority);
   statusBarItem.command = cmd;
   statusBarItem.text = text;
   statusBarItem.tooltip = `${EXTENSION_ID} - ${tooltip}`;
@@ -153,6 +221,7 @@ function createStatusbarCommand(
     statusBarItem.show();
   }
   context.subscriptions.push(statusBarItem);
+  buildStatusBarItems.push(statusBarItem);
   return statusBarItem;
 }
 
@@ -173,89 +242,173 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // 扩展可能因为taskDefinitions贡献点被激活，添加when上下文
-  const isRtthreadProject = await getIsRtthreadProject();
-  vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadProject`, isRtthreadProject);
+  const isRtthreadProject = await setWhenContext();
   if (!isRtthreadProject) {
     return;
   }
 
   // 创建状态栏按钮
-  const pickWorkspaceFolderStatusBar = createStatusbarCommand(
+  createStatusbarCommand(
     context,
-    'pickAWorkspaceFolder',
+    COMMANDS.PICK_A_WORKSPACEFOLDER,
     '$(file-submodule)',
+    '',
     vscode.l10n.t('Choose a workspace folder'),
+    100,
     async () => {
       await pickWorkspaceFolder();
     },
     false,
   );
-  if ((vscode.workspace.workspaceFolders ?? []).length > 1) {
-    pickWorkspaceFolderStatusBar.show();
-  }
   createStatusbarCommand(
     context,
-    'importProject',
-    '$(sign-in) ' + vscode.l10n.t('Import'),
+    'action.generateConfig',
+    '$(sign-in)',
+    vscode.l10n.t('Import'),
     vscode.l10n.t('Import the RT-Thread project and generate the vscode configuration file'),
+    99,
     async () => {
       const workspaceFolder = await getOrPickWorkspaceFolder();
       await doCheckAndOpenGenerateWebview(workspaceFolder.uri);
     },
     true,
   );
-  let buildStatusBarItem = createStatusbarCommand(
+  createStatusbarCommand(
     context,
-    BUILD_TASKS.CLEAN.name,
-    '$(trash) ' + vscode.l10n.t('Clean'),
+    COMMANDS.MENUCONFIG,
+    '$(gear)',
+    vscode.l10n.t('Config'),
+    vscode.l10n.t('Menuconfig'),
+    98,
+    async () => {
+      const workspaceFolder = await getOrPickWorkspaceFolder();
+      MenuConfig.CreateOrOpenPanel(workspaceFolder.uri);
+      if (getConfig(workspaceFolder.uri, 'RttEnv.autoUpdatePackages', true)) {
+        context.subscriptions.push(
+          MenuConfig.onDidSaveMenuconfig(async () => {
+            debouncedPkgsUpdate();
+          }),
+        );
+      }
+    },
+    false,
+  );
+  createStatusbarCommand(
+    context,
+    TASKS.CLEAN.name,
+    '$(trash)',
+    vscode.l10n.t('Clean'),
     vscode.l10n.t('Full Clean'),
+    97,
     async () => {
-      await runBuildTaskAndHandle(BUILD_TASKS.CLEAN.name);
+      await runTaskAndHandle(TASKS.CLEAN.name);
     },
     false,
   );
-  buildStatusBarItems.push(buildStatusBarItem);
-  buildStatusBarItem = createStatusbarCommand(
+  createStatusbarCommand(
     context,
-    BUILD_TASKS.BUILD.name,
-    '$(symbol-property) ' + vscode.l10n.t('Build'),
+    TASKS.BUILD.name,
+    '$(symbol-property)',
+    vscode.l10n.t('Build'),
     vscode.l10n.t('Use GCC to compile the code'),
+    96,
     async () => {
-      await runBuildTaskAndHandle(BUILD_TASKS.BUILD.name);
+      await runTaskAndHandle(TASKS.BUILD.name);
     },
     false,
   );
-  buildStatusBarItems.push(buildStatusBarItem);
-  buildStatusBarItem = createStatusbarCommand(
+  createStatusbarCommand(
     context,
-    BUILD_TASKS.DOWNLOAD.name,
-    '$(zap) ' + vscode.l10n.t('Download'),
+    TASKS.DOWNLOAD.name,
+    '$(zap)',
+    vscode.l10n.t('Download'),
     vscode.l10n.t('Download the program using the debugger'),
+    95,
     async () => {
-      await runBuildTaskAndHandle(BUILD_TASKS.DOWNLOAD.name);
+      await runTaskAndHandle(TASKS.DOWNLOAD.name);
     },
     false,
   );
-  buildStatusBarItems.push(buildStatusBarItem);
-  buildStatusBarItem = createStatusbarCommand(
+  createStatusbarCommand(
     context,
-    BUILD_TASKS.BUILD_AND_DOWNLOAD.name,
-    '$(flame) ' + vscode.l10n.t('Build and Download'),
+    TASKS.BUILD_AND_DOWNLOAD.name,
+    '$(flame)',
+    vscode.l10n.t('Build and Download'),
     vscode.l10n.t('Build and download the program'),
+    94,
     async () => {
-      await runBuildTaskAndHandle(BUILD_TASKS.BUILD_AND_DOWNLOAD.name);
+      await runTaskAndHandle(TASKS.BUILD_AND_DOWNLOAD.name);
     },
     false,
   );
-  buildStatusBarItems.push(buildStatusBarItem);
+  createStatusbarCommand(
+    context,
+    COMMANDS.OPEN_TERMINAL,
+    '$(terminal)',
+    vscode.l10n.t('Terminal'),
+    vscode.l10n.t('Open ConEmu'),
+    93,
+    async () => {
+      if (platform() === 'win32') {
+        rtthreadEnvTerminal = vscode.window.createTerminal({
+          name: 'RT-Thread Env',
+          shellPath: 'cmd.exe',
+          shellArgs: ['/K', 'chcp 437'],
+        });
+        rtthreadEnvTerminal.show();
+        context.subscriptions.push(
+          vscode.window.onDidCloseTerminal((closedTerminal) => {
+            if (closedTerminal === rtthreadEnvTerminal) {
+              rtthreadEnvTerminal = null;
+            }
+          }),
+        );
+      } else {
+        // TODO: 其它平台
+        throw new Error(vscode.l10n.t('Not implemented'));
+      }
+    },
+    false,
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`${EXTENSION_ID}.${COMMANDS.OPEN_CONEMU}`, async (uri: vscode.Uri) => {
+      if (platform() === 'win32') {
+        const workspaceFolder = await getOrPickWorkspaceFolder();
+        const fileType = await getFileType(uri);
+        let cwd: string;
+        if (fileType === vscode.FileType.Directory) {
+          cwd = uri.fsPath;
+        } else if (fileType === vscode.FileType.File) {
+          cwd = dirname(uri.fsPath);
+        } else {
+          cwd = workspaceFolder.uri.fsPath;
+        }
+        const envPath = parsePath(getConfig(workspaceFolder, 'generate.envPath', ''));
+        const ConEmuExe = join(envPath, 'tools', 'ConEmu', 'ConEmu64');
+        conEmuProcess = spawn(ConEmuExe, [], { cwd });
+        conEmuProcess.on('close', () => {
+          conEmuProcess = null;
+        });
+      } else {
+        // TODO: 其它平台
+        throw new Error(vscode.l10n.t('Not implemented'));
+      }
+    }),
+  );
+  context.subscriptions.push(
+    onDidEnvRootChange(() => {
+      const terminals = vscode.window.terminals;
+      terminals.forEach((terminal) => terminal.dispose());
+      conEmuProcess?.kill();
+      MenuConfig.Dispose();
+    }),
+  );
 
   // 监听makefile相关文件
   const setMakefileProcessorBuildConfig = async (workspaceFolder: vscode.WorkspaceFolder) => {
-    const extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, BUILD_TASKS.BUILD.label);
+    const extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
     if (extensionSpecifiedBuildTask) {
-      for (const startBarItem of buildStatusBarItems) {
-        startBarItem.show();
-      }
+      changeShowStatusBars(workspaceFolder.uri);
       await Promise.all([parseSelectedBuildConfigs(workspaceFolder.uri), parseProjcfgIni(workspaceFolder.uri)]).then(
         ([buildConfig, projcfgIni]) => {
           if (buildConfig) {
@@ -294,18 +447,36 @@ export async function activate(context: vscode.ExtensionContext) {
       MakefileProcessor.HandleFileChange(e);
     }),
   );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`${EXTENSION_ID}.command.AddIncludePath`, async (uri: vscode.Uri) => {
+      MakefileProcessor.AddIncludePaths([uri.fsPath]);
+    }),
+  );
 
   // 监听配置变化
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration(EXTENSION_ID)) {
-        if (!e.affectsConfiguration(`${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}`)) {
+        if (getIsConfigUpdateByExtension()) {
+          return;
+        }
+        if (e.affectsConfiguration(`${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}`)) {
+          const message = vscode.l10n.t(
+            "It won't work until the next time you import it, so do you want to do it again?",
+          );
+          const confirmAction = vscode.l10n.t('Yes');
+          const selectedAction = await vscode.window.showWarningMessage(message, confirmAction, vscode.l10n.t('No'));
+          if (selectedAction === confirmAction) {
+            const workspaceFolder = await getOrPickWorkspaceFolder();
+            await doCheckAndOpenGenerateWebview(workspaceFolder.uri);
+          }
+        } else {
           const message = vscode.l10n.t(
             'The Settings have changed and the window needs to be reloaded to apply the changes.',
           );
-          const reloadAction = vscode.l10n.t('Reload Now');
-          vscode.window.showInformationMessage(message, reloadAction).then((selectedAction) => {
-            if (selectedAction === reloadAction) {
+          const confirmAction = vscode.l10n.t('Reload Now');
+          vscode.window.showInformationMessage(message, confirmAction).then((selectedAction) => {
+            if (selectedAction === confirmAction) {
               vscode.commands.executeCommand('workbench.action.reloadWindow');
             }
           });
@@ -318,8 +489,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand(`${EXTENSION_ID}.action.tasks.build`, async () => {
       const workspaceFolder = await getOrPickWorkspaceFolder();
-      const buildTaskName = getConfig(workspaceFolder, 'generate.defaultBuildTask', BUILD_TASKS.BUILD.name);
-      await runBuildTaskAndHandle(buildTaskName);
+      const buildTaskName = getConfig(workspaceFolder, 'generate.defaultBuildTask', TASKS.BUILD.name);
+      await runTaskAndHandle(buildTaskName);
     }),
   );
 
@@ -345,4 +516,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // 添加要自动清理的对象
   context.subscriptions.push(workspaceFolderChangeEmitter);
   context.subscriptions.push(buildTaskManager);
+}
+
+/**
+ * 处理扩展被禁用或关闭
+ */
+export function deactivate() {
+  conEmuProcess?.kill();
+  rtthreadEnvTerminal?.dispose();
+  MenuConfig.Dispose();
 }

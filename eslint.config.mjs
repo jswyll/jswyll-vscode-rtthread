@@ -35,7 +35,11 @@ export default [
     rules: {
       'jswyll/must-use-await-for-function': [
         'error',
-        [ { functionName: 'existsAsync' }],
+        [
+          { functionName: 'existsAsync' },
+          { functionName: 'updateConfig' },
+          { functionName: 'getFileType' },
+        ],
       ],
     },
   },

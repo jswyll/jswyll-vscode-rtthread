@@ -1,9 +1,9 @@
 {
   "name": "jswyll-vscode-rtthread",
   "displayName": "RT-Thread Project Assistant",
-  "description": "RT-Thread Studio项目助手，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。RT-Thread Studio project assistant, can generate vscode code browsing, editing, compiling, downloading, debugging configuration files.",
+  "description": "RT-Thread项目助手，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。RT-Thread project assistant, can generate vscode code browsing, editing, compiling, downloading, debugging configuration files.",
   "icon": "icon.png",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "jswyll",
   "license": "Apache-2.0",
   "repository": {
@@ -23,7 +23,8 @@
     "embedded"
   ],
   "activationEvents": [
-    "workspaceContains:.cproject"
+    "workspaceContains:.cproject",
+    "workspaceContains:rtconfig.py"
   ],
   "preview": true,
   "main": "./out/main/extension.js",
@@ -31,16 +32,56 @@
   "contributes": {
     "commands": [
       {
+        "command": "jswyll-vscode-rtthread.action.pickAWorkspaceFolder",
+        "title": "%jswyll-vscode-rtthread.action.pickAWorkspaceFolder%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.action.generateConfig",
+        "title": "%jswyll-vscode-rtthread.action.generateConfig%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.action.menuconfig.open",
+        "title": "%jswyll-vscode-rtthread.action.menuconfig.open%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.clean",
+        "title": "%jswyll-vscode-rtthread.clean%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.build",
+        "title": "%jswyll-vscode-rtthread.build%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.download",
+        "title": "%jswyll-vscode-rtthread.download%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.build and download",
+        "title": "%jswyll-vscode-rtthread.build and download%"
+      },
+      {
         "command": "jswyll-vscode-rtthread.action.tasks.build",
         "title": "%jswyll-vscode-rtthread.action.tasks.build%"
       },
       {
-        "command": "jswyll-vscode-rtthread.command.developmentTest",
-        "title": "%jswyll-vscode-rtthread.command.developmentTest%"
+        "command": "jswyll-vscode-rtthread.action.terminal.open",
+        "title": "%jswyll-vscode-rtthread.action.terminal.open%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.action.ConEmu.open",
+        "title": "%jswyll-vscode-rtthread.action.ConEmu.open%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.command.AddIncludePath",
+        "title": "%jswyll-vscode-rtthread.command.AddIncludePath%"
       },
       {
         "command": "jswyll-vscode-rtthread.command.diagnosticInterrupt",
         "title": "%jswyll-vscode-rtthread.command.diagnosticInterrupt%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.command.developmentTest",
+        "title": "%jswyll-vscode-rtthread.command.developmentTest%"
       }
     ],
     "configuration": [
@@ -77,77 +118,141 @@
       {
         "title": "%jswyll-vscode-rtthread.generate.title%",
         "properties": {
+          "jswyll-vscode-rtthread.generate.projectType": {
+            "markdownDescription": "%jswyll-vscode-rtthread.projectType.markdownDescription%",
+            "type": "string",
+            "default": "RT-Thread Studio",
+            "scope": "machine-overridable"
+          },
           "jswyll-vscode-rtthread.generate.makeBaseDirectory": {
             "markdownDescription": "%jswyll-vscode-rtthread.makeBaseDirectory.markdownDescription%",
             "type": "string",
             "default": "${workspaceFolder}/Debug",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.makeToolPath": {
             "markdownDescription": "%jswyll-vscode-rtthread.makeToolPath.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
+          },
+          "jswyll-vscode-rtthread.generate.envPath": {
+            "markdownDescription": "%jswyll-vscode-rtthread.envPath.markdownDescription%",
+            "type": "string",
+            "default": "c:/env-windows",
+            "scope": "resource"
+          },
+          "jswyll-vscode-rtthread.generate.rttDir": {
+            "markdownDescription": "%jswyll-vscode-rtthread.rttDir.markdownDescription%",
+            "type": "string",
+            "default": "rt-thread",
+            "scope": "resource"
+          },
+          "jswyll-vscode-rtthread.generate.artifactPath": {
+            "markdownDescription": "%jswyll-vscode-rtthread.generate.artifactPath.markdownDescription%",
+            "type": "string",
+            "default": "rt-thread.elf",
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.toolchainPath": {
             "markdownDescription": "%jswyll-vscode-rtthread.toolchainPath.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.studioInstallPath": {
             "markdownDescription": "%jswyll-vscode-rtthread.studioInstallPath.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.compilerPath": {
             "markdownDescription": "%jswyll-vscode-rtthread.compilerPath.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.debuggerAdapter": {
             "markdownDescription": "%jswyll-vscode-rtthread.debuggerAdapter.markdownDescription%",
             "type": "string",
             "default": "STLink",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.debuggerInterface": {
             "markdownDescription": "%jswyll-vscode-rtthread.debuggerInterface.markdownDescription%",
             "type": "string",
             "default": "SWD",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.chipName": {
             "markdownDescription": "%jswyll-vscode-rtthread.chipName.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.debuggerServerPath": {
             "markdownDescription": "%jswyll-vscode-rtthread.debuggerServerPath.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.cmsisPack": {
             "markdownDescription": "%jswyll-vscode-rtthread.cmsisPack.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.buildConfigName": {
             "markdownDescription": "%jswyll-vscode-rtthread.buildConfigName.markdownDescription%",
             "type": "string",
             "default": "",
-            "scope": "machine-overridable"
+            "scope": "resource"
           },
           "jswyll-vscode-rtthread.generate.defaultBuildTask": {
             "markdownDescription": "%jswyll-vscode-rtthread.defaultBuildTask.markdownDescription%",
             "type": "string",
             "default": "jswyll-vscode-rtthread: build",
-            "scope": "machine-overridable"
+            "scope": "resource"
+          },
+          "jswyll-vscode-rtthread.generate.customExtraPathVar": {
+            "markdownDescription": "%jswyll-vscode-rtthread.customExtraPathVar.markdownDescription%",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "scope": "resource"
+          },
+          "jswyll-vscode-rtthread.generate.customExtraVars": {
+            "markdownDescription": "%jswyll-vscode-rtthread.customExtraVars.markdownDescription%",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "%jswyll-vscode-rtthread.RttEnv.title%",
+        "properties": {
+          "jswyll-vscode-rtthread.RttEnv.autoUpdatePackages": {
+            "markdownDescription": "%jswyll-vscode-rtthread.RttEnv.autoUpdatePackages.markdownDescription%",
+            "type": "boolean",
+            "default": true,
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "%jswyll-vscode-rtthread.appearance.title%",
+        "properties": {
+          "jswyll-vscode-rtthread.appearance.showStatusBarTitle": {
+            "markdownDescription": "%jswyll-vscode-rtthread.appearance.showStatusBarTitle.markdownDescription%",
+            "type": "boolean",
+            "default": true,
+            "scope": "window"
           }
         }
       }
@@ -164,7 +269,18 @@
       "explorer/context": [
         {
           "when": "!explorerResourceIsFolder && resourceLangId == c && jswyll-vscode-rtthread.isRtthreadProject",
-          "command": "jswyll-vscode-rtthread.command.diagnosticInterrupt"
+          "command": "jswyll-vscode-rtthread.command.diagnosticInterrupt",
+          "group": "jswyll-vscode-rtthread@1"
+        },
+        {
+          "when": "explorerResourceIsFolder && jswyll-vscode-rtthread.isRtthreadProject",
+          "command": "jswyll-vscode-rtthread.command.AddIncludePath",
+          "group": "jswyll-vscode-rtthread@2"
+        },
+        {
+          "when": "jswyll-vscode-rtthread.isRtthreadEnvProject",
+          "command": "jswyll-vscode-rtthread.action.ConEmu.open",
+          "group": "jswyll-vscode-rtthread@3"
         }
       ]
     },
@@ -251,6 +367,7 @@
   "scripts": {
     "build": "npm run build:main && npm run build:webview",
     "build:main": "eslint src && tsx src/dev/esbuild.ts --production",
+    "build:temp": "tsc -p temp/tsconfig.json",
     "build:tsc": "tsc -p src/main/tsconfig.json",
     "build:webview": "vite build src/webview",
     "check:translation": "npm run export-l10n && tsx src/dev/checkTranslation.ts",
@@ -271,19 +388,26 @@
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
+    "@types/crypto-js": "^4.2.2",
     "@types/lodash": "^4.17.13",
     "@types/node": "20.x",
+    "@types/qs": "^6.9.18",
     "@types/vscode": "^1.95.0",
     "@vue/eslint-config-prettier": "^10.1.0",
     "@vue/eslint-config-typescript": "^14.1.3",
+    "axios": "^1.7.9",
     "cheerio": "^1.0.0",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.7",
     "esbuild": "^0.24.0",
     "eslint": "^9.14.0",
     "eslint-plugin-vue": "^9.30.0",
+    "glob": "^11.0.0",
     "jsonc-parser": "^3.3.1",
     "lodash": "^4.17.21",
     "minimatch": "^10.0.1",
     "prettier": "^3.3.3",
+    "qs": "^6.14.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.2",
     "vite": "^6.0.1",

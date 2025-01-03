@@ -28,6 +28,23 @@ export async function existsAsync(pathOrUri: string | vscode.Uri) {
 }
 
 /**
+ * 获取文件类型，文件不存在时不抛出异常且返回{@link vscode.FileType.Unknown}。
+ * @param uri 文件uri
+ * @returns 文件类型
+ */
+export async function getFileType(pathOrUri: string | vscode.Uri): Promise<vscode.FileType> {
+  try {
+    if (typeof pathOrUri === 'string') {
+      pathOrUri = vscode.Uri.file(pathOrUri);
+    }
+    const stat = await vscode.workspace.fs.stat(pathOrUri);
+    return stat.type;
+  } catch {
+    return vscode.FileType.Unknown;
+  }
+}
+
+/**
  * 读取文本文件。
  * @param uri 文件uri
  * @param defaultValue 读取失败时返回的默认文本
@@ -81,18 +98,4 @@ export async function writeJsonFile(uri: vscode.Uri, data: object) {
 export async function parseJsonFile<T = Record<string, unknown>>(uri: vscode.Uri) {
   const text = await readTextFile(uri);
   return parse(text) as T;
-}
-
-/**
- * 获取文件类型，文件不存在时不抛出异常且返回{@link vscode.FileType.Unknown}。
- * @param uri 文件uri
- * @returns 文件类型
- */
-export async function getFileType(uri: vscode.Uri) {
-  try {
-    const stat = await vscode.workspace.fs.stat(uri);
-    return stat.type;
-  } catch {
-    return vscode.FileType.Unknown;
-  }
 }

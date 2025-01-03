@@ -1,3 +1,5 @@
+import { TMenuItem } from './menuconfig';
+
 /**
  * 根据RT-Thread Studio项目的`.settings/projcfg.ini`文件中解析的项目配置
  */
@@ -67,6 +69,11 @@ export interface BuildConfig {
  */
 export interface GenerateSettings {
   /**
+   * 项目类型，默认为'RT-Thread Studio'
+   */
+  projectType: 'RT-Thread Studio' | 'Env';
+
+  /**
    * make的工作基目录，根据{@link InputGenerateParams.projectRootDir}和选择的{@link BuildConfig}计算
    *
    * @attention 应为绝对路径，否则C/C++扩展无法定位出错的文件
@@ -77,6 +84,21 @@ export interface GenerateSettings {
    * make工具的文件夹路径
    */
   makeToolPath: string;
+
+  /**
+   * env的根目录路径，默认为`c:/env-windows`
+   */
+  envPath: string;
+
+  /**
+   * 构建产物的相对路径或绝对路径，默认为`rt-thread.elf`。
+   */
+  artifactPath: string;
+
+  /**
+   * RT-Thread源码的根目录（RTT_DIR）
+   */
+  rttDir: string;
 
   /**
    * GCC工具链的文件夹路径，根据{@link compilerPath}计算，应为绝对路径
@@ -127,6 +149,16 @@ export interface GenerateSettings {
    * 按快捷键（`Ctrl+Shift+B`）时执行的默认构建任务
    */
   defaultBuildTask: string;
+
+  /**
+   * 自定义额外追加到环境变量`PATH`的路径
+   */
+  customExtraPathVar: string[];
+
+  /**
+   * 自定义额外的环境变量键值对
+   */
+  customExtraVars: Record<string, string | undefined>;
 }
 
 /**
@@ -182,6 +214,11 @@ export interface DoGenerateParams {
    * make的主版本号，获取不到则为`undefined`
    */
   makeMajorVersion: number | undefined;
+
+  /**
+   * 工具链前缀，末尾包含`-`，例如`arm-none-eabi-`
+   */
+  toolchainPrefix: string;
 }
 
 /**
@@ -347,6 +384,41 @@ export interface ExtensionToWebviewDataMap {
   };
 
   /**
+   * 检查Env的文件夹路径
+   */
+  validateEnvPath: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 校验结果
+       */
+      validateResult: TdesignCustomValidateResult;
+
+      /**
+       * 可供选择的编译器文件路径
+       */
+      compilerPaths: string[];
+    };
+  };
+
+  /**
+   * 检查RTT_DIR
+   */
+  validateRttDir: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 校验结果
+       */
+      validateResult: TdesignCustomValidateResult;
+    };
+  };
+
+  /**
    * 检查调试服务器
    */
   validateDebuggerServer: {
@@ -369,6 +441,71 @@ export interface ExtensionToWebviewDataMap {
      * 参数
      */
     params: unknown;
+  };
+}
+
+/**
+ * 扩展进程向webview的消息表
+ */
+export interface ExtensionToWebviewDataMap {
+  /**
+   * 获取菜单配置数据
+   */
+  getMenuconfigData: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 菜单配置数据
+       */
+      menus: TMenuItem[];
+
+      /**
+       * 是否有修改
+       */
+      hasChanged: boolean;
+    };
+  };
+
+  /**
+   * 修改菜单配置数据
+   */
+  changeMenuItem: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 是否修改成功
+       */
+      result: boolean;
+    };
+  };
+
+  /**
+   * 设置菜单配置数据
+   */
+  setMenuconfigData: {
+    /**
+     * 参数
+     */
+    params: TMenuItem[];
+  };
+
+  /**
+   * 保存菜单配置数据
+   */
+  saveMenuconfig: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 提示语
+       */
+      message: string;
+    };
   };
 }
 
@@ -475,6 +612,36 @@ export interface WebviewToExtensionDataMap {
   };
 
   /**
+   * 检查Env的文件夹路径
+   */
+  validateEnvPath: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 输入或选择的文件夹路径
+       */
+      path: string;
+    };
+  };
+
+  /**
+   * 检查RTT_DIR
+   */
+  validateRttDir: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 输入或选择的文件夹路径
+       */
+      path: string;
+    };
+  };
+
+  /**
    * 检查调试服务器
    */
   validateDebuggerServer: {
@@ -502,6 +669,48 @@ export interface WebviewToExtensionDataMap {
        */
       doGenerateParams: DoGenerateParams;
     };
+  };
+}
+
+/**
+ * webview向扩展进程的发送消息表
+ */
+export interface WebviewToExtensionDataMap {
+  /**
+   * 获取菜单配置数据
+   */
+  getMenuconfigData: {
+    /**
+     * 参数
+     */
+    params: unknown;
+  };
+
+  /**
+   * 修改菜单配置数据
+   */
+  changeMenuItem: {
+    /**
+     * 参数
+     */
+    params: {
+      /**
+       * 菜单节点编号
+       */
+      id: number;
+
+      /**
+       * 值
+       */
+      value: string | number | boolean;
+    };
+  };
+
+  /**
+   * 保存菜单配置数据
+   */
+  saveMenuconfig: {
+    params: unknown;
   };
 }
 

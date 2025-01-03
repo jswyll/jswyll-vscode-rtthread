@@ -1,4 +1,4 @@
-import { GenerateSettings } from '../../common/type';
+import { GenerateSettings } from '../../common/types/type';
 
 /**
  * 描述检测构建输出中问题的问题匹配器（仅列出可能使用到的字段）
@@ -89,6 +89,16 @@ export interface TasksJson {
      */
     windows?: {
       /**
+       * 命令
+       */
+      command?: string;
+
+      /**
+       * 命令参数
+       */
+      args?: string[];
+
+      /**
        * 配置选项，用于指定工作目录和环境变量。
        */
       options?: {
@@ -132,6 +142,26 @@ interface MakefileProcessorSettings {
 }
 
 /**
+ * 扩展配置 - RT-Thread Env
+ */
+interface RttEnvSettings {
+  /**
+   * 是否在保存菜单配置成功后自动更新软件包，默认为是。
+   */
+  'RttEnv.autoUpdatePackages': boolean;
+}
+
+/**
+ * 扩展设置 - 外观
+ */
+interface AppearanceSettings {
+  /**
+   * 是否显示状态栏标题，默认为是
+   */
+  'appearance.showStatusBarTitle': boolean;
+}
+
+/**
  * 生成的参数的扩展配置，每个键都添加了`generate.`前缀
  *
  * TODO: 使用脚本检查package.json中是否已定义配置项
@@ -153,6 +183,48 @@ interface VscodeSettings {
    * vscode - 文件名称与语言类型关联
    */
   'files.associations': Record<string, string>;
+
+  /**
+   * 集成终端的环境变量 - windows平台
+   */
+  'terminal.integrated.env.windows': Record<string, string>;
+
+  /**
+   * 集成终端的环境变量 - osx平台
+   */
+  'terminal.integrated.env.osx': Record<string, string>;
+
+  /**
+   * 集成终端的环境变量 - linux平台
+   */
+  'terminal.integrated.env.linux': Record<string, string>;
+
+  /**
+   * 集成终端配置 - windows平台
+   */
+  'terminal.integrated.profiles.windows': {
+    [name: string]: {
+      /**
+       * 终端命令路径
+       */
+      path: string;
+
+      /**
+       * 终端命令参数
+       */
+      args?: string[];
+
+      /**
+       * 终端命令环境变量
+       */
+      env?: Record<string, string>;
+    };
+  };
+
+  /**
+   * 集成终端默认配置 - windows平台
+   */
+  'terminal.integrated.defaultProfile.windows': string;
 }
 
 /**
@@ -176,4 +248,6 @@ interface AutoDiagnosticInterruptSettings {
 type ExtensionConfiguration = ExtensionGenerateSettings &
   MakefileProcessorSettings &
   AutoDiagnosticInterruptSettings &
+  RttEnvSettings &
+  AppearanceSettings &
   VscodeSettings;
