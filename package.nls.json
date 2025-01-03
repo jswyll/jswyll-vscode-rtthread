@@ -19,5 +19,6 @@
   "jswyll-vscode-rtthread.command.diagnosticInterrupt":"jswyll-vscode-rtthread - Diagnostic Interrupt Function",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.title": "Auto Diagnostic Interrupt",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.enable.description": "Whether to initiate diagnostics automatically. If enabled, The path meet `#jswyll-vscode-rtthread.diagnosticInterrupt.globPattern#` file appears RT-Thread fragment will automatically diagnosis if the interrupt function has been called `rt_interrupt_enter()` and `rt_interrupt_leave()`.",
-  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "The relative path pattern [Glob expression](https://code.visualstudio.com/docs/editor/glob-patterns) of file to be diagnosed."
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "The relative path pattern [Glob expression](https://code.visualstudio.com/docs/editor/glob-patterns) of file to be diagnosed.",
+  "jswyll-vscode-rtthread.command.AddIncludePath": "jswyll-vscode-rtthread - Adds to header search path"
 }

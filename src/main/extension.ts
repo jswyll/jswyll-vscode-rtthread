@@ -294,6 +294,11 @@ export async function activate(context: vscode.ExtensionContext) {
       MakefileProcessor.HandleFileChange(e);
     }),
   );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`${EXTENSION_ID}.command.AddIncludePath`, async (uri: vscode.Uri) => {
+      MakefileProcessor.AddIncludePaths([uri.fsPath]);
+    }),
+  );
 
   // 监听配置变化
   context.subscriptions.push(

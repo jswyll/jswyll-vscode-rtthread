@@ -37,6 +37,7 @@ import { TdesignValidateError } from '../base/error';
 import { MakefileProcessor } from './makefile';
 import { ExtensionGenerateSettings, TasksJson } from '../base/type';
 import { spawnPromise } from '../base/process';
+import { processCCppPropertiesConfig } from './cCppProperties';
 
 /**
  * 生成的参数
@@ -264,7 +265,7 @@ async function parseBuildConfigs(wsFolder: vscode.Uri) {
         name,
         toolchainPrefix,
         cDefines: Array.from(cDefineValues),
-        cIncludePaths: Array.from(cIncludePathValues),
+        cIncludePaths: Array.from(cIncludePathValues).sort(),
         cIncludeFiles: Array.from(cIncludeFileValues),
         excludingPaths: Array.from(excludingPathValues),
       });
@@ -419,62 +420,6 @@ async function updateFilesAssociationsAndExclude(params: GenerateParamsInternal)
     filesExclude[v] = true;
   });
   updateConfig(wsFolder, 'files.exclude', filesExclude, true);
-}
-
-/**
- * 处理C/C++配置文件。
- * @param params 生成选项
- */
-async function processCCppPropertiesConfig(params: GenerateParamsInternal) {
-  logger.info('processCCppPropertiesConfig...');
-  const { wsFolder, settings } = params;
-  const { compilerPath } = settings;
-  const { cDefines, cIncludePaths } = params.buildConfig;
-  const includePathSet = new Set<string>();
-  for (const cIncludePath of cIncludePaths) {
-    // TODO: cIncludePath一定是相对于当前工作区文件夹的相对路径？
-    const normalizePath = normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, cIncludePath));
-    if (!normalizePath) {
-      includePathSet.add('.');
-    } else {
-      includePathSet.add(normalizePath);
-    }
-  }
-
-  let dotConfig: string | undefined = undefined;
-  const dotConfigPath = vscode.Uri.file(join(wsFolder.fsPath, '.config'));
-  if (await existsAsync(dotConfigPath)) {
-    dotConfig = normalizePathForWorkspace(wsFolder, dotConfigPath.fsPath);
-  }
-  const cCppPropertiesJson = {
-    configurations: [
-      {
-        name: EXTENSION_ID,
-        compilerPath,
-        intelliSenseMode: 'gcc-arm',
-        includePath: Array.from(includePathSet),
-        defines: ['${default}'],
-        cStandard: 'c99',
-        cppStandard: 'c++11',
-        dotConfig,
-      },
-    ],
-  };
-  cCppPropertiesJson.configurations[0].defines.push(...cDefines);
-  const fileUri = vscode.Uri.joinPath(wsFolder, '.vscode/c_cpp_properties.json');
-  if (!(await existsAsync(fileUri))) {
-    await writeJsonFile(fileUri, cCppPropertiesJson);
-  } else {
-    const configJson = await parseJsonFile<typeof cCppPropertiesJson>(fileUri);
-    assertParam(
-      isJsonObject(configJson) && Array.isArray(configJson.configurations),
-      vscode.l10n.t('The format of "{0}" is invalid', [fileUri.fsPath]),
-    );
-    const configuration = cCppPropertiesJson.configurations[0];
-    configJson.configurations = configJson.configurations.filter((v) => v.name !== configuration.name);
-    configJson.configurations.unshift(configuration);
-    await writeJsonFile(fileUri, configJson);
-  }
 }
 
 /**
@@ -788,7 +733,7 @@ async function startGenerate(params: GenerateParamsInternal) {
   logger.debug(`generateFilesExclude took ${Date.now() - startTimestamp} ms:`);
 
   startTimestamp = Date.now();
-  await processCCppPropertiesConfig(params);
+  await processCCppPropertiesConfig(wsFolder, settings.compilerPath, params.buildConfig);
   logger.debug(`processCCppPropertiesConfig took ${Date.now() - startTimestamp} ms:`);
 
   startTimestamp = Date.now();

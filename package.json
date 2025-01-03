@@ -3,7 +3,7 @@
   "displayName": "RT-Thread Project Assistant",
   "description": "RT-Thread Studio项目助手，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。RT-Thread Studio project assistant, can generate vscode code browsing, editing, compiling, downloading, debugging configuration files.",
   "icon": "icon.png",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "jswyll",
   "license": "Apache-2.0",
   "repository": {
@@ -33,6 +33,10 @@
       {
         "command": "jswyll-vscode-rtthread.action.tasks.build",
         "title": "%jswyll-vscode-rtthread.action.tasks.build%"
+      },
+      {
+        "command": "jswyll-vscode-rtthread.command.AddIncludePath",
+        "title": "%jswyll-vscode-rtthread.command.AddIncludePath%"
       },
       {
         "command": "jswyll-vscode-rtthread.command.developmentTest",
@@ -165,6 +169,10 @@
         {
           "when": "!explorerResourceIsFolder && resourceLangId == c && jswyll-vscode-rtthread.isRtthreadProject",
           "command": "jswyll-vscode-rtthread.command.diagnosticInterrupt"
+        },
+        {
+          "when": "explorerResourceIsFolder && jswyll-vscode-rtthread.isRtthreadProject",
+          "command": "jswyll-vscode-rtthread.command.AddIncludePath"
         }
       ]
     },

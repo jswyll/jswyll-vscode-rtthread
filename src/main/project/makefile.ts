@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 import { readTextFile, writeTextFile } from '../base/fs';
 import { Logger } from '../base/logger';
-import { escapeRegExp } from '../../common/utils';
+import { escapeRegExp, findLastMatch } from '../../common/utils';
 import { basename, extname, join, relative } from 'path';
-import { getConfig } from '../base/workspace';
+import { getConfig, normalizePathForWorkspace } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqual } from '../../common/platform';
 import { BuildConfig, ProjcfgIni } from '../../common/type';
 import { debounce } from 'lodash';
+import { Cproject } from './cproject';
+import { processCCppPropertiesConfig } from './cCppProperties';
 
 /**
  * 源文件的相对路径
@@ -127,6 +129,15 @@ export class MakefileProcessor {
   }
 
   /**
+   * 获取全部subdir.mk文件的uri。
+   * @returns uri
+   */
+  private static GetSubdirMkUris() {
+    const buildUri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name);
+    return vscode.workspace.findFiles(new vscode.RelativePattern(buildUri, '**/subdir.mk'));
+  }
+
+  /**
    * 处理单个Makefile文件，不抛出出现的错误。
    *
    * 1. 在编译文件的gcc或g++指令前添加提示正在编译的文件，并使用`@`屏蔽命令及其参数，例如：
@@ -221,11 +232,57 @@ export class MakefileProcessor {
     }
     logger.info('processMakefiles...');
     const makefileUris: vscode.Uri[] = [this.GetMakefileUri(), this.GetMakefileTargetsUri()];
-    const buildUri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name);
-    const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(buildUri, '**/subdir.mk'));
+    const uris = await this.GetSubdirMkUris();
     makefileUris.push(...uris);
-    logger.debug('makefileUris:', makefileUris);
+    logger.trace('makefileUris:', makefileUris);
     await Promise.all(makefileUris.map((uri) => this.ProcessMakefile(uri)));
+  }
+
+  /**
+   * 向全部subdir.mk文件中添加头文件路径。
+   * @param paths 待添加的头文件绝对路径列表
+   */
+  public static async AddIncludePaths(paths: string[]) {
+    const buildUri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name);
+    const relativeDirs = paths.map((path) => normalizePathForWorkspace(this.CurrentProjectRoot, path));
+    const relativeDirsForBuild = paths.map((path) => normalizePathForWorkspace(buildUri, path));
+    const uris = await this.GetSubdirMkUris();
+    const fn = async (subdirMkUri: vscode.Uri) => {
+      const includeSet = new Set<string>(relativeDirsForBuild);
+      const fileContent = await readTextFile(subdirMkUri);
+      const compileRegex = new RegExp(`(^\\t@?${this.BuildConfig.toolchainPrefix}(gcc|g\\+\\+))\\s+.*`, 'gm');
+      const newFileContent = fileContent.replaceAll(compileRegex, (...match) => {
+        let compileLine = match[0];
+        const includeRegex = /( -I\s*)"([^"]*)"/g;
+        compileLine = compileLine.replaceAll(includeRegex, (...includeMatch) => {
+          const includePath = convertPathToUnixLike(includeMatch[2]);
+          includeSet.add(includePath);
+          return '';
+        });
+        const newIncludePathsString = Array.from(includeSet)
+          .map((v) => ` -I"${v}"`)
+          .sort()
+          .join('');
+        const defineRegex = /( -D\s*)([\w_]+)(=[^ ]*)?/g;
+        const lastMatch = findLastMatch(defineRegex, compileLine);
+        if (lastMatch) {
+          const insertIndex = lastMatch.index + lastMatch[0].length;
+          compileLine = compileLine.slice(0, insertIndex) + newIncludePathsString + compileLine.slice(insertIndex);
+        } else {
+          const insertIndex = match[1].length;
+          compileLine = compileLine.slice(0, insertIndex) + newIncludePathsString + compileLine.slice(insertIndex);
+        }
+        return compileLine;
+      });
+      if (newFileContent !== fileContent) {
+        logger.info(`change ${subdirMkUri.fsPath} to: ${newFileContent}'`);
+        await writeTextFile(subdirMkUri, newFileContent);
+      }
+    };
+    await Promise.all(uris.map((uri) => fn(uri)));
+    const compilerPath = getConfig(this.CurrentProjectRoot, 'generate.compilerPath', 'arm-none-eabi-gcc');
+    await processCCppPropertiesConfig(this.CurrentProjectRoot, compilerPath, this.BuildConfig);
+    await Cproject.AddIncludePaths(this.CurrentProjectRoot, this.BuildConfig.name, relativeDirs);
   }
 
   /**

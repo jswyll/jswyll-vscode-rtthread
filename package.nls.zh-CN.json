@@ -19,5 +19,6 @@
   "jswyll-vscode-rtthread.command.diagnosticInterrupt":"jswyll-vscode-rtthread - 诊断中断函数",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.title": "自动诊断中断",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.enable.description": "如果启用，路径符合`#jswyll-vscode-rtthread.diagnosticInterrupt.globPattern#`的文件出现RT-Thread片段时将自动诊断中断函数是否已调用了 `rt_interrupt_enter()` 和 `rt_interrupt_leave()` 。",
-  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "自动诊断的文件相对路径的[Glob表达式](https://code.visualstudio.com/docs/editor/glob-patterns)。"
+  "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "自动诊断的文件相对路径的[Glob表达式](https://code.visualstudio.com/docs/editor/glob-patterns)。",
+  "jswyll-vscode-rtthread.command.AddIncludePath": "jswyll-vscode-rtthread - 添加到头文件搜索路径"
 }
