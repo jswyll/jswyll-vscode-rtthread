@@ -12,7 +12,6 @@ import {
   FormItem as TFormItem,
   Input as TInput,
   InputNumber as TInputNumber,
-  Loading as TLoading,
   Option as TOption,
   Row as TRow,
   Select as TSelect,
@@ -31,6 +30,7 @@ import { useI18n } from 'vue-i18n';
 import { toHexString, vueI18nEscape, vueI18nUnescape } from '../../../common/utils.ts';
 import menuconfigZhCn from '@webview/locales/menuconfig.zh-CN.json';
 import { i18n } from '@webview/locales/i18n.ts';
+import { useFullscreenLoading } from '@webview/components/loading.ts';
 
 /**
  * 菜单配置的简体中文翻译
@@ -47,7 +47,6 @@ const pageI18n = {
   Reload: '重新加载',
   Save: '保存',
   'Value entered is out of range({0}-{1})': '输入的值超出范围（{0}-{1}）',
-  Top: '顶部',
   'Search configuration, which supports entering keywords in name, title, or help':
     '搜索配置，支持输入名称、标题或帮助中的关键词',
   'There are unsaved changes. Sure to proceed?': '存在未保存的更改，确认继续操作？',
@@ -72,10 +71,7 @@ const { t } = useI18n<[menuconfigZhCnMessageSchema & typeof pageI18n], 'zh'>({
   },
 });
 
-/**
- * 是否显示全屏正在加载中
- */
-const isFullscreenLoading = ref(true);
+const { startLoading, stopLoading } = useFullscreenLoading();
 
 /**
  * 菜单节点数据
@@ -164,7 +160,7 @@ async function handleScChange(id: number, value: string | number | boolean) {
  */
 async function handleBoolChange(node: TMenuItem, value: boolean) {
   try {
-    isFullscreenLoading.value = true;
+    startLoading();
     const { result } = await handleScChange(node.id, value);
     if (value && result) {
       if (!expanded.value.includes(node.id)) {
@@ -172,7 +168,7 @@ async function handleBoolChange(node: TMenuItem, value: boolean) {
       }
     }
   } finally {
-    isFullscreenLoading.value = false;
+    stopLoading();
   }
 }
 
@@ -272,14 +268,14 @@ async function handleSave() {
     throw new Error(errmsg);
   }
   try {
-    isFullscreenLoading.value = true;
+    startLoading();
     await requestExtension({
       command: 'saveMenuconfig',
       params: {},
     });
     isHasChanged = false;
   } finally {
-    isFullscreenLoading.value = false;
+    stopLoading();
   }
 }
 
@@ -329,7 +325,7 @@ function tralateMenuconfig() {
  */
 async function loadData() {
   try {
-    isFullscreenLoading.value = true;
+    startLoading();
     const { menus, hasChanged } = await requestExtension({
       command: 'getMenuconfigData',
       params: {},
@@ -338,7 +334,7 @@ async function loadData() {
     tralateMenuconfig();
     isHasChanged = hasChanged;
   } finally {
-    isFullscreenLoading.value = false;
+    stopLoading();
   }
 }
 
@@ -348,7 +344,7 @@ onMounted(async () => {
   if (import.meta.env.MODE === 'development') {
     treeItems.value = treeData;
     tralateMenuconfig();
-    isFullscreenLoading.value = false;
+    stopLoading();
   }
 });
 
@@ -358,8 +354,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <TLoading fullscreen :loading="isFullscreenLoading"></TLoading>
-  <div class="m-page-container">
+  <div class="m-menuconfig-container">
     <TRow justify="center" :gutter="10">
       <TCol>
         <TButton theme="default" @click="handleReload"> {{ t('Reload') }} </TButton>
@@ -510,7 +505,7 @@ onUnmounted(() => {
   margin-top: 6px;
 }
 
-.m-page-container {
+.m-menuconfig-container {
   height: calc(100vh - 2 * var(--m-app-margin, 0));
   display: flex;
   flex-direction: column;

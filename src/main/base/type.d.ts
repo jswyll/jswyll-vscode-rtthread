@@ -1,4 +1,4 @@
-import { GenerateSettings } from '../../common/types/type';
+import { GenerateSettings } from '../../common/types/generate';
 
 /**
  * 描述检测构建输出中问题的问题匹配器（仅列出可能使用到的字段）

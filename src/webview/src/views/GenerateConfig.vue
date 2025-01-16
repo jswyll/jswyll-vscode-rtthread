@@ -7,7 +7,6 @@ import {
   Form as TForm,
   FormItem as TFormItem,
   Input as TInput,
-  Loading as TLoading,
   RadioGroup as TRadioGroup,
   RadioButton as TRadioButton,
   Row as TRow,
@@ -20,18 +19,15 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MMarkdown from '@webview/components/MMarkdown.vue';
 import { useWebview } from '@webview/components/vscode';
-import type {
-  TdesignCustomValidateResult,
-  ExtensionToWebviewDatas,
-  DoGenerateParams,
-  InputGenerateParams,
-  GenerateSettings,
-} from '../../../common/types/type';
+import type { ExtensionToWebviewDatas } from '../../../common/types/type';
 import { BUILD_TASKS_LABEL_PREFIX, EXTENSION_ID } from '../../../common/constants';
 import { assertParam } from '../../../common/assert';
 import { convertPathToUnixLike } from '../../../common/platform';
 import { addToSet } from '../../../common/utils';
 import MSelectInput from '@webview/components/MSelectInput.vue';
+import type { InputGenerateParams, DoGenerateParams, GenerateSettings } from '../../../common/types/generate';
+import type { TdesignCustomValidateResult } from '../../../common/types/vscode';
+import { useFullscreenLoading } from '@webview/components/loading';
 
 /**
  * 翻译
@@ -115,15 +111,7 @@ const { t } = useI18n({
 
 const { requestExtension } = useWebview();
 
-/**
- * 是否显示全屏正在加载中
- */
-const isFullscreenLoading = ref(!import.meta.env.DEV);
-
-/**
- * 加载中的显示文本
- */
-const loadingText = ref(t('Parsing project information...'));
+const { startLoading, stopLoading, isLoading } = useFullscreenLoading();
 
 /**
  * 表单引用
@@ -597,8 +585,7 @@ async function onSelectRttDir() {
  */
 async function onFormSubmit() {
   try {
-    isFullscreenLoading.value = true;
-    loadingText.value = t('Validating the form parameter...');
+    startLoading(t('Validating the form parameter...'));
     const validateResult = await form.value?.validate();
 
     // 允许有警告，但不允许有错误
@@ -656,7 +643,7 @@ async function onFormSubmit() {
         }
       }
     }
-    loadingText.value = t('Generating...');
+    startLoading(t('Generating...'));
     await requestExtension({
       command: 'generateConfig',
       params: {
@@ -664,7 +651,7 @@ async function onFormSubmit() {
       },
     });
   } finally {
-    isFullscreenLoading.value = false;
+    stopLoading();
   }
 }
 
@@ -683,7 +670,7 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
         msg.params.settings.buildConfigName = msg.params.cprojectBuildConfigs[0].name;
       }
       data.value = { ...data.value, ...msg.params };
-      if (isFullscreenLoading.value) {
+      if (isLoading.value) {
         try {
           if (data.value.settings.projectType === 'RT-Thread Studio') {
             await validateStudioInstallPath(data.value.settings.studioInstallPath);
@@ -691,7 +678,7 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
             await validateEnvPath(data.value.settings.envPath);
           }
         } catch {}
-        isFullscreenLoading.value = false;
+        stopLoading();
       }
       break;
 
@@ -702,6 +689,8 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
 
 onMounted(async () => {
   window.addEventListener('message', handleWindowMessage);
+  startLoading(t('Parsing project information...'));
+  requestExtension({ command: 'requestInitialValues', params: {} });
   if (import.meta.env.DEV) {
     data.value.compilerPaths = [
       'd:/RT-ThreadStudio/platform/env_released/env/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc',
@@ -721,7 +710,6 @@ onMounted(async () => {
       'd:/RT-ThreadStudio/repo/Extract/Debugger_Support_Packages/RealThread/PyOCD/0.1.3/packs/Keil.STM32F0xx_DFP.2.1.0-small.pack',
     ];
   }
-  requestExtension({ command: 'requestInitialValues', params: {} });
   watch(
     () => data.value.settings.debuggerServerPath,
     () => {
@@ -751,8 +739,6 @@ onUnmounted(() => {
 
 <template>
   <div class="m-config-project">
-    <TLoading fullscreen :loading="isFullscreenLoading" :text="loadingText"></TLoading>
-
     <h1 v-if="data.workspaceFolderPicked">
       {{ t('Current workspace folder') + ': ' }} <code>{{ data.workspaceFolderPicked }}</code>
     </h1>
@@ -765,7 +751,7 @@ onUnmounted(() => {
           <TRadioButton value="Env">RT-Thread Env</TRadioButton>
         </TRadioGroup>
         <template #help>
-          <MMarkdown :markdown-text="t('The way to build project.')"></MMarkdown>
+          <MMarkdown inline :markdown-text="t('The way to build project.')"></MMarkdown>
         </template>
       </TFormItem>
 
@@ -782,6 +768,7 @@ onUnmounted(() => {
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectEnvPath" />
           <template #help>
             <MMarkdown
+              inline
               :markdown-text="
                 t('The root directory of the Env tool, the first level of which should contain the `tools` folder.')
               "
@@ -800,7 +787,10 @@ onUnmounted(() => {
           </TInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectRttDir" />
           <template #help>
-            <MMarkdown :markdown-text="t('The root directory of the RT-Thread source code (RTT_DIR).')"></MMarkdown>
+            <MMarkdown
+              inline
+              :markdown-text="t('The root directory of the RT-Thread source code (RTT_DIR).')"
+            ></MMarkdown>
           </template>
         </TFormItem>
       </template>
@@ -822,6 +812,7 @@ onUnmounted(() => {
           </TSelect>
           <template #help>
             <MMarkdown
+              inline
               :markdown-text="
                 t(
                   'Currently active build configuration. Different configurations are available for different environments or targets, such as `Debug` and `Release` .',
@@ -844,6 +835,7 @@ onUnmounted(() => {
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectStudioInstallPath" />
         <template #help>
           <MMarkdown
+            inline
             :markdown-text="t('RT-Thread Studio installation folder for finding the following tools.')"
           ></MMarkdown>
         </template>
@@ -862,6 +854,7 @@ onUnmounted(() => {
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('compilerPath')" />
         <template #help>
           <MMarkdown
+            inline
             :markdown-text="
               t(
                 'The GCC compiler file path, can omit the suffix name. Select or manually enter the path, you can also [reference environment variables](https://code.visualstudio.com/docs/editor/variables-reference#_environment-variables), such as `{\'$\'}{\'{\'}env:ARM_NONE_EABI_GCC_V10_HOME{\'}\'}/bin/arm-none-eabi-gcc` . If you have added the gcc compiler directory to the environment variable \'PATH\', you can include the base filename (e.g. `arm-none-ebi-gcc` ).',
@@ -884,6 +877,7 @@ onUnmounted(() => {
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectMakeToolPath" />
           <template #help>
             <MMarkdown
+              inline
               :markdown-text="
                 t(
                   'The **folder** of make tool. Environment variables can be referenced, such as `{\'$\'}{\'{\'}env:MAKE_HOME{\'}\'}` . If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.',
@@ -907,6 +901,7 @@ onUnmounted(() => {
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('debuggerServerPath')" />
         <template #help>
           <MMarkdown
+            inline
             :markdown-text="
               t(
                 'Path to the server to download or debug. Supports `pyocd`, `openocd`, and `jlink`. You can just fill in the base filename (e.g., `openocd`) if you have added the folder to the `PATH` environment variable.',
@@ -929,6 +924,7 @@ onUnmounted(() => {
             </TSelect>
             <template #help>
               <MMarkdown
+                inline
                 :markdown-text="
                   t('The type of debugger to download or debug.') +
                   (isPyocdServer ? t('pyocd can be automatically detected, optional.') : '')
@@ -946,7 +942,7 @@ onUnmounted(() => {
             >
             </TSelect>
             <template #help>
-              <MMarkdown :markdown-text="t('Debugger interface type.')"></MMarkdown>
+              <MMarkdown inline :markdown-text="t('Debugger interface type.')"></MMarkdown>
             </template>
           </TFormItem>
         </TCol>
@@ -956,7 +952,10 @@ onUnmounted(() => {
       <TFormItem :label="t('Chip Name')" name="settings.chipName">
         <TInput v-model="data.settings.chipName" clearable placeholder=""> </TInput>
         <template #help>
-          <MMarkdown :markdown-text="t('Chip name to download or debug the program (e.g. `STM32F407ZG` )')"></MMarkdown>
+          <MMarkdown
+            inline
+            :markdown-text="t('Chip name to download or debug the program (e.g. `STM32F407ZG` )')"
+          ></MMarkdown>
         </template>
       </TFormItem>
 
@@ -973,6 +972,7 @@ onUnmounted(() => {
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('cmsisPack')" />
           <template #help>
             <MMarkdown
+              inline
               :markdown-text="
                 t(
                   'File path of the Cmsis package corresponding to the chip. If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.',
@@ -994,6 +994,7 @@ onUnmounted(() => {
         </TSelect>
         <template #help>
           <MMarkdown
+            inline
             :markdown-text="t('The default build task to execute when you press the key shortcut (`Ctrl+Shift+B`).')"
           ></MMarkdown>
         </template>
@@ -1001,7 +1002,7 @@ onUnmounted(() => {
 
       <div class="mt3"></div>
       <TFormItem>
-        <TButton :disabled="isFullscreenLoading" theme="primary" @click="onFormSubmit">{{ t('Generate') }}</TButton>
+        <TButton :disabled="isLoading" theme="primary" @click="onFormSubmit">{{ t('Generate') }}</TButton>
       </TFormItem>
     </TForm>
   </div>

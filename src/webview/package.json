@@ -2,7 +2,9 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/tsconfig": "^0.7.0",
+    "highlight.js": "^11.11.1",
     "marked": "^15.0.3",
+    "marked-gfm-heading-id": "^4.1.1",
     "pinia": "^2.3.0",
     "tdesign-icons-vue-next": "^0.3.3",
     "tdesign-vue-next": "^1.10.5",

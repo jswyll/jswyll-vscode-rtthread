@@ -5,7 +5,7 @@
     "src/**/*",
     "src/**/*.vue",
     "../common/**/*"
-, "../main/base/constants.ts"  ],
+  ],
   "exclude": [
     "src/**/__tests__/*"
   ],

@@ -5,7 +5,7 @@ import { EXTENSION_ID } from '../../common/constants';
 import { isJsonObject } from '../../common/utils';
 import { existsAsync, writeJsonFile, parseJsonFile } from '../base/fs';
 import { normalizePathForWorkspace } from '../base/workspace';
-import { BuildConfig } from '../../common/types/type';
+import { BuildConfig } from '../../common/types/generate';
 
 /**
  * 处理C/C++配置文件。

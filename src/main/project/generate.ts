@@ -2,15 +2,7 @@ import * as vscode from 'vscode';
 import { load } from 'cheerio';
 import { basename, delimiter, extname, join } from 'path';
 import { Logger } from '../base/logger';
-import {
-  BuildConfig,
-  DoGenerateParams,
-  ExtensionToWebviewDatas,
-  GenerateSettings,
-  ProjcfgIni,
-  TdesignCustomValidateResult,
-  WebviewToExtensionData,
-} from '../../common/types/type';
+import { ExtensionToWebviewDatas, WebviewToExtensionData } from '../../common/types/type';
 import { getConfig, normalizePathForWorkspace, parsePath, updateConfig } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import {
@@ -37,6 +29,8 @@ import { ExtensionGenerateSettings, TasksJson } from '../base/type';
 import { spawnPromise } from '../base/process';
 import { processCCppPropertiesConfig } from './cCppProperties';
 import { WebviewPanel } from '../base/webview';
+import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../../common/types/generate';
+import { TdesignCustomValidateResult } from '../../common/types/vscode';
 
 /**
  * 生成的参数

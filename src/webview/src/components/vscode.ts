@@ -1,10 +1,7 @@
-import type {
-  ExtensionToWebviewDataMap,
-  ExtensionToWebviewData,
-  WebviewToExtensionData,
-} from '../../../common/types/type';
+import type { ExtensionToWebviewData, WebviewToExtensionData } from '../../../common/types/type';
 import { CustomEvent } from '../../../common/event';
 import { onMounted, onUnmounted } from 'vue';
+import type { ExtensionToWebviewDataMap } from '../../../common/types/vscode';
 
 /**
  * 获取vscode API
