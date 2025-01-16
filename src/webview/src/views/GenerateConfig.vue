@@ -8,6 +8,8 @@ import {
   FormItem as TFormItem,
   Input as TInput,
   Loading as TLoading,
+  RadioGroup as TRadioGroup,
+  RadioButton as TRadioButton,
   Row as TRow,
   Select as TSelect,
   type FormInstanceFunctions,
@@ -24,7 +26,7 @@ import type {
   DoGenerateParams,
   InputGenerateParams,
   GenerateSettings,
-} from '../../../common/type';
+} from '../../../common/types/type';
 import { BUILD_TASKS_LABEL_PREFIX, EXTENSION_ID } from '../../../common/constants';
 import { assertParam } from '../../../common/assert';
 import { convertPathToUnixLike } from '../../../common/platform';
@@ -87,7 +89,6 @@ const { t } = useI18n({
       'The project root directory specified when the system is not windows.': '当系统不为windows时，指定的项目根目录。',
       Rebuild: '重新构建',
       Generate: '生成',
-      Warning: '警告',
       Ignore: '忽略',
       Reselect: '重新选择',
       'Debugger Server': '调试服务器',
@@ -101,6 +102,13 @@ const { t } = useI18n({
       'Generating...': '生成...',
       'The form fails the validation': '表单校验不通过',
       'Not set': '不设置',
+      'Project Type': '项目类型',
+      'The way to build project.': '构建项目的方式。',
+      'Env Tool Path': 'Env工具路径',
+      'The root directory of the Env tool, the first level of which should contain the `tools` folder.':
+        'Env工具的根目录，其第一级应包含`tools`文件夹。',
+      'RTT Root Path': 'RTT根目录',
+      'The root directory of the RT-Thread source code (RTT_DIR).': 'RT-Thread源码的根目录（RTT_DIR）。',
     },
   },
 });
@@ -110,7 +118,7 @@ const { requestExtension } = useWebview();
 /**
  * 是否显示全屏正在加载中
  */
-const loading = ref(!import.meta.env.DEV);
+const isFullscreenLoading = ref(!import.meta.env.DEV);
 
 /**
  * 加载中的显示文本
@@ -127,9 +135,13 @@ const form = ref<FormInstanceFunctions>();
  */
 const data = ref<InputGenerateParams & DoGenerateParams>({
   settings: {
+    projectType: 'RT-Thread Studio',
     makeBaseDirectory: '',
     toolchainPath: '',
     makeToolPath: '',
+    envPath: '',
+    artifactPath: 'rt-thread.elf',
+    rttDir: 'rt-thread',
     buildConfigName: '',
     studioInstallPath: '',
     compilerPath: '',
@@ -139,6 +151,8 @@ const data = ref<InputGenerateParams & DoGenerateParams>({
     debuggerServerPath: 'pyocd',
     cmsisPack: '',
     defaultBuildTask: `${EXTENSION_ID}: build`,
+    customExtraPathVar: [],
+    customExtraVars: {},
   },
   compilerPaths: [],
   makeToolPaths: [],
@@ -147,117 +161,162 @@ const data = ref<InputGenerateParams & DoGenerateParams>({
   cprojectBuildConfigs: [],
   workspaceFolderPicked: undefined,
   makeMajorVersion: undefined,
+  toolchainPrefix: 'arm-none-eabi-',
 });
 
 /**
  * 表单校验规则
  */
-const formRules: FormRules = {
-  buildConfigName: [
-    { required: true, message: t('"{0}" is required', [t('Build Config')]), type: 'error' },
-    {
-      validator: () => {
-        getSelectedBuildConfigAndCheck();
-        return true;
+const formRules = computed<FormRules>(() => {
+  return {
+    projectType: [
+      {
+        required: data.value.settings.projectType === 'RT-Thread Studio',
+        message: t('"{0}" is required', [t('Project Type')]),
+        type: 'error',
       },
-    },
-  ],
-  studioInstallPath: [{ validator: validateStudioInstallPath }],
-  compilerPath: [
-    {
-      validator: validateCompilerPath,
-    },
-  ],
-  makeToolPath: [
-    {
-      validator: async (value: string) => {
-        const { validateResult, makeMajorVersion: makeMajorVer } = await requestExtension({
-          command: 'validateMakeToolPath',
-          params: {
-            path: value,
-          },
-        });
-        if (validateResult.result) {
-          data.value.makeMajorVersion = makeMajorVer;
-        }
-        return validateResult;
+    ],
+    envPath: [
+      {
+        required: data.value.settings.projectType === 'Env',
+        message: t('"{0}" is required', [t('Env Tool Path')]),
+        type: 'error',
       },
-    },
-  ],
-  debuggerAdapter: [
-    {
-      validator: (value: string) => {
-        return validateSelectValue(value, debuggerAdapterOptions, t('Debugger type'));
+      {
+        validator: validateEnvPath,
       },
-    },
-  ],
-  debuggerInterface: [
-    {
-      validator: (value: string) => {
-        return validateSelectValue(value, debuggerInterfaceOptions, t('Debugger interface'));
+    ],
+    rttDir: [
+      {
+        required: data.value.settings.projectType === 'Env',
+        message: t('"{0}" is required', [t('RTT Root Path')]),
+        type: 'error',
       },
-    },
-  ],
-  chipName: [
-    {
-      validator: (value: string) => {
-        if (!value || (value.startsWith('STM32') && value.length < 11)) {
-          return {
-            result: false,
-            message: t(
-              'A more specific chip name should be provided to correctly identify the FLASH size, such as `STM32F407ZG`.',
-            ),
-            type: 'warning',
-          };
-        }
-
-        return true;
-      },
-    },
-  ],
-  debuggerServerPath: [
-    {
-      validator: async (value: string) => {
-        const { validateResult } = await requestExtension({
-          command: 'validateDebuggerServer',
-          params: {
-            debuggerServerPath: value,
-          },
-        });
-        return validateResult;
-      },
-    },
-  ],
-  cmsisPack: [
-    {
-      validator: async (value: string) => {
-        if (isPyocdServer.value && !value) {
-          const validateResult: TdesignCustomValidateResult = {
-            type: 'warning',
-            message: t('"{0}" is required', [t('Cmsis Pack')]),
-            result: false,
-          };
+      {
+        validator: async (value: string) => {
+          // TODO: 尝试推导：从BSP_DIR逐级往上
+          const { validateResult } = await requestExtension({
+            command: 'validateRttDir',
+            params: {
+              path: value,
+            },
+          });
           return validateResult;
-        }
+        },
+      },
+    ],
+    buildConfigName: [
+      {
+        required: data.value.settings.projectType === 'RT-Thread Studio',
+        message: t('"{0}" is required', [t('Build Config')]),
+        type: 'error',
+      },
+      {
+        validator: () => {
+          if (data.value.settings.projectType === 'RT-Thread Studio') {
+            getSelectedBuildConfigAndCheck();
+          }
+          return true;
+        },
+      },
+    ],
+    studioInstallPath: [{ validator: validateStudioInstallPath }],
+    compilerPath: [
+      {
+        validator: validateCompilerPath,
+      },
+    ],
+    makeToolPath: [
+      {
+        validator: async (value: string) => {
+          const { validateResult, makeMajorVersion: makeMajorVer } = await requestExtension({
+            command: 'validateMakeToolPath',
+            params: {
+              path: value,
+            },
+          });
+          if (validateResult.result) {
+            data.value.makeMajorVersion = makeMajorVer;
+          }
+          return validateResult;
+        },
+      },
+    ],
+    debuggerAdapter: [
+      {
+        validator: (value: string) => {
+          return validateSelectValue(value, debuggerAdapterOptions, t('Debugger type'));
+        },
+      },
+    ],
+    debuggerInterface: [
+      {
+        validator: (value: string) => {
+          return validateSelectValue(value, debuggerInterfaceOptions, t('Debugger interface'));
+        },
+      },
+    ],
+    chipName: [
+      {
+        validator: (value: string) => {
+          if (!value || (value.startsWith('STM32') && value.length < 11)) {
+            return {
+              result: false,
+              message: t(
+                'A more specific chip name should be provided to correctly identify the FLASH size, such as `STM32F407ZG`.',
+              ),
+              type: 'warning',
+            };
+          }
 
-        const { validateResult } = await requestExtension({
-          command: 'validatePathExists',
-          params: {
-            path: value,
-          },
-        });
-        return validateResult;
+          return true;
+        },
       },
-    },
-  ],
-  defaultBuildTask: [
-    {
-      validator: (value: string) => {
-        return validateSelectValue(value, buildTaskOptions, t('Default Build Task'));
+    ],
+    debuggerServerPath: [
+      {
+        validator: async (value: string) => {
+          const { validateResult } = await requestExtension({
+            command: 'validateDebuggerServer',
+            params: {
+              debuggerServerPath: value,
+            },
+          });
+          return validateResult;
+        },
       },
-    },
-  ],
-};
+    ],
+    cmsisPack: [
+      {
+        validator: async (value: string) => {
+          if (isPyocdServer.value && !value) {
+            const validateResult: TdesignCustomValidateResult = {
+              type: 'warning',
+              message: t('"{0}" is required', [t('Cmsis Pack')]),
+              result: false,
+            };
+            return validateResult;
+          }
+
+          const { validateResult } = await requestExtension({
+            command: 'validatePathExists',
+            params: {
+              path: value,
+            },
+          });
+          return validateResult;
+        },
+      },
+    ],
+    defaultBuildTask: [
+      {
+        validator: (value: string) => {
+          return validateSelectValue(value, buildTaskOptions, t('Default Build Task'));
+        },
+      },
+    ],
+  };
+});
 
 /**
  * 系统架构平台
@@ -352,6 +411,28 @@ function getSelectedBuildConfigAndCheck() {
  * @param value 编译器路径
  * @returns 校验结果
  */
+async function validateEnvPath(value: string) {
+  const { validateResult, compilerPaths } = await requestExtension({
+    command: 'validateEnvPath',
+    params: {
+      path: value,
+    },
+  });
+
+  if (compilerPaths) {
+    data.value.compilerPaths = [...new Set([...compilerPaths, ...data.value.compilerPaths])];
+    if (data.value.compilerPaths.length > 0 && !data.value.settings.compilerPath) {
+      data.value.settings.compilerPath = data.value.compilerPaths[0];
+    }
+  }
+  return validateResult;
+}
+
+/**
+ * 校验编译器路径
+ * @param value 编译器路径
+ * @returns 校验结果
+ */
 async function validateCompilerPath(value: string) {
   if (!value) {
     const validateResult: TdesignCustomValidateResult = {
@@ -362,28 +443,33 @@ async function validateCompilerPath(value: string) {
     return validateResult;
   }
 
-  const buildConfig = getSelectedBuildConfigAndCheck();
   const { validateResult, toolchainPrefix } = await requestExtension({
     command: 'validateCompilerPath',
     params: {
       path: value,
     },
   });
-  const prefix = buildConfig.toolchainPrefix;
-  if (toolchainPrefix && prefix && toolchainPrefix !== prefix) {
-    validateResult.result = false;
-    validateResult.type = 'error';
-    validateResult.message = t(
-      'The toolchain prefix("{0}") of the selected compiler is different from that of .cproject configuration("{1}"). Please select the correct compiler.',
-      [toolchainPrefix, prefix],
-    );
-    return validateResult;
+
+  if (data.value.settings.projectType === 'RT-Thread Studio') {
+    const buildConfig = getSelectedBuildConfigAndCheck();
+    const prefix = buildConfig.toolchainPrefix;
+    if (toolchainPrefix && prefix && toolchainPrefix !== prefix) {
+      validateResult.result = false;
+      validateResult.type = 'error';
+      validateResult.message = t(
+        'The toolchain prefix("{0}") of the selected compiler is different from that of .cproject configuration("{1}"). Please select the correct compiler.',
+        [toolchainPrefix, prefix],
+      );
+      return validateResult;
+    }
   }
+
   if (validateResult.result === false) {
     compilerPathPopupVisible.value = false;
     return validateResult;
   }
 
+  data.value.toolchainPrefix = toolchainPrefix!;
   return true;
 }
 
@@ -485,11 +571,33 @@ async function onSelectMakeToolPath() {
 }
 
 /**
+ * 选择Env根目录
+ */
+async function onSelectEnvPath() {
+  const { folderPath } = await requestExtension({
+    command: 'selectFolder',
+    params: {},
+  });
+  data.value.settings.envPath = convertPathToUnixLike(folderPath);
+}
+
+/**
+ * 选择RTT根目录
+ */
+async function onSelectRttDir() {
+  const { folderPath } = await requestExtension({
+    command: 'selectFolder',
+    params: {},
+  });
+  data.value.settings.rttDir = convertPathToUnixLike(folderPath);
+}
+
+/**
  * 处理点击生成按钮
  */
 async function onFormSubmit() {
   try {
-    loading.value = true;
+    isFullscreenLoading.value = true;
     loadingText.value = t('Validating the form parameter...');
     const validateResult = await form.value?.validate();
 
@@ -556,14 +664,14 @@ async function onFormSubmit() {
       },
     });
   } finally {
-    loading.value = false;
+    isFullscreenLoading.value = false;
   }
 }
 
 /**
  * 处理vscode扩展发送的消息
  */
-function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
+async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
   const { data: msg } = m;
   if (msg.errmsg !== undefined) {
     return;
@@ -571,12 +679,19 @@ function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
 
   switch (msg.command) {
     case 'requestInitialValues':
-      data.value = { ...data.value, ...msg.params };
-      if (data.value.cprojectBuildConfigs.length && !data.value.settings.buildConfigName) {
-        data.value.settings.buildConfigName = data.value.cprojectBuildConfigs[0].name;
+      if (msg.params.cprojectBuildConfigs.length && !msg.params.settings.buildConfigName) {
+        msg.params.settings.buildConfigName = msg.params.cprojectBuildConfigs[0].name;
       }
-      if (loading.value) {
-        loading.value = false;
+      data.value = { ...data.value, ...msg.params };
+      if (isFullscreenLoading.value) {
+        try {
+          if (data.value.settings.projectType === 'RT-Thread Studio') {
+            await validateStudioInstallPath(data.value.settings.studioInstallPath);
+          } else {
+            await validateEnvPath(data.value.settings.envPath);
+          }
+        } catch {}
+        isFullscreenLoading.value = false;
       }
       break;
 
@@ -605,7 +720,6 @@ onMounted(async () => {
       'd:/RT-ThreadStudio/repo/Extract/Debugger_Support_Packages/RealThread/PyOCD/0.1.3/packs/Keil.STM32F1xx_DFP.2.3.0-small.pack',
       'd:/RT-ThreadStudio/repo/Extract/Debugger_Support_Packages/RealThread/PyOCD/0.1.3/packs/Keil.STM32F0xx_DFP.2.1.0-small.pack',
     ];
-    data.value.settings.buildConfigName = 'Debug';
   }
   requestExtension({ command: 'requestInitialValues', params: {} });
   watch(
@@ -614,6 +728,18 @@ onMounted(async () => {
       if (isJlinkServer.value) {
         data.value.settings.debuggerAdapter = 'JLink';
       }
+    },
+  );
+  watch(
+    () => data.value.settings.projectType,
+    async () => {
+      try {
+        if (data.value.settings.projectType === 'RT-Thread Studio') {
+          await validateStudioInstallPath(data.value.settings.studioInstallPath);
+        } else {
+          await validateEnvPath(data.value.settings.envPath);
+        }
+      } catch {}
     },
   );
 });
@@ -625,37 +751,86 @@ onUnmounted(() => {
 
 <template>
   <div class="m-config-project">
-    <TLoading fullscreen :loading="loading" :text="loadingText"></TLoading>
+    <TLoading fullscreen :loading="isFullscreenLoading" :text="loadingText"></TLoading>
 
     <h1 v-if="data.workspaceFolderPicked">
       {{ t('Current workspace folder') + ': ' }} <code>{{ data.workspaceFolderPicked }}</code>
     </h1>
-    <div class="mt2"></div>
 
+    <div class="mt2"></div>
     <TForm ref="form" :data="data" label-align="right" label-width="14em" :rules="formRules">
-      <TFormItem :label="t('Build Config')" name="settings.buildConfigName">
-        <TSelect
-          v-model="data.settings.buildConfigName"
-          :readonly="data.cprojectBuildConfigs.length < 2"
-          :keys="{
-            value: 'name',
-            label: 'name',
-          }"
-          :options="data.cprojectBuildConfigs"
-          :show-arrow="data.cprojectBuildConfigs.length >= 2"
-          :popup-props="{ overlayInnerStyle: getSelectPopupWidth }"
-        >
-        </TSelect>
+      <TFormItem :label="t('Project Type')" name="settings.projectType">
+        <TRadioGroup v-model="data.settings.projectType" variant="default-filled">
+          <TRadioButton value="RT-Thread Studio">RT-Thread Studio</TRadioButton>
+          <TRadioButton value="Env">RT-Thread Env</TRadioButton>
+        </TRadioGroup>
         <template #help>
-          <MMarkdown
-            :markdown-text="
-              t(
-                'Currently active build configuration. Different configurations are available for different environments or targets, such as `Debug` and `Release` .',
-              )
-            "
-          ></MMarkdown>
+          <MMarkdown :markdown-text="t('The way to build project.')"></MMarkdown>
         </template>
       </TFormItem>
+
+      <template v-if="data.settings.projectType === 'Env'">
+        <div class="mt2"></div>
+        <TFormItem :label="t('Env Tool Path')" name="settings.envPath">
+          <TInput
+            v-model="data.settings.envPath"
+            clearable
+            :placeholder="t('Input or select a folder')"
+            @blur="data.settings.envPath = convertPathToUnixLike($event as string)"
+          >
+          </TInput>
+          <FolderOpenIcon class="m-folderopen-icon" @click="onSelectEnvPath" />
+          <template #help>
+            <MMarkdown
+              :markdown-text="
+                t('The root directory of the Env tool, the first level of which should contain the `tools` folder.')
+              "
+            ></MMarkdown>
+          </template>
+        </TFormItem>
+
+        <div class="mt2"></div>
+        <TFormItem :label="t('RTT Root Path')" name="settings.rttDir">
+          <TInput
+            v-model="data.settings.rttDir"
+            clearable
+            :placeholder="t('Input or select a folder')"
+            @blur="data.settings.rttDir = convertPathToUnixLike($event as string)"
+          >
+          </TInput>
+          <FolderOpenIcon class="m-folderopen-icon" @click="onSelectRttDir" />
+          <template #help>
+            <MMarkdown :markdown-text="t('The root directory of the RT-Thread source code (RTT_DIR).')"></MMarkdown>
+          </template>
+        </TFormItem>
+      </template>
+
+      <div class="mt2"></div>
+      <template v-if="data.settings.projectType === 'RT-Thread Studio'">
+        <TFormItem :label="t('Build Config')" name="settings.buildConfigName">
+          <TSelect
+            v-model="data.settings.buildConfigName"
+            :readonly="data.cprojectBuildConfigs.length < 2"
+            :keys="{
+              value: 'name',
+              label: 'name',
+            }"
+            :options="data.cprojectBuildConfigs"
+            :show-arrow="data.cprojectBuildConfigs.length >= 2"
+            :popup-props="{ overlayInnerStyle: getSelectPopupWidth }"
+          >
+          </TSelect>
+          <template #help>
+            <MMarkdown
+              :markdown-text="
+                t(
+                  'Currently active build configuration. Different configurations are available for different environments or targets, such as `Debug` and `Release` .',
+                )
+              "
+            ></MMarkdown>
+          </template>
+        </TFormItem>
+      </template>
 
       <div class="mt2"></div>
       <TFormItem v-if="platform === 'win32'" :label="t('RT-Thread Studio Path')" name="settings.studioInstallPath">
@@ -663,7 +838,7 @@ onUnmounted(() => {
           v-model="data.settings.studioInstallPath"
           clearable
           :placeholder="t('Input or select a folder')"
-          @blur="(value) => (data.settings.studioInstallPath = convertPathToUnixLike(value as string))"
+          @blur="data.settings.studioInstallPath = convertPathToUnixLike($event as string)"
         >
         </TInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectStudioInstallPath" />
@@ -678,7 +853,6 @@ onUnmounted(() => {
       <TFormItem :label="t('GCC Compiler Path')" name="settings.compilerPath" required-mark>
         <MSelectInput
           v-model="data.settings.compilerPath"
-          allow-input
           clearable
           :filterable="false"
           :options="data.compilerPaths"
@@ -697,32 +871,33 @@ onUnmounted(() => {
         </template>
       </TFormItem>
 
-      <div class="mt2"></div>
-      <TFormItem :label="t('Make Tool Path')" name="settings.makeToolPath">
-        <TInput
-          v-model="data.settings.makeToolPath"
-          clearable
-          :placeholder="t('Input or select a folder')"
-          @blur="(value) => (data.settings.makeToolPath = convertPathToUnixLike(value as string))"
-        >
-        </TInput>
-        <FolderOpenIcon class="m-folderopen-icon" @click="onSelectMakeToolPath" />
-        <template #help>
-          <MMarkdown
-            :markdown-text="
-              t(
-                'The **folder** of make tool. Environment variables can be referenced, such as `{\'$\'}{\'{\'}env:MAKE_HOME{\'}\'}` . If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.',
-              )
-            "
-          ></MMarkdown>
-        </template>
-      </TFormItem>
+      <template v-if="data.settings.projectType === 'RT-Thread Studio'">
+        <div class="mt2"></div>
+        <TFormItem :label="t('Make Tool Path')" name="settings.makeToolPath">
+          <TInput
+            v-model="data.settings.makeToolPath"
+            clearable
+            :placeholder="t('Input or select a folder')"
+            @blur="data.settings.makeToolPath = convertPathToUnixLike($event as string)"
+          >
+          </TInput>
+          <FolderOpenIcon class="m-folderopen-icon" @click="onSelectMakeToolPath" />
+          <template #help>
+            <MMarkdown
+              :markdown-text="
+                t(
+                  'The **folder** of make tool. Environment variables can be referenced, such as `{\'$\'}{\'{\'}env:MAKE_HOME{\'}\'}` . If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.',
+                )
+              "
+            ></MMarkdown>
+          </template>
+        </TFormItem>
+      </template>
 
       <div class="mt2"></div>
       <TFormItem :label="t('Debugger Server')" name="settings.debuggerServerPath">
         <MSelectInput
           v-model="data.settings.debuggerServerPath"
-          allow-input
           clearable
           :filterable="false"
           :options="data.debuggerServerPaths"
@@ -826,7 +1001,7 @@ onUnmounted(() => {
 
       <div class="mt3"></div>
       <TFormItem>
-        <TButton :disabled="loading" theme="primary" @click="onFormSubmit">{{ t('Generate') }}</TButton>
+        <TButton :disabled="isFullscreenLoading" theme="primary" @click="onFormSubmit">{{ t('Generate') }}</TButton>
       </TFormItem>
     </TForm>
   </div>

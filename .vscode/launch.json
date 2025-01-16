@@ -12,6 +12,13 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "temp.ts debug",
+			"program": "${workspaceFolder}/temp/temp.ts",
+			"preLaunchTask": "tsc: build - temp/tsconfig.json"
 		}
 	]
 }

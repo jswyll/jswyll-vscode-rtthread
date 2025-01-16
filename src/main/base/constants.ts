@@ -22,7 +22,32 @@ export const GCC_COMPILE_PROBLEM_MATCHER_NAME = `$${EXTENSION_ID}-gcc-compile`;
 export const GCC_LINK_PROBLEM_MATCHER_NAME = `$${EXTENSION_ID}-gcc-link`;
 
 /**
- * 构建任务，其中每一项的属性意义：
+ * 扩展命令名称（不含`${EXTENSION_ID}.`前缀）
+ */
+export const COMMANDS = {
+  /**
+   * 选择工作区文件夹
+   */
+  PICK_A_WORKSPACEFOLDER: 'pickAWorkspaceFolder',
+
+  /**
+   * 打开或显示菜单配置
+   */
+  MENUCONFIG: 'action.menuconfig.open',
+
+  /**
+   * 打开终端
+   */
+  OPEN_TERMINAL: 'action.terminal.open',
+
+  /**
+   * 打开ConEmu
+   */
+  OPEN_CONEMU: 'action.ConEmu.open',
+};
+
+/**
+ * 任务，其中每一项的属性意义：
  *
  * - `name` 基本的任务名称，点击状态栏按钮时优先匹配用户定义的此名称，匹配不到时再匹配扩展定义的
  *
@@ -30,7 +55,16 @@ export const GCC_LINK_PROBLEM_MATCHER_NAME = `$${EXTENSION_ID}-gcc-link`;
  *
  * - `detail` 任务的本地化描述，和tasks.json中的detail对应
  */
-export const BUILD_TASKS = {
+export const TASKS = {
+  /**
+   * 更新软件包
+   */
+  PKGS_UPDATE: {
+    name: 'pkgs --update',
+    label: BUILD_TASKS_LABEL_PREFIX + 'pkgs --update',
+    detail: vscode.l10n.t('Update Packages'),
+  },
+
   /**
    * 构建
    */
@@ -89,10 +123,10 @@ export const BUILD_TASKS = {
 /**
  * 构建任务的类型
  */
-export type BuildTaskName = (typeof BUILD_TASKS)[keyof typeof BUILD_TASKS]['name'];
+export type BuildTaskName = (typeof TASKS)[keyof typeof TASKS]['name'];
 
 /**
- * 设置组的前缀
+ * 扩展设置组的前缀
  */
 export const CONFIG_GROUP = {
   /**
@@ -109,4 +143,14 @@ export const CONFIG_GROUP = {
    * 生成
    */
   GENERATE: 'generate',
+
+  /**
+   * RT-Thread Env
+   */
+  RTT_ENV: 'RttEnv',
+
+  /**
+   * 外观
+   */
+  APPEARANCE: 'appearance',
 } as const;

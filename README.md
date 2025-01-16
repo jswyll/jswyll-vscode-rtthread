@@ -86,15 +86,15 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 ### 扩展激活
 
-启用扩展后，当工作区文件夹中（第一级）有`.cproject`文件时，扩展会自动激活。
+启用扩展后，当工作区文件夹中（第一级）有`.cproject`文件或`rt_config.py`文件时，扩展会自动激活。
 
 ### 导入项目
 
-点击状态里的“导入”（生成）来生成vscode的配置文件。
+点击状态里的“导入”来生成vscode的配置文件。
 
 > **说明**
 >
-> - 重复导入应该是没有副作用的，需要修改或更新选项的时候可以再导入。
+> - 重复生成应该是没有副作用的，需要修改或更新选项的时候可以再生成。
 >
 > - 项目可以是已经移动的（不在RT-Thread Studio workspace文件夹中的）。
 
@@ -236,6 +236,168 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 >
 > 本扩展开发时参考了[eclipse-cdt - gnu2/GnuMakefileGenerator.java](https://github.com/eclipse-cdt/cdt/blob/main/build/org.eclipse.cdt.managedbuilder.core/src/org/eclipse/cdt/managedbuilder/makegen/gnu2/GnuMakefileGenerator.java)自动生成makefile的源码，目前只实现了更新它已经生成的makefile。如果自动更新有问题，可以在扩展设置中关闭此功能，然后在RT-Thread Studio构建项目一次，相关的文件会还原为GnuMakefileGenerator自动生成的值。
 
+## RT-Thread Env
+
+### 先决条件
+
+1. 已安装好Env Windows。（对于Env v2.x联网环境方式，需要先启动一次env.exe以下载相关依赖。）
+
+2. 支持scons方式编译的项目。
+
+打开BSP的所在文件夹（`BSP_DIR`），例如：
+
+- 第一种：已经是RT-Thread标准项目框架的：
+
+    ```sh
+    stm32f407-atk-explorer/ # BSP_DIR
+    ├── applications/
+    ├── packages/  # PKGS_DIR (PKGS_ROOT)
+    ├── rt-thread/ # RTT_DIR
+    ├── ...
+    ├── Kconfig
+    ├── SConscript
+    ├── SConstruct
+    ├── rtconfig.h
+    └── rtconfig.py
+    ```
+
+- 第二种：是RT-Thread仓库下的某个BSP：
+
+    ```sh
+    rt-thread/ # RTT_DIR
+    ├── bsp/
+    │   └── stm32/
+    │       ├── libraries/
+    │       ├── ...
+    │       └── stm32f407-atk-explorer # BSP_DIR
+    │          ├── applications/
+    │          ├── packages/ # PKGS_DIR (PKGS_ROOT)
+    │          ├── ...
+    │          ├── Kconfig
+    │          ├── SConscript
+    │          ├── SConstruct
+    │          ├── rtconfig.h
+    │          └── rtconfig.py
+    ├── ...
+    ├── src/
+    ├── tools/
+    └── Kconfig
+    ```
+
+### 生成配置
+
+1. 点击状态栏的“导入”图标按钮，弹出配置面板：
+
+    ![images/1735660800032.png](images/1735660800032.png)
+
+    - **Env工具路径**：`ENV_ROOT`，即`tools`文件夹的所在文件夹。例：
+
+      - `c:/env-windows`（v2.x 离线环境方式安装）
+
+      - `E:/BaiduNetdiskDownload/env-windows-v2.0.0/env-windows`（v2.x 联网环境方式安装）
+
+      - `C:/Users/jswyll/.env`或`${userHome}/.env`（v2.x [powershell方式安装](https://github.com/RT-Thread/env)）
+
+      - `E:/BaiduNetdiskDownload/env_released_1.3.5_gcc10_python2/env-windows-v1.3.5`（v1.x 无需虚拟环境）
+
+    - **RTT根目录**：`RTT_DIR`，RT-Thread源码的主目录。以前面的BSP`stm32f407-atk-explorer`为例，第一种填`rt-thread`，第二种情况填`../../..`。
+
+2. 其它选项与RT-Thread Studio的配置方式一致。
+
+3. 点击“生成”按钮并等待生成完毕。
+
+如果操作无误状态栏应显示“配置”和“终端”图标按钮：
+
+![images/1735660800033.png](images/1735660800033.png)
+
+### 菜单配置
+
+> **说明**
+>
+> 对于Env v2.x，安装好依赖后，除非本扩展无法正常使用，否则 **无需** 且 **不建议** 运行`${ENV_ROOT}/env.ps1`或`${ENV_ROOT}/.venv/Scripts/Activate.ps1`激活虚拟环境。
+
+1. 点击状态栏的“配置”图标按钮，弹出菜单配置面板：
+
+    ![images/1735660800034.png](images/1735660800034.png)
+
+2. 单击菜单项的标题（或最左边侧的图标）可以展开或折叠菜单，有几类配置项：
+
+    - 整数（`int`）
+
+    - 十六进制数（`hex`）
+
+    - 字符串（`string`）
+
+    - 布尔（`bool`）
+
+    - 单项选择（`choice`）
+
+    ![images/1735660800035.png](images/1735660800035.png)
+
+3. 可以在搜索框中输入关键词搜索配置项（或菜单项）：
+
+    ![images/1735660800036.png](images/1735660800036.png)
+
+    关键词可以是以下之一中的字词：
+
+    - 名称，例如`RT_NAME_MAX`
+
+    - 标题，例如`The maximal size of kernel object name`，
+
+    - 帮助，例如`Each kernel object, such as thread, timer, semaphore etc, has a name,the RT_NAME_MAX is the maximal size of this object name.`
+
+    - 翻译后的标题，例如`内核对象名称的最大大小`
+
+    - 翻译后的帮助，例如`每个内核对象，如线程、定时器、信号量等，都有一个名称。 RT_NAME_MAX是该对象名称的最大大小。`
+
+4. 如果修改了Kconfig文件，可以点“重新加载”按钮来刷新菜单配置。
+
+    > **说明**
+    >
+    > 参考[linux内核Kconfig文档](https://www.kernel.org/doc/html/latest/kbuild/kconfig-language.html)了解Kconfig语法。
+
+5. 点击“保存”按钮保存配置，默认自动更新软件包：
+
+    ![images/1735660800037.gif](images/1735660800037.gif)
+
+    > **说明**
+    >
+    > - 可以在 菜单栏 -> 终端 -> 运行任务... 手动运行该任务：
+    >
+    >     ![images/1735660800038.png](images/1735660800038.png)
+    >
+    > - 可以在扩展设置中关闭保存配置时自动更新软件包。
+
+### 终端任务
+
+清除、构建、下载、调试的操作方式与RT-Thread Studio类型的一致。本质上是运行定义的`tasks.json`中的任务，可以通过点击状态栏图标按钮、菜单栏、配置快捷键、使用任务扩展等方式运行终端任务。
+
+![images/1735660800039.png](images/1735660800039.png)
+
+### 终端集成
+
+- 点击状态栏的“终端”图标按钮，弹出终端面板。可以使用scons、pkgs命令。
+
+    ![images/1735660800040.png](images/1735660800040.png)
+
+    menuconfig也勉强（见[使用限制](#使用限制)）可以使用：
+
+    ![images/1735660800041.png](images/1735660800041.png)
+
+- 也可以通过点击终端面板右上角的下拉图标来打开终端。
+
+    ![images/1735660800042.png](images/1735660800042.png)
+
+### 原始方式
+
+由于还未能和官方取得联系，对接RT-Thread Env方式实现方法是我通过试用各个Env-Windows版本来推测的，如果存在问题，欢迎反馈。
+
+可以在vscode资源管理器上（文件或文件夹）右键，选择“在此处打开ConEmu”，使用原始方式开发：
+
+![images/1735660800043.png](images/1735660800043.png)
+
+![images/1735660800044.png](images/1735660800044.png)
+
 ## 更佳实践
 
 本扩展只实现了一小部分功能，可能不满足实际的需求，可以在生成的基础上进行修改；或者，使用其它扩展进行嵌入式开发。不管怎样，以下的操作和建议应该是通用的。
@@ -252,7 +414,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
     > **说明**
     >
-    > 旧版本的`gcc-arm-none-eabi-gdb`依赖于`libncurses.so.5`库，而Ubuntu18以后已经移除，可以链接到`libncurses.so.6库：
+    > 旧版本的`gcc-arm-none-eabi-gdb`依赖于`libncurses.so.5`库，而Ubuntu18以后已经移除，可以链接到`libncurses.so.6`库：
     >
     > ```sh
     > # 例如10.3.1，假设解压到了 ~/Desktop/software/gcc-arm-none-eabi-10.3-2021.10
@@ -311,7 +473,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
         > **注意**
         >
-        > Linux下JLink的可行性文件名为`JLinkExe`。
+        > Linux下JLink的可执行文件名为`JLinkExe`。
 
     - PyOCD：
 
@@ -365,7 +527,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
     - JLink：
 
-        在<https://www.oracle.com/java/technologies/downloads/>下载并安装macOS的`JLink_MacOSX_Vxxx_universal.pkg`文件。
+        在<https://www.segger.com/downloads/jlink>下载并安装macOS的`JLink_MacOSX_Vxxx_universal.pkg`文件。
 
         安装后位于`/Applications/SEGGER/JLink_Vxxx/JLinkExe`
 
@@ -389,13 +551,13 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
     D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc.exe
     ```
 
+- 用户主目录下的路径，例如`${userHome}/env/.venv/Scripts`。
+
 - 相对于工作区文件夹的路径。例如`tools/make.exe`。
 
 - 已添加到[环境变量](#环境变量)`PATH`中的路径。例如openocd工具在`D:/openocd-v0.12.0-i686-w64-mingw32/bin/openocd.exe`，把`D:/openocd-v0.12.0-i686-w64-mingw32/bin`添加到环境变量`PATH`中后，可以填写`openocd.exe`。
 
 - 可以[引用环境变量](https://code.visualstudio.com/docs/editor/variables-reference#_environment-variables)。
-
-<!-- TODO: 支持引用用户目录`~/xxx` -->
 
 > **说明**
 >
@@ -464,6 +626,18 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
         > **说明**
         >
         > Linux或MacOS的对应工具没有`.exe`后缀，省略掉可以提高兼容性。
+
+团队协作中，不同成员的工具安装目录等配置很可能不同。虽然可以通过把`.vscode`、`*.code-workspace`加入`.gitignore`中来屏蔽不同团队成员的配置，但那样也损失了可共享的公用配置，如果没有完善的文档，若干年之后再`git clone`用起来或许连自己都要折腾几番。个人认为更好的方式是：
+
+- 不把`.vscode`、`*.code-workspace`加入`.gitignore`忽略规则；
+
+- 如果在不同项目中是通用的，有差异的设置保存在“用户”域中；
+
+- 如果在不同项目中不是通用的，每个成员在系统中创建环境变量；
+
+- 把剩余的小部分不可通用的（没有同步到远程仓库的）所需配置或产生配置的方式写在项目文档中。
+
+例如，`stm32f407-atk-explorer-v5.0.0`项目决定用Env v2.0版本，每个成员把具体的Env版本的所在文件夹设为环境变量`RTT_ENV_V2`，然后在生成配置时“Env工具路径”填写`${env:RTT_ENV_V2}`、“GCC编译器路径”填写`${env:RTT_ENV_V2}/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc`。
 
 ### 扩展设置
 
@@ -610,10 +784,101 @@ vscode设置的优先级是`工作区文件夹 > 工作区 > 用户 > 默认值`
 
     ![images/1735660800030.png](images/1735660800030.png)
 
+### 子文件夹
+
+如果想在子文件夹进行本扩展的相关功能，可以按照下面的步骤转换为vscode[多根工作区](https://code.visualstudio.com/docs/editor/multi-root-workspaces)。
+
+假设当前打开的文件夹的目录结构如下：
+
+```sh
+rt-thread/ # opened this folder
+├── bsp/
+│   └── stm32/
+│       ├── libraries/
+│       ├── ...
+│       └── stm32f407-atk-explorer # BSP_DIR
+│          ├── applications/
+│          ├── packages/
+│          ├── ...
+│          ├── Kconfig
+│          ├── SConscript
+│          ├── SConstruct
+│          ├── rtconfig.h
+│          └── rtconfig.py
+├── ...
+├── src/
+├── tools/
+└── Kconfig
+```
+
+1. 如果还不是vscode工作区（`xxx.code-workspace`）：在vscode打开父级目录`workspace`；点击 vscode菜单栏 -> 文件 -> 将工作区另存为...，在弹出的保存窗口中填工作区的名称和位置，然后点击“保存”按钮就生成了一个vscode工作区（`xxx.code-workspace`）。
+
+    ```sh
+    rt-thread/ # .code-workspace root1
+    ├── bsp/
+    │   └── stm32/
+    │       ├── libraries/
+    │       ├── ...
+    │       └── stm32f407-atk-explorer # BSP_DIR
+    │          ├── applications/
+    │          ├── packages/
+    │          ├── ...
+    │          ├── Kconfig
+    │          ├── SConscript
+    │          ├── SConstruct
+    │          ├── rtconfig.h
+    │          └── rtconfig.py
+    ├── ...
+    ├── src/
+    ├── tools/
+    └── Kconfig
+    ```
+
+2. 点击 vscode菜单栏 -> 文件 -> 将文件夹添加到工作区...，选择那个子文件夹（`BSP_DIR`）；
+
+    ```sh
+    rt-thread/ # .code-workspace root1
+    ├── bsp/
+    │   └── stm32/
+    │       ├── libraries/
+    │       ├── ...
+    │       └── stm32f407-atk-explorer # BSP_DIR
+    │          ├── applications/
+    │          ├── packages/
+    │          ├── ...
+    │          ├── Kconfig
+    │          ├── SConscript
+    │          ├── SConstruct
+    │          ├── rtconfig.h
+    │          └── rtconfig.py
+    ├── ...
+    ├── src/
+    ├── tools/
+    └── Kconfig
+
+    stm32f407-atk-explorer # .code-workspace root2 (BSP_DIR)
+    ├── applications/
+    ├── packages/
+    ├── ...
+    ├── Kconfig
+    ├── SConscript
+    ├── SConstruct
+    ├── rtconfig.h
+    └── rtconfig.py
+    ```
+
+3. 点击状态栏的子模块图标来选择当前的工作区文件夹为上一步加入多根工作区的文件夹（`.code-workspace root2`）。
+
+    > **说明**
+    >
+    > 以后在vscode打开步骤1的`xxx.code-workspace`。
+
+4. 在`.code-workspace root1`继续后续操作。（在`.code-workspace root2`当然是可以的，它的物理路径和`.code-workspace root1`中的那个子文件夹的是一样的。）
+
 ## 常见问题
 
 ```sh
-rror: open failed
+error: open failed
 in procedure 'program'
 ** OpenOCD init failed **
 shutdown command invoked
@@ -645,13 +910,65 @@ make (e=2): 系统找不到指定的文件。
 
 ---
 
-## 使用局限
-
-- 目前仅支持用RT-Thread Studio的新建、导入项目，或使用`scons --dist-ide --target=eclipse`生成然后使用RT-Thread Studio导入的。理论上Eclipse C/C++的项目可以使用，但未测试过。只支持GCC Make类型的编译方式。
+## 使用限制
 
 - 调试依赖于Cortex-Debug扩展，只支持ARM-Cortex架构（如果GCC编译器的前缀不是`arm-none-eabi-`将不生成调试配置`.vscode/launch.json`）。
 
-- 暂不支持在资源管理器中右键添加新增编译的源文件文件夹、新的头文件包含路径；暂不支持像ESP-IDF一样通过界面配置项目（代替menuconfig）。未来可能支持，目前需要使用RT-Thread Studio构建一次后才会管理新增的源文件文件夹。
+- 暂不支持在资源管理器中右键添加新增编译的源文件文件夹，目前需要使用RT-Thread Studio构建一次后才会管理新增的源文件文件夹。
+
+- RT-Thread Env方式暂不支持生成浏览代码的`.vscode/c_cpp_properties.json`。可以使用`scons --target=vsc`相关命令生成，然后（打开一个`.c`文件）在状态栏右下角切换C/C++配置为`rt-thread`。
+
+- 如果在工作区启用Python扩展激活了虚拟环境且虚拟环境的python版本和选择的RT-Thread Env（v1.x是Python2.7）中的（大）版本不一致，很可能导致终端出错，因为Python扩展激活的Python的优先级更高。出现错误请修改Python扩展的设置关闭激活虚拟环境，或（在工作区）禁用Python扩展。
+
+- 在vscode打开的主目录必须是BSP主目录或RT-Thread Studio项目的主目录。如果不是，可参考[子文件夹](#子文件夹)执行操作。
+
+  > **说明**
+  >
+  > BSP的Kconfig中的路径可能是导入后的，如果在RT-Thread主仓库中的BSP开发，可以尝试使用RT-Thread Studio导入项目或使用`scons --dist`相关命令生成标准的目录结构。
+
+- 终端集成：
+
+    RT-Thread Env 2.x的menuconfig不支持用上下左右箭头来移动，这是[kconfiglib.py](https://github.com/ulfalizer/Kconfiglib)本身的特征（需要`curses`之类的模块来支撑）。进入子菜单请用`Enter`或`L`键；返回上一级请用`ESC`或`H`键；上、下请用`K`、`J`键。
+
+    RT-Thread Env 1.x的menuconfig如何上下移动尚未清楚。
+
+- 旧版本RT-Thread Studio内置的`J-Link/v7.50a`不支持解析elf文件，如果使用RT-Thread Env方式，请使用以下方式之一解决：
+
+  - 使用RT-Thread Studio的SDK管理器安装高版本的J-Jlink
+
+  - 升级RT-Thread Studio
+
+  - 下载[新版本的Segger Jlink](https://www.segger.com/downloads/jlink)并在生成配置时选择
+
+  - 修改编译脚本（例如`rt_config.py`）使它生成`.hex`文件，然后在扩展设置中填入`.hex`文件的路径。
+
+- 作者还不了解其它平台的Env安装与用法，Env方式暂未支持MasOS和Linux。
+
+## 已知问题
+
+- 扩展会在以下情况自动关闭ComEmu：
+
+  - 先后两次导入项目（生成配置）如果选择的RT-Thread Env的路径不一样，且之前打开的ComEmu没有关闭；
+  
+  - 关闭扩展时之前打开的ComEmu没有关闭。
+  
+  但其中的cmd没有被关闭：
+  
+  ![images/1735660800045.png](images/1735660800045.png)
+
+  手动关闭即可。
+
+- 导入项目（生成配置）时，如果选择的调试服务器是Segger Jlink，由于Jlink不直接支持`--version`参数，校验表单时需要多等待约3秒的时间。
+
+- 如果之前的构建任务启动失败（例如Makefile构建目录不存在），下次运行会一直弹出等待进度。
+
+- 快速连续多次点击状态栏按钮启动构建任务时，如果之前的任务启动失败，任务报告统计可能错乱。
+
+## 未完待续
+
+- 引用`Serial Monitor`扩展，提供监视功能并在运行时发生（硬件）错误时显示对应的源码文件位置。
+
+- 研究MacOS、Linux的Env安装与使用。
 
 ## 问题反馈
 
@@ -676,6 +993,8 @@ make (e=2): 系统找不到指定的文件。
 - 开发说明：<https://github.com/jswyll/jswyll-vscode-rtthread/tree/main/docs/README.md>。
 
 ## 特别鸣谢
+
+- [kconfiglib](https://github.com/ulfalizer/Kconfiglib)：一个灵活的Python 2/3 Kconfig实现和库。
 
 - [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug)：一款适用于ARM Cortex-M架构的GDB调试扩展。
 
@@ -1066,7 +1385,7 @@ This extension implements only a small part of the functionality, which may not 
 
    - **JLink**:
 
-     Download and install the macOS package from [SEGGER](https://www.oracle.com/java/technologies/downloads/), such as `JLink_MacOSX_Vxxx_universal.pkg`. After installation, it will be located at `/Applications/SEGGER/JLink_Vxxx/JLinkExe`.
+     Download and install the macOS package from [SEGGER](https://www.segger.com/downloads/jlink), such as `JLink_MacOSX_Vxxx_universal.pkg`. After installation, it will be located at `/Applications/SEGGER/JLink_Vxxx/JLinkExe`.
 
    - **PyOCD**:
 
@@ -1087,6 +1406,8 @@ Supported path expressions include:
   ```sh
   D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc.exe
   ```
+
+- **user's home directory**, such as `~/env/.venv/Scripts`.
 
 - **Relative Paths** to the workspace folder. For example `tools/make.exe`.
 
@@ -1305,6 +1626,25 @@ If the generated configuration by this extension does not meet your needs, you c
 
     ![images/1735660800030.png](images/1735660800030.png)
 
+### Subfolders
+
+If you want to perform operations on subfolders that contain `.cproject`, you can follow the steps below to convert them into a VSCode [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces).
+
+1. **If it is not already a VSCode workspace:**
+   - Open the parent directory `workspace` in VSCode.
+   - Click on the VSCode menu bar -> File -> Save Workspace As...
+   - In the save dialog, enter the workspace name and location, then click the "Save" button to create a VSCode workspace file (`xxx.code-workspace`).
+
+2. **Add the subfolder to the workspace:**
+   - Click on the VSCode menu bar -> File -> Add Folder to Workspace..., and select the desired subfolder.
+
+3. **Select the current workspace folder as the subfolder:**
+   - Follow the instructions at the beginning of the [Operation Instructions](#operation-instructions) to set the current workspace folder to the selected subfolder.
+
+> **Note**
+>
+> In the future, open the `xxx.code-workspace` created in step 1 in VSCode.
+
 ## Common Issues
 
 ```sh
@@ -1344,7 +1684,7 @@ The `echo` command is not in the `PATH` environment variable. It is built-in on 
 
 - Debugging depends on the Cortex-Debug extension, supporting only ARM-Cortex architectures (if the GCC compiler prefix is not `arm-none-eabi-`, no debugging configuration `.vscode/launch.json` will be generated).
 
-- Does not support adding new source file directories or header include paths via the Explorer context menu. Also, it does not support configuring projects through an interface like ESP-IDF's menuconfig. Future support may be added. Currently, new source file directories are managed only after building once with RT-Thread Studio.
+- Does not support adding new source file directories via the Explorer context menu. Also, it does not support configuring projects through an interface like ESP-IDF's menuconfig. Future support may be added. Currently, new source file directories are managed only after building once with RT-Thread Studio.
 
 ## Issue Reporting
 

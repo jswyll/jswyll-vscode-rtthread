@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { readTextFile, writeTextFile } from '../base/fs';
 import { Logger } from '../base/logger';
-import { escapeRegExp, findLastMatch } from '../../common/utils';
+import { findLastMatch } from '../../common/utils';
 import { basename, extname, join, relative } from 'path';
 import { getConfig, normalizePathForWorkspace } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqual } from '../../common/platform';
-import { BuildConfig, ProjcfgIni } from '../../common/type';
-import { debounce } from 'lodash';
+import { BuildConfig, ProjcfgIni } from '../../common/types/type';
+import { debounce, escapeRegExp } from 'lodash';
 import { Cproject } from './cproject';
 import { processCCppPropertiesConfig } from './cCppProperties';
 
@@ -154,11 +154,11 @@ export class MakefileProcessor {
    *
    * ```makefile
    * applications/%.o: ../applications/%.c
-   *     @echo compiling $<...
+   *     -@echo compiling $<...
    *     @arm-none-eabi-gcc ...
    *
    * rt-thread/libcpu/arm/cortex-m4/%.o: ../rt-thread/libcpu/arm/cortex-m4/%.S
-   *     @echo compiling $<...
+   *     -@echo compiling $<...
    *     @arm-none-eabi-gcc ...
    * ```
    *
@@ -185,10 +185,10 @@ export class MakefileProcessor {
       const compileRegex = new RegExp(`^(.*?\\.o:.*\\r\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'gm');
       const oldContent = await readTextFile(uri);
       let newContent = oldContent.replace(linkRegex, (...match) => {
-        return `${match[1]}\t@echo linking ...\r\n\t@${toolchainPrefix}${match[2]}`;
+        return `${match[1]}\t-@echo linking ...\r\n\t@${toolchainPrefix}${match[2]}`;
       });
       newContent = newContent.replace(compileRegex, (...match) => {
-        return `${match[1]}\t@echo compiling $<...\r\n\t@${toolchainPrefix}${match[2]}`;
+        return `${match[1]}\t-@echo compiling $<...\r\n\t@${toolchainPrefix}${match[2]}`;
       });
       const { projectRootDir } = this.ProjcfgIni;
       const gccIncludeDirRegex = /(\s+-I|-include|-T\s*)"([^"]*)"/g;
@@ -432,7 +432,7 @@ export class MakefileProcessor {
     try {
       if (this.BuildConfig.excludingPaths.some((v) => isPathUnderOrEqual(v, relativeDir))) {
         logger.info('is excludingPath:', relativeDir);
-        // TODO: 如果原来编译了，需要移除编译？
+        // TODO: 如果原来编译了，需要清除编译？
         return;
       }
       const sourceFiles = await this.GetSourceFilesOfDir(relativeDir);
@@ -521,6 +521,7 @@ export class MakefileProcessor {
    * @param uri 文件uri
    */
   public static async HandleFileChange(uri: vscode.Uri) {
+    // TODO: 如果不是RT-Thread Studio类型则忽略
     logger.trace('HandleFileChange:', uri.fsPath);
     if (
       !this.HasBuildConfig ||

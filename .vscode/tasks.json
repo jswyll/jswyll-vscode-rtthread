@@ -38,6 +38,12 @@
 				"group": "watch",
 				"reveal": "never"
 			}
+		},
+		{
+			"type": "npm",
+			"script": "build:temp",
+			"problemMatcher": "$tsc",
+			"label": "tsc: build - temp/tsconfig.json",
 		}
 	]
 }

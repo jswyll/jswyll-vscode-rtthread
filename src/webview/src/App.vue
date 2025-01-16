@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import GenerateConfig from './views/GenerateConfig.vue';
-import { MessagePlugin } from 'tdesign-vue-next';
-import { onMounted, onUnmounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
 import { storeToRefs } from 'pinia';
+import { MessagePlugin } from 'tdesign-vue-next';
+import { onMounted, onUnmounted, watch } from 'vue';
+import { RouterView } from 'vue-router';
+import router from './router';
 
 const { theme } = storeToRefs(useThemeStore());
 
@@ -33,6 +34,10 @@ onMounted(() => {
   });
   window.addEventListener('unhandledrejection', onUnhandledrejection);
   window.addEventListener('error', onError);
+  const path = document.documentElement.getAttribute('path');
+  if (path) {
+    router.replace(path);
+  }
 });
 
 onUnmounted(() => {
@@ -43,12 +48,20 @@ onUnmounted(() => {
 
 <template>
   <div class="m-layout">
-    <GenerateConfig></GenerateConfig>
+    <RouterView></RouterView>
   </div>
 </template>
 
-<style scoped>
+<style>
+:root {
+  --m-app-margin: 8px;
+}
+
 body {
   background-color: var(--theme-body-background) !important;
+}
+
+.m-layout {
+  margin: var(--m-app-margin);
 }
 </style>

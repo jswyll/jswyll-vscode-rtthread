@@ -4,6 +4,8 @@
 
 ```sh
 jswyll-vscode-rtthread/
+├── docs/                      # 开发文档
+├── images/                    # 主说明文档的图片
 ├── l10n/                      # 扩展进程的本地化文件
 │   ├── bundle.l10n.json               # 默认翻译
 │   └── bundle.l10n.zh-CN.json         # 简体中文翻译
@@ -15,16 +17,20 @@ jswyll-vscode-rtthread/
 │       └── index.js                       # 脚本
 ├── src/                           # 源码
 │   ├── common/                        # 扩展进程与webview的公共代码
+│   │   ├── types/                         # 类型声明
+│   │   │   ├── menuconfig.d.ts            # 菜单配置
+│   │   │   └── type.d.ts                  # 扩展进程与webview通信
 │   │   ├── assert.ts                      # 断言
 │   │   ├── constants.ts                   # 常量
 │   │   ├── error.ts                       # 错误
 │   │   ├── event.ts                       # 事件
 │   │   ├── platform.ts                    # 跨平台处理
-│   │   └── type.d.ts                      # 公共类型声明
+│   │   └── utils.ts                       # 工具
 │   ├── dev/                           # 开发辅助脚本
 │   │   ├── checkTranslation.ts            # 检查翻译是否完整
 │   │   ├── esbuild.ts                     # 构建扩展进程
-│   │   └── must-use-await-for-function.js # eslint插件 - 必须await或then函数调用
+│   │   ├── must-use-await-for-function.js # eslint插件 - 必须await或then函数调用
+│   │   └── translate.ts                   # 有道翻译
 │   ├── main/                          # 扩展进程的代码
 │   │   ├── base/                          # 扩展进程的公共代码
 │   │   │   ├── constants.ts                   # 常量
@@ -33,12 +39,18 @@ jswyll-vscode-rtthread/
 │   │   │   ├── logger.ts                      # 日志记录器
 │   │   │   ├── process.ts                     # 子进程
 │   │   │   ├── type.d.ts                      # 仅扩展进程使用的类型声明
-│   │   │   ├── utils.ts                       # 工具
+│   │   │   ├── webview.ts                     # webview处理
 │   │   │   └── workspace.ts                   # 工作区
+│   │   ├── kconfig/                       # Kconfig处理
+│   │   │   ├── kconfiglib.ts                  # kconfiglib库
+│   │   │   └── tree.ts                        # kconfig树结构
 │   │   ├── project/                       # 项目处理
+│   │   │   ├── cCppProperties.ts              # c_cpp_properties.json处理
+│   │   │   ├── cproject.ts                    # .cproject处理
 │   │   │   ├── diagnostic.ts                  # 诊断中断函数
 │   │   │   ├── generate.ts                    # 生成项目配置文件
-│   │   │   └── makefile.ts                    # makefile处理
+│   │   │   ├── makefile.ts                    # makefile处理
+│   │   │   └── menuconfig.ts                  # 菜单配置
 │   │   ├── task/                          # 任务管理
 │   │   │   ├── build.ts                       # 构建任务执行
 │   │   │   └── serial.ts                      # 串行任务管理器
@@ -51,16 +63,20 @@ jswyll-vscode-rtthread/
 │       │   ├── assets/                        # 静态资源
 │       │   │   └── app.css                    # 全局样式
 │       │   ├── components/                # 组件
+│       │   │   ├── InputHex.vue               # 16进制输入框
+│       │   │   ├── MHome.vue                  # 主页
 │       │   │   ├── MMarkdown.vue              # 内联markdown渲染
 │       │   │   ├── MSelectInput.vue           # 可输入的下拉选择
 │       │   │   ├── TextCllipsis.vue           # 省略文本的悬停显示
 │       │   │   └── vscode.ts                  # 与主进程的通信
 │       │   ├── locales/                   # 多语言
-│       │   │   └── i18n.ts                    # 全局配置
+│       │   │   ├── i18n.ts                    # 全局配置
+│       │   │   └── menuconfig.zh-CN.json      # 菜单配置 - 简体中文
 │       │   ├── stores/                    # 状态管理
 │       │   │   └── theme.ts                   # 主题
 │       │   ├── views/                     # 页面
-│       │   │   └── GenerateConfig.vue        # 生成项目配置的面板
+│       │   │   ├── GenerateConfig.vue        # 生成配置
+│       │   │   └── MenuConfig.vue            # 菜单配置
 │       │   ├── App.vue                    # 根组件
 │       │   └── main.ts                    # 入口
 │       ├── env.d.ts                   # 环境变量类型声明
@@ -118,7 +134,7 @@ jswyll-vscode-rtthread/
 
 ## 参考文档
 
-> [vscode - Extension API](https://code.visualstudio.com/api)
+- [vscode - Extension API](https://code.visualstudio.com/api)
 
 - [vue3](https://cn.vuejs.org/guide/introduction)
 

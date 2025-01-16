@@ -1,4 +1,12 @@
 {
+  "logger.verbose": {
+    "scope": "typescript,javascript",
+    "prefix": "logv",
+    "body": [
+      "logger.verbose('$1:', $1$2);$0"
+    ],
+    "description": "log.verbose"
+  },
   "logger.debug": {
     "scope": "typescript,javascript",
     "prefix": "logd",

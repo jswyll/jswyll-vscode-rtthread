@@ -3,6 +3,7 @@
 </template>
 
 <script lang="ts" setup>
+import { escapeRegExp } from 'lodash';
 import { AutoComplete as TAutoComplete, type AutoCompleteOption, type AutoCompleteProps } from 'tdesign-vue-next';
 import { computed, ref, useAttrs } from 'vue';
 
@@ -29,7 +30,7 @@ const popupVisible = ref(false);
  * 过滤选项
  */
 function filterWords(keyword: string, option: AutoCompleteOption) {
-  const regExp = new RegExp(keyword, 'i');
+  const regExp = new RegExp(escapeRegExp(keyword), 'i');
   if (typeof option === 'string') {
     return regExp.test(option);
   }
@@ -65,8 +66,9 @@ function countMatch(keyword: string, onFirstMatch?: (value: string) => void) {
 const computedProps = computed<AutoCompleteProps>(() => ({
   ...attrs,
   filter: attrs.filterable ? filterWords : undefined,
-  onBlur() {
+  onBlur(e) {
     popupVisible.value = false;
+    attrs.onBlur?.(e);
   },
   onChange(value: string) {
     if (value && countMatch(value) === 0) {

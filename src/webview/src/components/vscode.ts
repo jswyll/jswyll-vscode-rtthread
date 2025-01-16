@@ -1,4 +1,8 @@
-import type { ExtensionToWebviewDataMap, ExtensionToWebviewData, WebviewToExtensionData } from '../../../common/type';
+import type {
+  ExtensionToWebviewDataMap,
+  ExtensionToWebviewData,
+  WebviewToExtensionData,
+} from '../../../common/types/type';
 import { CustomEvent } from '../../../common/event';
 import { onMounted, onUnmounted } from 'vue';
 

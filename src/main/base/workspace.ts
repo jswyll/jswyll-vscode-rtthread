@@ -5,6 +5,8 @@ import { EXTENSION_ID } from '../../common/constants';
 import { convertPathToUnixLike, isAbsolutePath, windowsAbsolutePathPattern } from '../../common/platform';
 import { Logger } from './logger';
 import { disposeWebviewPanel } from '../project/generate';
+import { debounce } from 'lodash';
+import { homedir } from 'os';
 
 /**
  * 全局状态
@@ -30,6 +32,18 @@ interface WorkspaceState {
  * 日志记录器
  */
 const logger = new Logger('main/base/workspace');
+
+/**
+ * 配置是否由扩展更改的
+ */
+let isConfigUpdateByExtension = false;
+
+/**
+ * 切换为不是扩展更改的配置。
+ */
+const unsetIsConfigUpdateByExtension = debounce(() => {
+  isConfigUpdateByExtension = false;
+}, 1000);
 
 /**
  * 扩展的上下文
@@ -152,14 +166,23 @@ export function getConfig<T extends keyof ExtensionConfiguration>(
  * - `false` 配置项是当前扩展的节点，即`${EXTENSION_ID}.${key}`
  * - `true` 配置项是全局的节点，即`${key}`
  */
-export function updateConfig<T extends keyof ExtensionConfiguration>(
+export async function updateConfig<T extends keyof ExtensionConfiguration>(
   scope: vscode.ConfigurationScope | null,
   key: T,
   value: ExtensionConfiguration[T],
   allSection: boolean = false,
 ) {
   const section = allSection ? undefined : EXTENSION_ID;
-  vscode.workspace.getConfiguration(section, scope).update(key, value);
+  isConfigUpdateByExtension = true;
+  await vscode.workspace.getConfiguration(section, scope).update(key, value);
+  unsetIsConfigUpdateByExtension();
+}
+
+/**
+ * 获取是否由扩展更改的配置。
+ */
+export function getIsConfigUpdateByExtension() {
+  return isConfigUpdateByExtension;
 }
 
 /**
@@ -231,17 +254,22 @@ export function normalizePathForWorkspace(wsFolder: vscode.Uri, fsPath: string) 
 }
 
 /**
- * 解析环境变量。
+ * 解析路径。
  *
- * `${env:VAR_NAME}` 或 `${VAR_NAME}` 将被替换为环境变量的值（如果对应的环境变量存在）。
+ * - `${env:VAR_NAME}`将被替换为环境变量的值（如果对应的环境变量存在）。
+ *
+ * - `${userHome}`将被替换为用户主目录。
  *
  * @param p 要解析的字符串
  * @returns 解析后的字符串
  */
-export function parseEnvVariables(p: string) {
-  return p.replace(/\$\{(env:)?([^}]+)\}/g, (...match) => {
-    if (match[2] !== undefined || match[1] !== undefined) {
-      const replaceText = process.env[match[2] ?? match[1]];
+export function parsePath(p: string) {
+  p = p.replace(/\$\{userHome\}/g, () => {
+    return homedir();
+  });
+  return p.replace(/\$\{env:([^}]+)\}/g, (...match) => {
+    if (match[1] !== undefined) {
+      const replaceText = process.env[match[1]];
       if (replaceText !== undefined) {
         return replaceText;
       }

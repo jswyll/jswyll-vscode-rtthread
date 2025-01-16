@@ -10,19 +10,11 @@ import {
   ProjcfgIni,
   TdesignCustomValidateResult,
   WebviewToExtensionData,
-} from '../../common/type';
-import {
-  getConfig,
-  getExtensionContext,
-  normalizePathForWorkspace,
-  parseEnvVariables,
-  updateConfig,
-} from '../base/workspace';
-import { platform } from 'os';
+} from '../../common/types/type';
+import { getConfig, normalizePathForWorkspace, parsePath, updateConfig } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
-import { CustomEvent } from '../../common/event';
 import {
-  BUILD_TASKS,
+  TASKS,
   CONFIG_GROUP,
   GCC_COMPILE_PROBLEM_MATCHER_NAME,
   GCC_LINK_PROBLEM_MATCHER_NAME,
@@ -30,14 +22,21 @@ import {
 } from '../base/constants';
 import { EXTENSION_ID } from '../../common/constants';
 import { assertParam } from '../../common/assert';
-import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, removeExeSuffix } from '../../common/platform';
+import {
+  calculateEnvPathString,
+  convertPathToUnixLike,
+  dirnameOrEmpty,
+  isAbsolutePath,
+  removeExeSuffix,
+} from '../../common/platform';
 import { readTextFile, writeJsonFile, writeTextFile, parseJsonFile, existsAsync } from '../base/fs';
-import { getNonce, isJsonObject } from '../../common/utils';
+import { isJsonObject } from '../../common/utils';
 import { TdesignValidateError } from '../base/error';
 import { MakefileProcessor } from './makefile';
 import { ExtensionGenerateSettings, TasksJson } from '../base/type';
 import { spawnPromise } from '../base/process';
 import { processCCppPropertiesConfig } from './cCppProperties';
+import { WebviewPanel } from '../base/webview';
 
 /**
  * 生成的参数
@@ -51,12 +50,22 @@ interface GenerateParamsInternal extends DoGenerateParams {
   /**
    * 选择的构建配置，各项获取不到则为空字符串
    */
-  buildConfig: BuildConfig;
+  buildConfig?: BuildConfig;
 
   /**
    * 从`.settings/projcfg.ini`文件中解析的项目配置
    */
   projcfgIni: ProjcfgIni;
+
+  /**
+   * 额外的环境变量PATH
+   */
+  exraPaths: string[];
+
+  /**
+   * 额外的环境变量
+   */
+  extraVar: Record<string, string | undefined>;
 }
 
 /**
@@ -65,29 +74,24 @@ interface GenerateParamsInternal extends DoGenerateParams {
 type SupportedDebugServer = (typeof supportedDebugServer)[number];
 
 /**
- * Webview事件类
+ * 生成完成事件的发射器
  */
-declare class WebviewEvent {
-  /**
-   * 生成的结果
-   */
-  once(event: 'generateSuccess', listener: () => void): void;
+const generateEmitter = new vscode.EventEmitter<void>();
 
-  /**
-   * 生成的结果
-   */
-  emit(event: 'generateSuccess'): void;
-}
+/**
+ * 选择的Env根目录发生变化的发射器
+ */
+const envRootChangeEmitter = new vscode.EventEmitter<void>();
+
+/**
+ * 选择的Env根目录发生变化
+ */
+const onDidEnvRootChange = envRootChangeEmitter.event;
 
 /**
  * 日志记录器
  */
 const logger = new Logger('main/project/generate');
-
-/**
- * webview事件
- */
-const webviewEvent: WebviewEvent = new CustomEvent();
 
 /**
  * 可能的GCC编译器文件名称，不包含文件扩展名
@@ -115,14 +119,14 @@ const supportedDebugServer = ['openocd', 'pyocd', 'jlink'] as const;
 /**
  * webview配置面板
  */
-let webviewPanel: vscode.WebviewPanel | undefined;
+let webviewPanel: WebviewPanel | undefined;
 
 /**
  * 向webview发送消息。
  * @param msg 消息
  */
 function postMessageToWebview(msg: ExtensionToWebviewDatas) {
-  if (webviewPanel?.webview.postMessage(msg)) {
+  if (webviewPanel?.postMessage(msg)) {
     logger.info('extension send', msg);
   }
 }
@@ -300,9 +304,13 @@ function getGenerateConfig<T extends keyof GenerateSettings>(
 function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
   logger.info('getLastGenerateConfig...');
   return {
+    projectType: getGenerateConfig(wsFolder, 'projectType', 'RT-Thread Studio'),
     buildConfigName: getGenerateConfig(wsFolder, 'buildConfigName', 'Debug'),
     makeBaseDirectory: getGenerateConfig(wsFolder, 'makeBaseDirectory', '${workspaceFolder}/Debug'),
     makeToolPath: getGenerateConfig(wsFolder, 'makeToolPath', ''),
+    envPath: getGenerateConfig(wsFolder, 'envPath', 'c:/env-windows'),
+    artifactPath: getGenerateConfig(wsFolder, 'artifactPath', 'rt-thread.elf'),
+    rttDir: getGenerateConfig(wsFolder, 'rttDir', 'rt-thread'),
     toolchainPath: getGenerateConfig(wsFolder, 'toolchainPath', ''),
     studioInstallPath: getGenerateConfig(wsFolder, 'studioInstallPath', 'D:/RT-ThreadStudio'),
     compilerPath: getGenerateConfig(wsFolder, 'compilerPath', ''),
@@ -311,7 +319,9 @@ function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
     chipName: getGenerateConfig(wsFolder, 'chipName', ''),
     debuggerServerPath: getGenerateConfig(wsFolder, 'debuggerServerPath', ''),
     cmsisPack: getGenerateConfig(wsFolder, 'cmsisPack', ''),
-    defaultBuildTask: getGenerateConfig(wsFolder, 'defaultBuildTask', BUILD_TASKS.BUILD.name),
+    defaultBuildTask: getGenerateConfig(wsFolder, 'defaultBuildTask', TASKS.BUILD.name),
+    customExtraPathVar: getGenerateConfig(wsFolder, 'customExtraPathVar', []),
+    customExtraVars: getGenerateConfig(wsFolder, 'customExtraVars', {}),
   };
 }
 
@@ -359,29 +369,27 @@ function isJlinkDebugger(debuggerServerPath: string) {
 }
 
 /**
- * 获取导入后的编译输出路径。
- * @param params 生成选项
- * @returns 编译输出路径的绝对路径
- */
-function getBuildAbsolutePath(params: GenerateParamsInternal) {
-  return join(params.wsFolder.fsPath, params.buildConfig.name);
-}
-
-/**
- * 获取导入后的elf文件路径。
+ * 获取构建生成的elf文件路径。
  * @param params 生成选项
  * @returns elf文件相对于当前工作区文件夹的相对路径，如果不在工作区文件夹则返回绝对路径
  */
 function getElfFilePathForWorkspace(params: GenerateParamsInternal) {
   const { wsFolder } = params;
-  const { artifactName } = params.buildConfig;
-  return normalizePathForWorkspace(wsFolder, join(getBuildAbsolutePath(params), `${artifactName}.elf`));
+  const { projectType } = params.settings;
+  if (projectType === 'Env') {
+    const artifactPath = getConfig(wsFolder, 'generate.artifactPath', 'rt-thread');
+    return normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, artifactPath));
+  } else {
+    const { name, artifactName } = params.buildConfig!;
+    const buildAbsolutePath = join(wsFolder.fsPath, name);
+    return normalizePathForWorkspace(wsFolder, join(buildAbsolutePath, `${artifactName}.elf`));
+  }
 }
 
 /**
  * 更新vscode的排除文件、关联文件配置项。
  *
- * - 根据{@link BuildConfig.excludingPaths}向'files.exclude'配置项更新排除列表
+ * - 根据BuildConfig.excludingPaths向'files.exclude'配置项更新排除列表
  *
  * - 更新{@link ExtensionConfiguration['files.associations']}配置项：
  *
@@ -403,23 +411,24 @@ async function updateFilesAssociationsAndExclude(params: GenerateParamsInternal)
   filesAssociations['makefile.init'] = 'makefile';
   filesAssociations['makefile.defs'] = 'makefile';
   filesAssociations['makefile.targets'] = 'makefile';
-  updateConfig(wsFolder, 'files.associations', filesAssociations, true);
+  await updateConfig(wsFolder, 'files.associations', filesAssociations, true);
 
-  const { excludingPaths } = params.buildConfig;
-  const filesExclude: Record<string, boolean> = {
-    '**/.git': true,
-    '**/.svn': true,
-    '**/.hg': true,
-    '**/CVS': true,
-    '**/.DS_Store': true,
-    '**/Thumbs.db': true,
-  };
-  // TODO: excludingPaths一定是相对于当前工作区文件夹的相对路径？
-  excludingPaths.forEach((v) => {
-    v = normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, v));
-    filesExclude[v] = true;
-  });
-  updateConfig(wsFolder, 'files.exclude', filesExclude, true);
+  if (params.settings.projectType === 'RT-Thread Studio') {
+    const { excludingPaths } = params.buildConfig!;
+    const filesExclude: Record<string, boolean> = {
+      '**/.git': true,
+      '**/.svn': true,
+      '**/.hg': true,
+      '**/CVS': true,
+      '**/.DS_Store': true,
+      '**/Thumbs.db': true,
+    };
+    excludingPaths.forEach((v) => {
+      v = normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, v));
+      filesExclude[v] = true;
+    });
+    await updateConfig(wsFolder, 'files.exclude', filesExclude, true);
+  }
 }
 
 /**
@@ -429,7 +438,7 @@ async function updateFilesAssociationsAndExclude(params: GenerateParamsInternal)
 async function processMakefiles(params: GenerateParamsInternal) {
   logger.info('processMakefiles...');
   const { wsFolder, projcfgIni, buildConfig } = params;
-  MakefileProcessor.SetProcessConfig(wsFolder, projcfgIni, buildConfig);
+  MakefileProcessor.SetProcessConfig(wsFolder, projcfgIni, buildConfig!);
   await MakefileProcessor.ProcessMakefiles();
 
   // jlink segger旧版本不支持解析elf文件，所以生成hex文件
@@ -444,32 +453,58 @@ async function processMakefiles(params: GenerateParamsInternal) {
  */
 async function processTasksJson(params: GenerateParamsInternal) {
   logger.info('processTasksJson...');
-  const { makeMajorVersion, wsFolder, settings } = params;
-  const { defaultBuildTask, debuggerServerPath, cmsisPack, debuggerInterface, chipName } = settings;
-  const buildArgs = ['-j16', 'all'];
+  const { makeMajorVersion, wsFolder, settings, exraPaths, extraVar } = params;
+  const { projectType, defaultBuildTask, debuggerServerPath, cmsisPack, debuggerInterface, chipName } = settings;
+
+  let buildCommand = 'make';
+  let buildArgs = ['-j16', 'all'];
+  let buildCwd: string | undefined = `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeBaseDirectory}`;
+  let cleanArgs = ['-j16', 'clean'];
   if (makeMajorVersion && makeMajorVersion >= 4) {
     buildArgs.push('--output-sync=target');
   }
+  if (projectType === 'Env') {
+    buildCommand = 'scons';
+    buildArgs = ['-j16'];
+    cleanArgs = ['-c'];
+    buildCwd = undefined;
+  }
+
+  const envPaths = [
+    ...exraPaths,
+    `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeToolPath}`,
+    `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath}`,
+    '${env:PATH}',
+  ];
 
   const taskJson: TasksJson = {
     version: '2.0.0',
     tasks: [
       {
-        label: BUILD_TASKS.BUILD.label,
-        detail: BUILD_TASKS.BUILD.detail,
+        label: TASKS.BUILD.label,
+        detail: TASKS.BUILD.detail,
         type: 'shell',
-        command: 'make',
+        command: buildCommand,
         args: buildArgs,
         options: {
-          cwd: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeBaseDirectory}`,
+          cwd: buildCwd,
           env: {
-            PATH: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeToolPath}:\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath}:\${env:PATH}`,
+            PATH: calculateEnvPathString(envPaths, ':'),
+            ...extraVar,
           },
         },
         windows: {
+          command: 'cmd.exe',
+          args: [
+            '/c',
+            projectType === 'Env'
+              ? ['chcp', '437', '&&', buildCommand, ...buildArgs].join(' ')
+              : [buildCommand, ...buildArgs].join(' '),
+          ],
           options: {
             env: {
-              PATH: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeToolPath};\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath};\${env:PATH}`,
+              PATH: calculateEnvPathString(envPaths, ';'),
+              ...extraVar,
             },
           },
         },
@@ -477,55 +512,92 @@ async function processTasksJson(params: GenerateParamsInternal) {
         problemMatcher: [GCC_COMPILE_PROBLEM_MATCHER_NAME, GCC_LINK_PROBLEM_MATCHER_NAME],
         group: {
           kind: 'build',
-          isDefault: defaultBuildTask === BUILD_TASKS.BUILD.label,
+          isDefault: defaultBuildTask === TASKS.BUILD.label,
         },
       },
       {
-        label: BUILD_TASKS.BUILD_AND_DOWNLOAD.label,
-        detail: BUILD_TASKS.BUILD_AND_DOWNLOAD.detail,
-        dependsOn: [BUILD_TASKS.BUILD.label, BUILD_TASKS.DOWNLOAD.label],
+        label: TASKS.BUILD_AND_DOWNLOAD.label,
+        detail: TASKS.BUILD_AND_DOWNLOAD.detail,
+        dependsOn: [TASKS.BUILD.label, TASKS.DOWNLOAD.label],
         dependsOrder: 'sequence',
         group: {
           kind: 'build',
-          isDefault: defaultBuildTask === BUILD_TASKS.BUILD_AND_DOWNLOAD.label,
+          isDefault: defaultBuildTask === TASKS.BUILD_AND_DOWNLOAD.label,
         },
         problemMatcher: [],
       },
       {
-        label: BUILD_TASKS.CLEAN.label,
-        detail: BUILD_TASKS.CLEAN.detail,
+        label: TASKS.CLEAN.label,
+        detail: TASKS.CLEAN.detail,
         type: 'shell',
-        command: 'make',
-        // TODO: 使用clean2？
-        args: ['-j16', 'clean'],
+        command: buildCommand,
+        args: cleanArgs,
         options: {
-          cwd: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeBaseDirectory}`,
+          cwd: buildCwd,
           env: {
-            PATH: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeToolPath}:\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath}:\${env:PATH}`,
+            PATH: calculateEnvPathString(envPaths, ':'),
+            ...extraVar,
           },
         },
         windows: {
+          command: 'cmd.exe',
+          args: [
+            '/c',
+            projectType === 'Env'
+              ? ['chcp', '437', '&&', buildCommand, ...cleanArgs].join(' ')
+              : [buildCommand, ...buildArgs].join(' '),
+          ],
           options: {
             env: {
-              PATH: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeToolPath};\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath};\${env:PATH}`,
+              PATH: calculateEnvPathString(envPaths, ';'),
+              ...extraVar,
             },
           },
         },
         problemMatcher: [],
       },
       {
-        label: BUILD_TASKS.REBUILD.label,
-        detail: BUILD_TASKS.REBUILD.detail,
-        dependsOn: [BUILD_TASKS.CLEAN.label, BUILD_TASKS.BUILD.label],
+        label: TASKS.REBUILD.label,
+        detail: TASKS.REBUILD.detail,
+        dependsOn: [TASKS.CLEAN.label, TASKS.BUILD.label],
         dependsOrder: 'sequence',
         group: {
           kind: 'build',
-          isDefault: defaultBuildTask === BUILD_TASKS.REBUILD.label,
+          isDefault: defaultBuildTask === TASKS.REBUILD.label,
         },
         problemMatcher: [],
       },
     ],
   };
+  if (projectType === 'Env') {
+    const pkgsCommand = 'pkgs';
+    const pkgsArgs = ['--update'];
+    taskJson.tasks.push({
+      label: TASKS.PKGS_UPDATE.label,
+      detail: TASKS.PKGS_UPDATE.detail,
+      type: 'shell',
+      command: pkgsCommand,
+      args: cleanArgs,
+      options: {
+        cwd: buildCwd,
+        env: {
+          PATH: calculateEnvPathString(envPaths, ':'),
+          ...extraVar,
+        },
+      },
+      windows: {
+        command: 'cmd.exe',
+        args: ['/c', ['chcp', '437', '&&', pkgsCommand, ...pkgsArgs].join(' ')],
+        options: {
+          env: {
+            PATH: calculateEnvPathString(envPaths, ';'),
+            ...extraVar,
+          },
+        },
+      },
+      problemMatcher: [],
+    });
+  }
 
   const debuggerServer = getDebugServer(debuggerServerPath);
   if (debuggerServer) {
@@ -565,8 +637,8 @@ async function processTasksJson(params: GenerateParamsInternal) {
       downloadArgs.push(`\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.chipName}`);
     }
     taskJson.tasks.push({
-      label: BUILD_TASKS.DOWNLOAD.label,
-      detail: BUILD_TASKS.DOWNLOAD.detail,
+      label: TASKS.DOWNLOAD.label,
+      detail: TASKS.DOWNLOAD.detail,
       type: 'shell',
       command: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.debuggerServerPath}`,
       args: downloadArgs,
@@ -597,7 +669,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
  */
 async function processLaunchConfig(params: GenerateParamsInternal) {
   logger.info('processLaunchConfig...');
-  const { wsFolder, settings } = params;
+  const { wsFolder, settings, toolchainPrefix } = params;
   const { debuggerAdapter, debuggerInterface, debuggerServerPath, chipName } = settings;
   const debuggerServer = getDebugServer(debuggerServerPath);
   if (!debuggerServer) {
@@ -653,7 +725,13 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
     writeTextFile(openocdConfigUri, openocdConfigContent);
   }
 
-  const { name, toolchainPrefix } = params.buildConfig;
+  let name;
+  if (settings.projectType === 'RT-Thread Studio') {
+    name = params.buildConfig!.name;
+  } else {
+    const artifactPath = getConfig(wsFolder, 'generate.artifactPath', 'rt-thread.elf');
+    name = basename(artifactPath, extname(artifactPath));
+  }
   const launchJsonUri = vscode.Uri.joinPath(wsFolder, '.vscode/launch.json');
   let launchJson: {
     version: string;
@@ -700,6 +778,136 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
 }
 
 /**
+ * 更新集成终端的环境变量设置项`terminal.integrated.env`和RT-Thread Env变量。
+ *
+ * @param params 生成参数
+ */
+async function updateTerminalIntegratedEnv(params: GenerateParamsInternal) {
+  const { wsFolder, settings, exraPaths, extraVar } = params;
+  const { projectType, envPath, rttDir, compilerPath, customExtraPathVar, customExtraVars } = settings;
+
+  const envPathParsed = parsePath(envPath);
+  const terminalIntegratedEnvLinux = getConfig(wsFolder, 'terminal.integrated.env.linux', {}, true);
+  const terminalIntegratedEnvOsx = getConfig(wsFolder, 'terminal.integrated.env.osx', {}, true);
+  const terminalIntegratedEnvWindows = getConfig(wsFolder, 'terminal.integrated.env.windows', {}, true);
+
+  function normalizeEnvSubPath(p: string) {
+    p = convertPathToUnixLike(p);
+    // 防止环境变量被解析
+    if (p.startsWith(convertPathToUnixLike(envPathParsed))) {
+      p = envPath + p.slice(envPathParsed.length);
+    }
+    return p;
+  }
+
+  if (projectType === 'Env') {
+    const envPathOld = getConfig(wsFolder, 'generate.envPath', '');
+    extraVar['ENV_DIR'] = convertPathToUnixLike(envPath);
+    extraVar['ENV_ROOT'] = convertPathToUnixLike(envPath);
+    extraVar['RTT_DIR'] = normalizePathForWorkspace(wsFolder, rttDir);
+    extraVar['RTT_ROOT'] = normalizePathForWorkspace(wsFolder, rttDir);
+    extraVar['BSP_DIR'] = '.';
+    extraVar['BSP_ROOT'] = '.';
+    exraPaths.push(convertPathToUnixLike(join(envPath, 'tools', 'bin')));
+
+    let pythonExePath;
+    let pythonDir;
+    const venvDir = join(envPathParsed, '.venv');
+    if (await existsAsync(venvDir)) {
+      const envDirNormalized = normalizeEnvSubPath(venvDir);
+      exraPaths.push(convertPathToUnixLike(join(envDirNormalized, 'Scripts')));
+      extraVar['VENV'] = envDirNormalized;
+      extraVar['VIRTUAL_ENV'] = envDirNormalized;
+      pythonExePath = convertPathToUnixLike(join(venvDir, 'Scripts', 'python'));
+      pythonDir = normalizeEnvSubPath(dirnameOrEmpty(pythonExePath));
+      extraVar['PYTHONHOME'] = undefined;
+      extraVar['PYTHONPATH'] = undefined;
+    } else {
+      extraVar['VENV'] = undefined;
+      extraVar['VIRTUAL_ENV'] = undefined;
+      const pythonUris = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(vscode.Uri.file(envPathParsed), 'tools/*/{python.exe,python}'),
+      );
+      assertParam(pythonUris.length > 0, vscode.l10n.t('The path "{0}" does not exists', ['python']));
+      // 优先使用Python27而不是Python27_32
+      pythonExePath = sortUris(pythonUris, false)[0].fsPath;
+      pythonDir = normalizeEnvSubPath(dirnameOrEmpty(pythonExePath));
+      extraVar['PYTHONHOME'] = pythonDir;
+      extraVar['PYTHONPATH'] = pythonDir;
+    }
+    exraPaths.push(pythonDir);
+    exraPaths.push(convertPathToUnixLike(join(pythonDir, 'Scripts')));
+    extraVar['PYTHON'] = normalizeEnvSubPath(pythonExePath);
+    extraVar['SCONS'] = convertPathToUnixLike(join(pythonDir, 'Scripts'));
+
+    const execDir = normalizeEnvSubPath(dirnameOrEmpty(compilerPath));
+    if (execDir) {
+      exraPaths.push(execDir);
+      extraVar['RTT_EXEC_PATH'] = convertPathToUnixLike(execDir);
+    }
+
+    const gitUris = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(vscode.Uri.file(envPathParsed), 'tools/*/cmd/{git.exe,git}'),
+    );
+    for (const uri of sortUris(gitUris, false)) {
+      exraPaths.push(normalizeEnvSubPath(dirnameOrEmpty(uri.fsPath)));
+    }
+
+    extraVar['PKGS_DIR'] = convertPathToUnixLike(join(envPath, 'packages'));
+    extraVar['PKGS_ROOT'] = convertPathToUnixLike(join(envPath, 'packages'));
+
+    await updateConfig(
+      wsFolder,
+      'terminal.integrated.profiles.windows',
+      {
+        'RT-Thread Env': {
+          path: 'cmd.exe',
+          args: ['/K', 'chcp 437'],
+        },
+      },
+      true,
+    );
+
+    if (envPathOld !== envPath) {
+      envRootChangeEmitter.fire();
+    }
+  }
+
+  params.extraVar = { ...extraVar, ...customExtraVars };
+  params.exraPaths = [...customExtraPathVar, ...exraPaths];
+  await updateConfig(
+    wsFolder,
+    'terminal.integrated.env.linux',
+    {
+      ...terminalIntegratedEnvLinux,
+      ...params.extraVar,
+      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}'], ':'),
+    },
+    true,
+  );
+  await updateConfig(
+    wsFolder,
+    'terminal.integrated.env.osx',
+    {
+      ...terminalIntegratedEnvOsx,
+      ...params.extraVar,
+      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}'], ':'),
+    },
+    true,
+  );
+  await updateConfig(
+    wsFolder,
+    'terminal.integrated.env.windows',
+    {
+      ...terminalIntegratedEnvWindows,
+      ...params.extraVar,
+      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}'], ';'),
+    },
+    true,
+  );
+}
+
+/**
  * 处理点击webview面板的生成按钮，开始生成项目配置文件。
  *
  * 1. 更新vscode文件关联与排除{@link updateFilesAssociationsAndExclude}。
@@ -721,33 +929,30 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
  * @throws 出现异常时抛出继承自{@link Error}的错误
  */
 async function startGenerate(params: GenerateParamsInternal) {
-  const { wsFolder, settings } = params;
-  const { toolchainPrefix } = params.buildConfig;
+  const { wsFolder, settings, toolchainPrefix } = params;
+  settings.makeToolPath = convertPathToUnixLike(settings.makeToolPath);
+  settings.studioInstallPath = convertPathToUnixLike(settings.studioInstallPath);
+  settings.compilerPath = convertPathToUnixLike(settings.compilerPath);
+  settings.debuggerServerPath = convertPathToUnixLike(settings.debuggerServerPath);
+  settings.cmsisPack = convertPathToUnixLike(settings.cmsisPack);
   const vscodeFolder = vscode.Uri.joinPath(wsFolder, '.vscode');
   if (!(await existsAsync(vscodeFolder))) {
     await vscode.workspace.fs.createDirectory(vscodeFolder);
   }
 
-  let startTimestamp = Date.now();
+  await updateTerminalIntegratedEnv(params);
+
   await updateFilesAssociationsAndExclude(params);
-  logger.debug(`generateFilesExclude took ${Date.now() - startTimestamp} ms:`);
 
-  startTimestamp = Date.now();
-  await processCCppPropertiesConfig(wsFolder, settings.compilerPath, params.buildConfig);
-  logger.debug(`processCCppPropertiesConfig took ${Date.now() - startTimestamp} ms:`);
+  if (settings.projectType === 'RT-Thread Studio') {
+    await processCCppPropertiesConfig(wsFolder, settings.compilerPath, params.buildConfig!);
+    await processMakefiles(params);
+  }
 
-  startTimestamp = Date.now();
-  await processMakefiles(params);
-  logger.debug(`processMakefiles took ${Date.now() - startTimestamp} ms:`);
-
-  startTimestamp = Date.now();
   await processTasksJson(params);
-  logger.debug(`processTasksConfig took ${Date.now() - startTimestamp} ms:`);
 
   if (toolchainPrefix === 'arm-none-eabi-') {
-    startTimestamp = Date.now();
     await processLaunchConfig(params);
-    logger.debug(`processLaunchConfig took ${Date.now() - startTimestamp} ms:`);
   }
 
   // 保存配置
@@ -763,8 +968,9 @@ async function startGenerate(params: GenerateParamsInternal) {
   for (const key in settings) {
     const section = `${CONFIG_GROUP.GENERATE}.${key}` as keyof ExtensionGenerateSettings;
     const value = settings[key as keyof GenerateSettings];
+    // TODO: 对象或数组不能用等号判断值是否相等
     if (value !== lastSettings[key as keyof GenerateSettings]) {
-      updateConfig(wsFolder, section, value);
+      await updateConfig(wsFolder, section, value);
     }
   }
 
@@ -782,7 +988,7 @@ async function startGenerate(params: GenerateParamsInternal) {
  * @param msg webview发送过来的消息
  * @param fn 校验函数
  */
-async function withTformitemValidate(msg: WebviewToExtensionData, fn: () => Promise<true | void>) {
+async function withFormitemValidate(msg: WebviewToExtensionData, fn: () => Promise<true | void>) {
   try {
     const result = await fn();
     if (result === true) {
@@ -794,9 +1000,7 @@ async function withTformitemValidate(msg: WebviewToExtensionData, fn: () => Prom
           },
         },
       };
-      if (webviewPanel?.webview.postMessage(message)) {
-        logger.info('extension send', message);
-      }
+      webviewPanel?.postMessage(message as ExtensionToWebviewDatas);
     }
   } catch (error) {
     logger.error(error);
@@ -812,9 +1016,7 @@ async function withTformitemValidate(msg: WebviewToExtensionData, fn: () => Prom
       command: msg.command,
       params: { validateResult },
     };
-    if (webviewPanel?.webview.postMessage(message)) {
-      logger.info('extension send', message);
-    }
+    webviewPanel?.postMessage(message as ExtensionToWebviewDatas);
   }
 }
 
@@ -822,6 +1024,8 @@ async function withTformitemValidate(msg: WebviewToExtensionData, fn: () => Prom
  * 检测指定的路径是否有效：
  *
  * - 可以是绝对路径
+ *
+ * - 可以是用户主目录下的，例如`${userHome}/.env`
  *
  * - 可以包含环境变量
  *
@@ -834,7 +1038,8 @@ async function withTformitemValidate(msg: WebviewToExtensionData, fn: () => Prom
  * @returns
  */
 async function isPathExists(p: string, wsFolder: vscode.Uri) {
-  p = parseEnvVariables(p);
+  p = parsePath(p);
+
   if (isAbsolutePath(p)) {
     return (await existsAsync(p)) || (await existsAsync(`${p}.exe`));
   }
@@ -879,7 +1084,6 @@ function sortUris(uris: vscode.Uri[], isAsc = true) {
  * @param msg webview发送过来的消息
  */
 async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensionData, buildConfigs: BuildConfig[]) {
-  logger.info('extension recv:', msg);
   switch (msg.command) {
     case 'requestInitialValues': {
       const lastGenerateConfig = getLastGenerateSettings(wsFolder);
@@ -975,7 +1179,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
 
     case 'validatePathExists': {
       const { path } = msg.params;
-      withTformitemValidate(msg, async () => {
+      withFormitemValidate(msg, async () => {
         if (!(await isPathExists(path, wsFolder))) {
           const message = vscode.l10n.t('The path "{0}" does not exists', [path]);
           throw new TdesignValidateError(message, 'error');
@@ -1006,7 +1210,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         const debuggerServersPromise = vscode.workspace.findFiles(
           new vscode.RelativePattern(
             vscode.Uri.joinPath(folderUri, 'repo/Extract/Debugger_Support_Packages'),
-            '**/{pyocd.exe,JLink.exe}',
+            '**/{pyocd.exe,JLink.exe,openocd.exe}',
           ),
         );
         const makePathUriPromise = vscode.workspace.findFiles(
@@ -1062,7 +1266,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       };
       let toolchainPrefix: string | undefined = undefined;
       const { path } = msg.params;
-      const compilerPath = parseEnvVariables(path);
+      const compilerPath = parsePath(path);
       logger.info('compilerPath after extract env:', compilerPath);
       try {
         const { stdout, stderr } = await spawnPromise(compilerPath, ['-v'], { timeout: 5000 });
@@ -1131,7 +1335,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         }
         return -1;
       };
-      withTformitemValidate(msg, async () => {
+      withFormitemValidate(msg, async () => {
         if (!path) {
           try {
             const std = await spawnPromise('make', ['-v'], { timeout: 5000 });
@@ -1145,7 +1349,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             throw new TdesignValidateError(message, 'warning');
           }
         } else {
-          const makePath = `${parseEnvVariables(path)}/make`;
+          const makePath = `${parsePath(path)}/make`;
           try {
             const std = await spawnPromise(makePath, ['-v'], { timeout: 5000 });
             makeMajorVersion = getMajorVersion(std.stdout + std.stderr);
@@ -1167,9 +1371,51 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       break;
     }
 
+    case 'validateEnvPath': {
+      const { path } = msg.params;
+      withFormitemValidate(msg, async () => {
+        assertParam(await isPathExists(path, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
+        const envToolPath = join(path, 'tools');
+        assertParam(
+          await isPathExists(envToolPath, wsFolder),
+          vscode.l10n.t('The path "{0}" does not exists', [envToolPath]),
+        );
+        const folderUri = vscode.Uri.file(path);
+        const uris = await vscode.workspace.findFiles(
+          new vscode.RelativePattern(
+            folderUri,
+            'tools/gnu_gcc/arm_gcc/mingw/bin/{arm-none-eabi-gcc.exe,arm-none-eabi-gcc}',
+          ),
+        );
+        postMessageToWebview({
+          command: msg.command,
+          params: {
+            validateResult: { result: true, message: '' },
+            compilerPaths: uris.map((uri) => removeExeSuffix(convertPathToUnixLike(uri.fsPath))),
+          },
+        });
+      });
+      break;
+    }
+
+    case 'validateRttDir': {
+      const { path } = msg.params;
+      const parsedPath = parsePath(path);
+      withFormitemValidate(msg, async () => {
+        assertParam(await isPathExists(parsedPath, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
+        const kconfigPath = join(parsedPath, 'src');
+        assertParam(
+          await isPathExists(kconfigPath, wsFolder),
+          vscode.l10n.t('The path "{0}" does not exists', [kconfigPath]),
+        );
+        return true;
+      });
+      break;
+    }
+
     case 'validateDebuggerServer': {
       const { debuggerServerPath } = msg.params;
-      withTformitemValidate(msg, async () => {
+      withFormitemValidate(msg, async () => {
         if (!debuggerServerPath) {
           throw new TdesignValidateError(
             vscode.l10n.t('You will not be able to download or debug the program'),
@@ -1180,7 +1426,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           await isPathExists(debuggerServerPath, wsFolder),
           vscode.l10n.t('The path "{0}" does not exists', [debuggerServerPath]),
         );
-        const filePath = parseEnvVariables(debuggerServerPath);
+        const filePath = parsePath(debuggerServerPath);
         const debuggerServer = getDebugServer(filePath);
         if (!debuggerServer) {
           throw new TdesignValidateError(
@@ -1226,22 +1472,29 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
     }
 
     case 'generateConfig': {
-      const { doGenerateParams } = msg.params;
-      const { buildConfigName } = doGenerateParams.settings;
+      const { doGenerateParams: params } = msg.params;
+      const { buildConfigName } = params.settings;
       const projcfgIni = await parseProjcfgIni(wsFolder);
       const buildConfig = buildConfigs.find((v) => v.name === buildConfigName);
-      assertParam(buildConfigName && buildConfig, vscode.l10n.t('Not Found {0} in {1}', [buildConfigName, '.croject']));
+      if (params.settings.projectType === 'RT-Thread Studio') {
+        assertParam(
+          buildConfigName && buildConfig,
+          vscode.l10n.t('Not Found {0} in {1}', [buildConfigName, '.croject']),
+        );
+      }
       await startGenerate({
         wsFolder,
-        ...doGenerateParams,
+        ...params,
         buildConfig,
         projcfgIni,
+        exraPaths: [],
+        extraVar: {},
       });
       postMessageToWebview({
         command: msg.command,
         params: {},
       });
-      webviewEvent.emit('generateSuccess');
+      generateEmitter.fire();
       break;
     }
 
@@ -1265,73 +1518,21 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
  */
 async function checkAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   logger.info('openGenerateWebview, workspaceFolder:', wsFolder.fsPath);
-  if (webviewPanel) {
-    webviewPanel.dispose();
-  }
+  webviewPanel?.dispose();
   const cprojectBuildConfigs = await parseBuildConfigs(wsFolder);
-  assertParam(cprojectBuildConfigs.length, vscode.l10n.t('No build config found in cproject'));
-  const themeMode = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-  const context = getExtensionContext();
-  webviewPanel = vscode.window.createWebviewPanel(
-    'generate',
+  vscode.commands.executeCommand('workbench.action.closePanel');
+  webviewPanel = new WebviewPanel(
+    `${EXTENSION_ID}-generate`,
     vscode.l10n.t('Generate project configuration files'),
-    vscode.ViewColumn.One,
-    {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'out/webview')],
-    },
+    '/view/generate',
   );
-  context.subscriptions.push(webviewPanel);
-  webviewPanel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
-  const scriptPath = webviewPanel.webview.asWebviewUri(
-    vscode.Uri.joinPath(context.extensionUri, 'out/webview/index.js'),
-  );
-  const cssPath = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'out/webview/index.css'));
-  const nonce = getNonce(32);
-  const html = `<!DOCTYPE html>
-<html data-platform="${platform()}" lang="${vscode.env.language}" theme-mode="${themeMode}">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webviewPanel.webview.cspSource}; script-src 'nonce-${nonce}';">
-    <title>${EXTENSION_ID}-vue</title>
-    <link rel="stylesheet" href="${cssPath}">
-  </head>
-  <body>
-    <div id="app"></div>
-    <script nonce="${nonce}" src="${scriptPath}"></script>
-  </body>
-</html>`;
-  webviewPanel.webview.html = html;
-  webviewPanel.onDidDispose(
-    () => {
-      webviewPanel = undefined;
-    },
-    undefined,
-    context.subscriptions,
-  );
-
-  webviewPanel?.webview.onDidReceiveMessage(async (msg: WebviewToExtensionData) => {
-    try {
-      await handleWebviewMessage(wsFolder, msg, cprojectBuildConfigs);
-    } catch (error) {
-      // 出现未捕获的异常则应答为失败
-      logger.error(error);
-      const message = {
-        command: msg.command,
-        params: {},
-        errmsg: getErrorMessage(error),
-      };
-      if (webviewPanel?.webview.postMessage(message)) {
-        logger.info('extension send', message);
-      }
-      throw error;
-    }
-  });
+  webviewPanel.onDidReceiveMessage = async (msg) => {
+    await handleWebviewMessage(wsFolder, msg, cprojectBuildConfigs);
+  };
 
   return new Promise<void>((resolve) => {
-    webviewEvent.once('generateSuccess', () => {
+    const disposable = generateEmitter.event(() => {
+      disposable.dispose();
       resolve();
     });
   });
@@ -1352,4 +1553,10 @@ async function parseSelectedBuildConfigs(wsFolder: vscode.Uri) {
   return buildConfig;
 }
 
-export { checkAndOpenGenerateWebview, parseProjcfgIni, parseSelectedBuildConfigs, disposeWebviewPanel };
+export {
+  checkAndOpenGenerateWebview,
+  parseProjcfgIni,
+  parseSelectedBuildConfigs,
+  disposeWebviewPanel,
+  onDidEnvRootChange,
+};

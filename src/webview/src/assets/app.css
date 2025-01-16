@@ -87,12 +87,15 @@
     --theme-scrollbar-thumb-background: #424242;
 }
 
-* {
-    box-sizing: border-box;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
     margin: 0;
+    padding: 0;
     color: var(--theme-text);
     background-color: var(--theme-body-background);
 }
@@ -105,7 +108,7 @@ body {
     align-items: center;
 }
 
-.m-row-center {
+.m-row--center {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;

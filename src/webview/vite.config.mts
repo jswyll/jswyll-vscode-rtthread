@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   root: resolve(__dirname),
   build: {
-    chunkSizeWarningLimit: 1024,
+    chunkSizeWarningLimit: 4096,
     emptyOutDir: true,
     outDir: '../../out/webview',
     rollupOptions: {
