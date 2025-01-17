@@ -9,9 +9,10 @@ export const i18n = createI18n({
      * 中文
      */
     zh: {
+      No: '否',
+      Top: '顶部',
       Warning: '警告',
       Yes: '是',
-      No: '否',
     },
   },
   missing: (locale, key) => {

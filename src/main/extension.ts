@@ -30,6 +30,8 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { getFileType } from './base/fs';
 import { platform } from 'os';
 import { debounce } from 'lodash';
+import { openChangeLog } from './project/markdown';
+import { AppVersion } from '../common/version';
 
 /**
  * 日志记录器
@@ -231,14 +233,17 @@ function createStatusbarCommand(
  */
 export async function activate(context: vscode.ExtensionContext) {
   setExtensionContext(context);
-  const lastVersion = getGlobalState('lastVersion', undefined);
-  const thisVersion = context.extension.packageJSON.version;
+  const lastVersion = new AppVersion(getGlobalState('lastVersion', undefined) || '');
+  const thisVersion = new AppVersion(context.extension.packageJSON.version);
   logger.info('################################################################################');
   logger.info(`# activate extension, version: ${thisVersion}`);
   logger.info('################################################################################');
-  if (lastVersion !== thisVersion) {
-    logger.info(`extension updated from version ${lastVersion}`);
-    updateGlobalState('lastVersion', thisVersion);
+  if (thisVersion.isGreaterTo(lastVersion)) {
+    logger.info(`extension upgraded from version ${lastVersion}`);
+    updateGlobalState('lastVersion', thisVersion.toString());
+    if (thisVersion.isUpgradeMajor(lastVersion) || thisVersion.isUpgradeMinor(lastVersion)) {
+      openChangeLog(lastVersion);
+    }
   }
 
   // 扩展可能因为taskDefinitions贡献点被激活，添加when上下文
@@ -401,6 +406,11 @@ export async function activate(context: vscode.ExtensionContext) {
       terminals.forEach((terminal) => terminal.dispose());
       conEmuProcess?.kill();
       MenuConfig.Dispose();
+    }),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`${EXTENSION_ID}.${COMMANDS.OPEN_CHANGELOG}`, async () => {
+      await openChangeLog();
     }),
   );
 

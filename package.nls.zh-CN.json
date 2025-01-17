@@ -39,5 +39,6 @@
   "jswyll-vscode-rtthread.clean": "jswyll-vscode-rtthread: 清除",
   "jswyll-vscode-rtthread.build": "jswyll-vscode-rtthread: 构建",
   "jswyll-vscode-rtthread.download": "jswyll-vscode-rtthread: 下载",
-  "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: 构建并下载"
+  "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: 构建并下载",
+  "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: 查看扩展更新日志"
 }

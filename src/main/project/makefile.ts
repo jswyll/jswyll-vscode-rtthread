@@ -6,10 +6,10 @@ import { basename, extname, join, relative } from 'path';
 import { getConfig, normalizePathForWorkspace } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqual } from '../../common/platform';
-import { BuildConfig, ProjcfgIni } from '../../common/types/type';
 import { debounce, escapeRegExp } from 'lodash';
 import { Cproject } from './cproject';
 import { processCCppPropertiesConfig } from './cCppProperties';
+import { ProjcfgIni, BuildConfig } from '../../common/types/generate';
 
 /**
  * 源文件的相对路径

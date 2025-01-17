@@ -61,6 +61,12 @@ body {
   background-color: var(--theme-body-background) !important;
 }
 
+a {
+  color: #007bff;
+  word-break: break-all;
+  text-decoration: none;
+}
+
 .m-layout {
   margin: var(--m-app-margin);
 }

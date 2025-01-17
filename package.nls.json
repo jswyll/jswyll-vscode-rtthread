@@ -39,5 +39,6 @@
   "jswyll-vscode-rtthread.clean": "jswyll-vscode-rtthread: Clean",
   "jswyll-vscode-rtthread.build": "jswyll-vscode-rtthread: Build",
   "jswyll-vscode-rtthread.download": "jswyll-vscode-rtthread: Download",
-  "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: Build and Download"
+  "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: Build and Download",
+  "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: Open Release Notes"
 }

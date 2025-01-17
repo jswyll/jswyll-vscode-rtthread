@@ -18,14 +18,17 @@ jswyll-vscode-rtthread/
 ├── src/                           # 源码
 │   ├── common/                        # 扩展进程与webview的公共代码
 │   │   ├── types/                         # 类型声明
+│   │   │   ├── generate.d.ts              # 生成配置
 │   │   │   ├── menuconfig.d.ts            # 菜单配置
-│   │   │   └── type.d.ts                  # 扩展进程与webview通信
+│   │   │   ├── type.d.ts                  # 类型定义
+│   │   │   └── vscode.d.ts                # 扩展进程与webview通信
 │   │   ├── assert.ts                      # 断言
 │   │   ├── constants.ts                   # 常量
 │   │   ├── error.ts                       # 错误
 │   │   ├── event.ts                       # 事件
 │   │   ├── platform.ts                    # 跨平台处理
-│   │   └── utils.ts                       # 工具
+│   │   ├── utils.ts                       # 工具
+│   │   └── version.ts                     # 应用版本处理
 │   ├── dev/                           # 开发辅助脚本
 │   │   ├── checkTranslation.ts            # 检查翻译是否完整
 │   │   ├── esbuild.ts                     # 构建扩展进程
@@ -50,6 +53,7 @@ jswyll-vscode-rtthread/
 │   │   │   ├── diagnostic.ts                  # 诊断中断函数
 │   │   │   ├── generate.ts                    # 生成项目配置文件
 │   │   │   ├── makefile.ts                    # makefile处理
+│   │   │   ├── markdown.ts                    # markdown文档渲染
 │   │   │   └── menuconfig.ts                  # 菜单配置
 │   │   ├── task/                          # 任务管理
 │   │   │   ├── build.ts                       # 构建任务执行
@@ -62,8 +66,11 @@ jswyll-vscode-rtthread/
 │       ├── src/                           # 源码
 │       │   ├── assets/                        # 静态资源
 │       │   │   └── app.css                    # 全局样式
+│       │   ├── components/                # 通用
+│       │   │   └── logger.ts                  # 日志记录器
 │       │   ├── components/                # 组件
 │       │   │   ├── InputHex.vue               # 16进制输入框
+│       │   │   ├── loading.vue                # 全屏加载
 │       │   │   ├── MHome.vue                  # 主页
 │       │   │   ├── MMarkdown.vue              # 内联markdown渲染
 │       │   │   ├── MSelectInput.vue           # 可输入的下拉选择
@@ -72,10 +79,14 @@ jswyll-vscode-rtthread/
 │       │   ├── locales/                   # 多语言
 │       │   │   ├── i18n.ts                    # 全局配置
 │       │   │   └── menuconfig.zh-CN.json      # 菜单配置 - 简体中文
+│       │   ├── mocks/                     # 模拟数据
+│       │   │   ├── menuconfig.ts              # RT-Thread菜单配置
+│       │   │   └── preview.ts                 # markdown预览
 │       │   ├── stores/                    # 状态管理
 │       │   │   └── theme.ts                   # 主题
 │       │   ├── views/                     # 页面
 │       │   │   ├── GenerateConfig.vue        # 生成配置
+│       │   │   ├── MarkdownPreview.vue       # markdown预览
 │       │   │   └── MenuConfig.vue            # 菜单配置
 │       │   ├── App.vue                    # 根组件
 │       │   └── main.ts                    # 入口

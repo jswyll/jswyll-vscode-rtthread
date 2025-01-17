@@ -25,6 +25,7 @@
   "An error occurred while executing the task \"{0}\", exit code: {1}": "执行任务 \"{0}\" 时出现错误, 退出代码: {1}",
   "Not found task {0} in {1}": "在{1}中未找到{0}任务",
   "Task {0} has no execution and no dependencies": "任务{0}没有执行或依赖项",
+  "Release Notes": "更新日志",
   "The format of \"{0}\" is invalid": "\"{0}\"的格式无效",
   "This chip is not supported at present, please manually configure .vsocde/xxx.cfg file to support download or debug.": "暂不支持该芯片，请手动配置.vsocde/xxx.cfg文件以支持下载或调试。",
   "The path \"{0}\" does not exists": "路径 \"{0}\" 不存在",

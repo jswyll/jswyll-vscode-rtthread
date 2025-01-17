@@ -44,6 +44,11 @@ export const COMMANDS = {
    * 打开ConEmu
    */
   OPEN_CONEMU: 'action.ConEmu.open',
+
+  /**
+   * 打开更新日志
+   */
+  OPEN_CHANGELOG: 'action.changelog.open',
 };
 
 /**

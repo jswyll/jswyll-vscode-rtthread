@@ -1,5 +1,6 @@
 import MHome from '@webview/components/MHome.vue';
 import GenerateConfig from '@webview/views/GenerateConfig.vue';
+import MarkdownPreview from '@webview/views/MarkdownPreview.vue';
 import MenuConfig from '@webview/views/MenuConfig.vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
@@ -19,6 +20,10 @@ const router = createRouter({
     {
       path: '/view/menuconfig',
       component: MenuConfig,
+    },
+    {
+      path: '/view/markdown',
+      component: MarkdownPreview,
     },
   ],
 });

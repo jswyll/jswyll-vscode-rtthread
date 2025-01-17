@@ -1,10 +1,10 @@
-# RT-Thread Studio项目助手
+# RT-Thread项目助手
 
 简体中文 | [English](#rt-thread-studio-project-assistant)
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/jswyll.jswyll-vscode-rtthread?color=blue)](https://marketplace.visualstudio.com/items?itemName=jswyll.jswyll-vscode-rtthread)
 
-> 本扩展适用于使用RT-Thread Studio新建或导入的项目，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。
+> 本扩展适用于使用RT-Thread Studio新建或导入的项目（或使用`scons --dist-ide --target=eclipse`生成然后使用RT-Thread Studio导入的），也适用于支持scons构建的RT-Thread项目，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。
 
 ## 快速开始
 
@@ -66,7 +66,7 @@
 
 - [跨平台开发](#其它平台)：已在Windows、MacOS（10.13和15.2）、Linux（Ubuntu 24.04）上测试通过。
 
-- [检查中断函数](中断检查)：检查形如`void xxx_IRQHandler(void)`的函数是否调用了`rt_interrupt_enter()`和`rt_interrupt_leave()`。
+- [检查中断函数](#中断检查)：检查形如`void xxx_IRQHandler(void)`的函数是否调用了`rt_interrupt_enter()`和`rt_interrupt_leave()`。
 
 - 国际化：支持简体中文和英文。
 
@@ -90,7 +90,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 ### 导入项目
 
-点击状态里的“导入”来生成vscode的配置文件。
+点击状态里的“导入”（生成）来生成vscode的配置文件。
 
 > **说明**
 >
@@ -1014,7 +1014,7 @@ make (e=2): 系统找不到指定的文件。
 
 # RT-Thread Studio Project Assistant
 
-[简体中文](#rt-thread-studio项目助手) | English
+[简体中文](#rt-thread项目助手) | English
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/jswyll.jswyll-vscode-rtthread?color=blue)](https://marketplace.visualstudio.com/items?itemName=jswyll.jswyll-vscode-rtthread)
 
