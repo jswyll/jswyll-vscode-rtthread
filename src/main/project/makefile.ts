@@ -87,13 +87,19 @@ export class MakefileProcessor {
    * @param buildConfig 选择的构建配置
    */
   public static SetProcessConfig(wsFolder: vscode.Uri, projcfgIni: ProjcfgIni, buildConfig: BuildConfig) {
-    this.HasBuildConfig = false;
     logger.info('SetBuildConfig for workspaceFolder:', wsFolder.fsPath);
     this.CurrentProjectRoot = wsFolder;
     this.ProjcfgIni = projcfgIni;
     this.BuildConfig = buildConfig;
     this.IsWatchMakefile = getConfig(this.CurrentProjectRoot, 'makefileProcessor.watch', true);
-    this.HasBuildConfig = true;
+  }
+
+  /**
+   * 设置是否有构建配置。
+   * @param hasBuildConfig 是否有构建配置
+   */
+  public static SetHasBuildConfig(hasBuildConfig: boolean) {
+    this.HasBuildConfig = hasBuildConfig;
   }
 
   /**
@@ -521,7 +527,6 @@ export class MakefileProcessor {
    * @param uri 文件uri
    */
   public static async HandleFileChange(uri: vscode.Uri) {
-    // TODO: 如果不是RT-Thread Studio类型则忽略
     logger.trace('HandleFileChange:', uri.fsPath);
     if (
       !this.HasBuildConfig ||
