@@ -31,6 +31,7 @@ import { processCCppPropertiesConfig } from './cCppProperties';
 import { WebviewPanel } from '../base/webview';
 import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../../common/types/generate';
 import { TdesignCustomValidateResult } from '../../common/types/vscode';
+import { isEqual } from 'lodash';
 
 /**
  * 生成的参数
@@ -962,8 +963,7 @@ async function startGenerate(params: GenerateParamsInternal) {
   for (const key in settings) {
     const section = `${CONFIG_GROUP.GENERATE}.${key}` as keyof ExtensionGenerateSettings;
     const value = settings[key as keyof GenerateSettings];
-    // TODO: 对象或数组不能用等号判断值是否相等
-    if (value !== lastSettings[key as keyof GenerateSettings]) {
+    if (!isEqual(value, lastSettings[key as keyof GenerateSettings])) {
       await updateConfig(wsFolder, section, value);
     }
   }

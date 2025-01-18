@@ -68,23 +68,27 @@ const debouncedPkgsUpdate = debounce(
  * 设置扩展的when语句上下文
  */
 async function setWhenContext() {
-  // TODO: 添加更精确的判断
   const [cprojectUris, rtconfigPyUris] = await Promise.all([
     vscode.workspace.findFiles('.cproject'),
-    // TODO: 支持子目录？
     vscode.workspace.findFiles('rtconfig.py'),
   ]);
   const isRtthreadProject = cprojectUris.length > 0 || rtconfigPyUris.length > 0;
   vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadProject`, isRtthreadProject);
-  vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadEnvProject`, rtconfigPyUris.length > 0);
   return isRtthreadProject;
 }
 
 /**
- * 根据配置情况显示或隐藏各个状态栏及右键菜单。
+ * 更改特性配置。
+ *
+ * - 显示或状态栏按钮。
+ *
+ * - 设置扩展的when语句上下文。
+ *
+ * - 设置是否自动处理makefile。
+ *
  * @param wsFolder 当前工作区文件夹
  */
-function changeShowStatusBars(wsFolder: vscode.Uri) {
+function changeFeature(wsFolder: vscode.Uri) {
   const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
   for (const statusbar of buildStatusBarItems) {
     if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.MENUCONFIG}`) {
@@ -103,7 +107,10 @@ function changeShowStatusBars(wsFolder: vscode.Uri) {
       statusbar.show();
     }
   }
+  const isRtthreadStudioProject = projectType === 'RT-Thread Studio';
   vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadEnvProject`, projectType === 'Env');
+  vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadStudioProject`, isRtthreadStudioProject);
+  MakefileProcessor.SetHasBuildConfig(isRtthreadStudioProject);
 }
 
 /**
@@ -112,7 +119,7 @@ function changeShowStatusBars(wsFolder: vscode.Uri) {
  */
 async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   await checkAndOpenGenerateWebview(wsFolder);
-  changeShowStatusBars(wsFolder);
+  changeFeature(wsFolder);
 }
 
 /**
@@ -418,7 +425,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const setMakefileProcessorBuildConfig = async (workspaceFolder: vscode.WorkspaceFolder) => {
     const extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
     if (extensionSpecifiedBuildTask) {
-      changeShowStatusBars(workspaceFolder.uri);
+      changeFeature(workspaceFolder.uri);
       await Promise.all([parseSelectedBuildConfigs(workspaceFolder.uri), parseProjcfgIni(workspaceFolder.uri)]).then(
         ([buildConfig, projcfgIni]) => {
           if (buildConfig) {
