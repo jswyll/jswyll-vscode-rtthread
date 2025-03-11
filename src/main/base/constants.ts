@@ -71,6 +71,15 @@ export const TASKS = {
   },
 
   /**
+   * 生成vscode配置
+   */
+  SCONS_TARGET_VSC: {
+    name: 'scons --target=vsc',
+    label: BUILD_TASKS_LABEL_PREFIX + 'scons --target=vsc',
+    detail: vscode.l10n.t('Generate VSCode Workspace'),
+  },
+
+  /**
    * 构建
    */
   BUILD: {

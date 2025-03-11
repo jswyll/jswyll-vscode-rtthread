@@ -27,7 +27,7 @@ import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './p
 import { MenuConfig } from './project/menuconfig';
 import { dirname, join } from 'path';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
-import { getFileType } from './base/fs';
+import { existsAsync, getFileType } from './base/fs';
 import { platform } from 'os';
 import { debounce } from 'lodash';
 import { openChangeLog } from './project/markdown';
@@ -88,7 +88,7 @@ async function setWhenContext() {
  *
  * @param wsFolder 当前工作区文件夹
  */
-function changeFeature(wsFolder: vscode.Uri) {
+async function changeFeature(wsFolder: vscode.Uri) {
   const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
   for (const statusbar of buildStatusBarItems) {
     if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.MENUCONFIG}`) {
@@ -119,7 +119,11 @@ function changeFeature(wsFolder: vscode.Uri) {
  */
 async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   await checkAndOpenGenerateWebview(wsFolder);
-  changeFeature(wsFolder);
+  await changeFeature(wsFolder);
+  const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
+  if (projectType === 'Env' && !(await existsAsync(vscode.Uri.joinPath(wsFolder, '.vscode/c_cpp_properties.json')))) {
+    await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
+  }
 }
 
 /**
@@ -365,20 +369,21 @@ export async function activate(context: vscode.ExtensionContext) {
         rtthreadEnvTerminal = vscode.window.createTerminal({
           name: 'RT-Thread Env',
           shellPath: 'cmd.exe',
-          shellArgs: ['/K', 'chcp 437'],
         });
-        rtthreadEnvTerminal.show();
-        context.subscriptions.push(
-          vscode.window.onDidCloseTerminal((closedTerminal) => {
-            if (closedTerminal === rtthreadEnvTerminal) {
-              rtthreadEnvTerminal = null;
-            }
-          }),
-        );
+        rtthreadEnvTerminal.sendText(`chcp 437`);
       } else {
-        // TODO: 其它平台
-        throw new Error(vscode.l10n.t('Not implemented'));
+        rtthreadEnvTerminal = vscode.window.createTerminal({
+          name: 'RT-Thread Env',
+        });
       }
+      rtthreadEnvTerminal.show();
+      context.subscriptions.push(
+        vscode.window.onDidCloseTerminal((closedTerminal) => {
+          if (closedTerminal === rtthreadEnvTerminal) {
+            rtthreadEnvTerminal = null;
+          }
+        }),
+      );
     },
     false,
   );
@@ -402,7 +407,6 @@ export async function activate(context: vscode.ExtensionContext) {
           conEmuProcess = null;
         });
       } else {
-        // TODO: 其它平台
         throw new Error(vscode.l10n.t('Not implemented'));
       }
     }),
@@ -425,7 +429,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const setMakefileProcessorBuildConfig = async (workspaceFolder: vscode.WorkspaceFolder) => {
     const extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
     if (extensionSpecifiedBuildTask) {
-      changeFeature(workspaceFolder.uri);
+      await changeFeature(workspaceFolder.uri);
       await Promise.all([parseSelectedBuildConfigs(workspaceFolder.uri), parseProjcfgIni(workspaceFolder.uri)]).then(
         ([buildConfig, projcfgIni]) => {
           if (buildConfig) {
@@ -442,6 +446,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     onWorkspaceFolderChange((workspaceFolder) => {
       setMakefileProcessorBuildConfig(workspaceFolder);
+      const terminals = vscode.window.terminals;
+      terminals.forEach((terminal) => terminal.dispose());
     }),
   );
   const watcher = vscode.workspace.createFileSystemWatcher('**/*');

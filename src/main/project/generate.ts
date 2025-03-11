@@ -5,13 +5,7 @@ import { Logger } from '../base/logger';
 import { ExtensionToWebviewDatas, WebviewToExtensionData } from '../../common/types/type';
 import { getConfig, normalizePathForWorkspace, parsePath, updateConfig } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
-import {
-  TASKS,
-  CONFIG_GROUP,
-  GCC_COMPILE_PROBLEM_MATCHER_NAME,
-  GCC_LINK_PROBLEM_MATCHER_NAME,
-  TASKS_JSON_RELATIVE_PATH,
-} from '../base/constants';
+import { TASKS, CONFIG_GROUP, TASKS_JSON_RELATIVE_PATH } from '../base/constants';
 import { EXTENSION_ID } from '../../common/constants';
 import { assertParam } from '../../common/assert';
 import {
@@ -32,6 +26,7 @@ import { WebviewPanel } from '../base/webview';
 import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../../common/types/generate';
 import { TdesignCustomValidateResult } from '../../common/types/vscode';
 import { isEqual } from 'lodash';
+import { platform } from 'os';
 
 /**
  * 生成的参数
@@ -435,11 +430,6 @@ async function processMakefiles(params: GenerateParamsInternal) {
   const { wsFolder, projcfgIni, buildConfig } = params;
   MakefileProcessor.SetProcessConfig(wsFolder, projcfgIni, buildConfig!);
   await MakefileProcessor.ProcessMakefiles();
-
-  // jlink segger旧版本不支持解析elf文件，所以生成hex文件
-  if (isJlinkDebugger(params.settings.debuggerServerPath)) {
-    await MakefileProcessor.GenerateHexTarget();
-  }
 }
 
 /**
@@ -504,7 +494,31 @@ async function processTasksJson(params: GenerateParamsInternal) {
           },
         },
         // FIXME: 链接的问题匹配器可能不能匹配到错误信息
-        problemMatcher: [GCC_COMPILE_PROBLEM_MATCHER_NAME, GCC_LINK_PROBLEM_MATCHER_NAME],
+        problemMatcher: [
+          {
+            fileLocation: ['autoDetect', '${config:jswyll-vscode-rtthread.generate.makeBaseDirectory}'],
+            source: 'gcc',
+            pattern: {
+              regexp: '^(.*?):(\\d+):(\\d*):?\\s+(?:fatal\\s+)?(warning|error):\\s+(.*)$',
+              file: 1,
+              line: 2,
+              column: 3,
+              severity: 4,
+              message: 5,
+            },
+          },
+          {
+            fileLocation: ['autoDetect', '${config:jswyll-vscode-rtthread.generate.makeBaseDirectory}'],
+            pattern: {
+              regexp: '^.+\\/bin\\/ld[^:]+:\\s*(.+):(\\d+):(.+)$',
+              file: 1,
+              line: 2,
+              message: 3,
+            },
+            severity: 'error',
+            source: 'gcc',
+          },
+        ],
         group: {
           kind: 'build',
           isDefault: defaultBuildTask === TASKS.BUILD.label,
@@ -567,31 +581,58 @@ async function processTasksJson(params: GenerateParamsInternal) {
   if (projectType === 'Env') {
     const pkgsCommand = 'pkgs';
     const pkgsArgs = ['--update'];
-    taskJson.tasks.push({
-      label: TASKS.PKGS_UPDATE.label,
-      detail: TASKS.PKGS_UPDATE.detail,
-      type: 'shell',
-      command: pkgsCommand,
-      args: cleanArgs,
-      options: {
-        cwd: buildCwd,
-        env: {
-          PATH: calculateEnvPathString(envPaths, ':'),
-          ...extraVar,
-        },
-      },
-      windows: {
-        command: 'cmd.exe',
-        args: ['/c', ['chcp', '437', '&&', pkgsCommand, ...pkgsArgs].join(' ')],
+    taskJson.tasks.push(
+      {
+        label: TASKS.PKGS_UPDATE.label,
+        detail: TASKS.PKGS_UPDATE.detail,
+        type: 'shell',
+        command: pkgsCommand,
+        args: pkgsArgs,
         options: {
+          cwd: buildCwd,
           env: {
-            PATH: calculateEnvPathString(envPaths, ';'),
+            PATH: calculateEnvPathString(envPaths, ':'),
             ...extraVar,
           },
         },
+        windows: {
+          command: 'cmd.exe',
+          args: ['/c', ['chcp', '437', '&&', pkgsCommand, ...pkgsArgs].join(' ')],
+          options: {
+            env: {
+              PATH: calculateEnvPathString(envPaths, ';'),
+              ...extraVar,
+            },
+          },
+        },
+        problemMatcher: [],
       },
-      problemMatcher: [],
-    });
+      {
+        label: TASKS.SCONS_TARGET_VSC.label,
+        detail: TASKS.SCONS_TARGET_VSC.detail,
+        type: 'shell',
+        command: 'scons',
+        args: ['--target=vsc'],
+        options: {
+          cwd: buildCwd,
+          env: {
+            PATH: calculateEnvPathString(envPaths, ':'),
+            ...extraVar,
+          },
+        },
+        windows: {
+          command: 'cmd.exe',
+          args: ['/c', ['chcp', '437', '&&', 'scons', '--target=vsc'].join(' ')],
+          options: {
+            env: {
+              PATH: calculateEnvPathString(envPaths, ';'),
+              ...extraVar,
+            },
+          },
+        },
+        problemMatcher: [],
+      },
+    );
   }
 
   const debuggerServer = getDebugServer(debuggerServerPath);
@@ -605,8 +646,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
         `program ${getElfFilePathForWorkspace(params)} verify reset exit`,
       ];
     } else if (isJlinkDebugger(debuggerServerPath)) {
-      // jlink segger旧版本不支持解析elf格式，所以使用hex文件
-      const targetHexFilePath = getElfFilePathForWorkspace(params).replace(/\.elf$/, '.hex');
+      const targetHexFilePath = getElfFilePathForWorkspace(params);
       const jlinkScriptPath = '.vscode/download.jlink';
       downloadArgs = ['-CommandFile', jlinkScriptPath];
       await writeTextFile(
@@ -777,19 +817,18 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
  *
  * @param params 生成参数
  */
-async function updateTerminalIntegratedEnv(params: GenerateParamsInternal) {
+async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs: 'linux' | 'osx' | 'windows') {
   const { wsFolder, settings, exraPaths, extraVar } = params;
   const { projectType, envPath, rttDir, compilerPath, customExtraPathVar, customExtraVars } = settings;
+  const exraPathsOfGit: typeof exraPaths = [];
 
   const envPathParsed = parsePath(envPath);
-  const terminalIntegratedEnvLinux = getConfig(wsFolder, 'terminal.integrated.env.linux', {}, true);
-  const terminalIntegratedEnvOsx = getConfig(wsFolder, 'terminal.integrated.env.osx', {}, true);
-  const terminalIntegratedEnvWindows = getConfig(wsFolder, 'terminal.integrated.env.windows', {}, true);
+  const terminalIntegratedEnv = getConfig(wsFolder, `terminal.integrated.env.${envOs}`, {}, true);
 
   function normalizeEnvSubPath(p: string) {
     p = convertPathToUnixLike(p);
-    // 防止环境变量被解析
-    if (p.startsWith(convertPathToUnixLike(envPathParsed))) {
+    // 防止环境变量被解析、影响团队协作
+    if (envPath.match(/\$\{env:([^}]+)\}/) && p.startsWith(convertPathToUnixLike(envPathParsed))) {
       p = envPath + p.slice(envPathParsed.length);
     }
     return p;
@@ -797,71 +836,138 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal) {
 
   if (projectType === 'Env') {
     const envPathOld = getConfig(wsFolder, 'generate.envPath', '');
-    extraVar['ENV_DIR'] = convertPathToUnixLike(envPath);
-    extraVar['ENV_ROOT'] = convertPathToUnixLike(envPath);
+    extraVar['ENV_DIR'] = normalizeEnvSubPath(envPathParsed);
+    extraVar['ENV_ROOT'] = normalizeEnvSubPath(envPathParsed);
+    extraVar['RTT_CC'] = 'gcc';
     extraVar['RTT_DIR'] = normalizePathForWorkspace(wsFolder, rttDir);
     extraVar['RTT_ROOT'] = normalizePathForWorkspace(wsFolder, rttDir);
     extraVar['BSP_DIR'] = '.';
     extraVar['BSP_ROOT'] = '.';
-    exraPaths.push(convertPathToUnixLike(join(envPath, 'tools', 'bin')));
-
-    let pythonExePath;
-    let pythonDir;
-    const venvDir = join(envPathParsed, '.venv');
-    if (await existsAsync(venvDir)) {
-      const envDirNormalized = normalizeEnvSubPath(venvDir);
-      exraPaths.push(convertPathToUnixLike(join(envDirNormalized, 'Scripts')));
-      extraVar['VENV'] = envDirNormalized;
-      extraVar['VIRTUAL_ENV'] = envDirNormalized;
-      pythonExePath = convertPathToUnixLike(join(venvDir, 'Scripts', 'python'));
-      pythonDir = normalizeEnvSubPath(dirnameOrEmpty(pythonExePath));
-      extraVar['PYTHONHOME'] = undefined;
-      extraVar['PYTHONPATH'] = undefined;
+    const envToolsBin = join(envPathParsed, 'tools', 'bin');
+    if (await existsAsync(envToolsBin)) {
+      exraPaths.push(normalizeEnvSubPath(join(envPathParsed, 'tools', 'bin')));
     } else {
+      exraPaths.push(normalizeEnvSubPath(join(envPathParsed, 'tools', 'scripts')));
+    }
+    let qemuPath = join(envPathParsed, 'tools', 'qemu', 'qemu64');
+    if (await existsAsync(qemuPath)) {
+      exraPaths.push(normalizeEnvSubPath(qemuPath));
+    } else {
+      qemuPath = join(envPathParsed, 'tools', 'qemu', 'qemu32');
+      if (await existsAsync(qemuPath)) {
+        exraPaths.push(normalizeEnvSubPath(qemuPath));
+      }
+    }
+
+    let venvBinDirname;
+    if (envOs === 'windows') {
+      venvBinDirname = 'Scripts';
+    } else {
+      venvBinDirname = 'bin';
+    }
+
+    const python27Dir = join(envPathParsed, 'tools', 'Python27');
+    if (await existsAsync(python27Dir)) {
+      // env 1.x
+      const pythonDir = normalizeEnvSubPath(python27Dir);
       extraVar['VENV'] = undefined;
       extraVar['VIRTUAL_ENV'] = undefined;
-      const pythonUris = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(vscode.Uri.file(envPathParsed), 'tools/*/{python.exe,python}'),
-      );
-      assertParam(pythonUris.length > 0, vscode.l10n.t('The path "{0}" does not exists', ['python']));
-      // 优先使用Python27而不是Python27_32
-      pythonExePath = sortUris(pythonUris, false)[0].fsPath;
-      pythonDir = normalizeEnvSubPath(dirnameOrEmpty(pythonExePath));
+      exraPaths.push(normalizeEnvSubPath(pythonDir));
+      exraPaths.push(normalizeEnvSubPath(join(pythonDir, venvBinDirname)));
+      extraVar['RTT_ENV_URL'] = undefined;
+      extraVar['PYTHON'] = undefined;
       extraVar['PYTHONHOME'] = pythonDir;
       extraVar['PYTHONPATH'] = pythonDir;
+      extraVar['SCONS'] = normalizeEnvSubPath(join(pythonDir, venvBinDirname));
+    } else {
+      // env 2.x
+      extraVar['RTT_ENV_URL'] = normalizeEnvSubPath(join(envPathParsed, 'tools', 'scripts'));
+      if (await existsAsync(join(envPathParsed, '.venv'))) {
+        exraPaths.push(normalizeEnvSubPath(join(envPathParsed, '.venv', venvBinDirname)));
+        extraVar['VENV'] = normalizeEnvSubPath(join(envPathParsed, '.venv'));
+        extraVar['VIRTUAL_ENV'] = normalizeEnvSubPath(join(envPathParsed, '.venv'));
+        extraVar['PYTHON'] = normalizeEnvSubPath(join(envPathParsed, '.venv', venvBinDirname, 'python'));
+      } else {
+        extraVar['VENV'] = undefined;
+        extraVar['VIRTUAL_ENV'] = undefined;
+        extraVar['PYTHON'] = undefined;
+      }
+      extraVar['PYTHONHOME'] = undefined;
+      extraVar['PYTHONPATH'] = undefined;
+      extraVar['SCONS'] = undefined;
     }
-    exraPaths.push(pythonDir);
-    exraPaths.push(convertPathToUnixLike(join(pythonDir, 'Scripts')));
-    extraVar['PYTHON'] = normalizeEnvSubPath(pythonExePath);
-    extraVar['SCONS'] = convertPathToUnixLike(join(pythonDir, 'Scripts'));
 
     const execDir = normalizeEnvSubPath(dirnameOrEmpty(compilerPath));
     if (execDir) {
       exraPaths.push(execDir);
-      extraVar['RTT_EXEC_PATH'] = convertPathToUnixLike(execDir);
+      extraVar['RTT_EXEC_PATH'] = normalizeEnvSubPath(execDir);
     }
 
     const gitUris = await vscode.workspace.findFiles(
       new vscode.RelativePattern(vscode.Uri.file(envPathParsed), 'tools/*/cmd/{git.exe,git}'),
     );
     for (const uri of sortUris(gitUris, false)) {
-      exraPaths.push(normalizeEnvSubPath(dirnameOrEmpty(uri.fsPath)));
+      exraPathsOfGit.push(normalizeEnvSubPath(dirnameOrEmpty(uri.fsPath)));
     }
 
-    extraVar['PKGS_DIR'] = convertPathToUnixLike(join(envPath, 'packages'));
-    extraVar['PKGS_ROOT'] = convertPathToUnixLike(join(envPath, 'packages'));
+    extraVar['PKGS_DIR'] = normalizeEnvSubPath(join(envPathParsed, 'packages'));
+    extraVar['PKGS_ROOT'] = normalizeEnvSubPath(join(envPathParsed, 'packages'));
 
-    await updateConfig(
-      wsFolder,
-      'terminal.integrated.profiles.windows',
-      {
-        'RT-Thread Env': {
-          path: 'cmd.exe',
-          args: ['/K', 'chcp 437'],
+    if (envOs === 'windows') {
+      await updateConfig(
+        wsFolder,
+        'terminal.integrated.profiles.windows',
+        {
+          'RT-Thread Env': {
+            path: 'cmd.exe',
+            args: ['/K', 'chcp 437'],
+          },
         },
-      },
-      true,
-    );
+        true,
+      );
+    } else if (envOs === 'osx') {
+      await updateConfig(
+        wsFolder,
+        'terminal.integrated.profiles.osx',
+        {
+          'RT-Thread Env': {
+            overrideName: true,
+            path: 'zsh',
+            env: {
+              ...terminalIntegratedEnv,
+              ...params.extraVar,
+              ...params.extraVar,
+              PATH: calculateEnvPathString(
+                [
+                  ...params.exraPaths,
+                  '/usr/local/bin',
+                  '/usr/local/bin',
+                  '/usr/bin',
+                  '/bin',
+                  '/usr/sbin',
+                  '/sbin',
+                  ...exraPathsOfGit,
+                ],
+                ':',
+              ),
+            },
+          },
+        },
+        true,
+      );
+      await updateConfig(wsFolder, 'terminal.integrated.defaultProfile.osx', 'RT-Thread Env', true);
+    } else {
+      await updateConfig(
+        wsFolder,
+        'terminal.integrated.profiles.linux',
+        {
+          'RT-Thread Env': {
+            path: 'bash',
+          },
+        },
+        true,
+      );
+    }
 
     if (envPathOld !== envPath) {
       envRootChangeEmitter.fire();
@@ -870,36 +976,31 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal) {
 
   params.extraVar = { ...extraVar, ...customExtraVars };
   params.exraPaths = [...customExtraPathVar, ...exraPaths];
-  await updateConfig(
-    wsFolder,
-    'terminal.integrated.env.linux',
-    {
-      ...terminalIntegratedEnvLinux,
-      ...params.extraVar,
-      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}'], ':'),
-    },
-    true,
-  );
-  await updateConfig(
-    wsFolder,
-    'terminal.integrated.env.osx',
-    {
-      ...terminalIntegratedEnvOsx,
-      ...params.extraVar,
-      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}'], ':'),
-    },
-    true,
-  );
-  await updateConfig(
-    wsFolder,
-    'terminal.integrated.env.windows',
-    {
-      ...terminalIntegratedEnvWindows,
-      ...params.extraVar,
-      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}'], ';'),
-    },
-    true,
-  );
+  if (envOs === 'windows') {
+    await updateConfig(
+      wsFolder,
+      `terminal.integrated.env.${envOs}`,
+      {
+        ...terminalIntegratedEnv,
+        ...params.extraVar,
+        ...params.extraVar,
+        PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}', ...exraPathsOfGit], ';'),
+      },
+      true,
+    );
+  } else {
+    await updateConfig(
+      wsFolder,
+      `terminal.integrated.env.${envOs}`,
+      {
+        ...terminalIntegratedEnv,
+        ...params.extraVar,
+        ...params.extraVar,
+        PATH: calculateEnvPathString([...params.exraPaths, '/usr/local/bin', '${env:PATH}', ...exraPathsOfGit], ':'),
+      },
+      true,
+    );
+  }
 }
 
 /**
@@ -935,7 +1036,14 @@ async function startGenerate(params: GenerateParamsInternal) {
     await vscode.workspace.fs.createDirectory(vscodeFolder);
   }
 
-  await updateTerminalIntegratedEnv(params);
+  const osPlatform = platform();
+  if (osPlatform === 'win32') {
+    await updateTerminalIntegratedEnv(params, 'windows');
+  } else if (osPlatform === 'darwin') {
+    await updateTerminalIntegratedEnv(params, 'osx');
+  } else {
+    await updateTerminalIntegratedEnv(params, 'linux');
+  }
 
   await updateFilesAssociationsAndExclude(params);
 
