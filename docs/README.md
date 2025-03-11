@@ -150,3 +150,23 @@ jswyll-vscode-rtthread/
 - [vue3](https://cn.vuejs.org/guide/introduction)
 
 - [TDesign](https://tdesign.tencent.com/vue-next/overview)
+
+## 特别鸣谢
+
+- [kconfiglib](https://github.com/ulfalizer/Kconfiglib)：一个灵活的Python 2/3 Kconfig实现和库。
+
+- [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug)：一款适用于ARM Cortex-M架构的GDB调试扩展。
+
+    ```sh
+    名称: Cortex-Debug
+    ID: marus25.cortex-debug
+    说明: ARM Cortex-M GDB Debugger support for VSCode
+    发布者: marus25
+    VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug
+    ```
+
+- [espressif - esp-idf-extension](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension)：参考了该扩展的部分功能和界面设计。
+
+- [eclipse-cdt - gnu2/GnuMakefileGenerator.java](https://github.com/eclipse-cdt/cdt/blob/main/build/org.eclipse.cdt.managedbuilder.core/src/org/eclipse/cdt/managedbuilder/makegen/gnu2/GnuMakefileGenerator.java)：了解了其makefile生成逻辑。
+
+- [rtthread - tools/eclipse.py](https://github.com/RT-Thread/rt-thread/blob/master/tools/eclipse.py)：参考了其eclipse项目解析逻辑。

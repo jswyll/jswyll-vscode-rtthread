@@ -292,41 +292,6 @@ export class MakefileProcessor {
   }
 
   /**
-   * 生成hex目标文件。
-   *
-   * 如果{@link GetMakefileUri}或{@link GetMakefileDefsUri}中有hex目标则跳过。
-   *
-   * 否则更新{@link GetMakefileDefsUri}来添加hex生成目标：
-   *
-   * 1. 添加`SECONDARY_FLASH += xxx.hex`
-   *
-   * 2. 添加`xxx.hex: xxx.elf: ...`
-   */
-  public static async GenerateHexTarget() {
-    const makefileUri = this.GetMakefileUri();
-    const makefileContent = await readTextFile(makefileUri);
-    const hexTargetRegex = /^.*?\.hex:.*\r?\n\t/gm;
-    if (hexTargetRegex.test(makefileContent)) {
-      return;
-    }
-    const makefileDefsUri = this.GetMakefileDefsUri();
-    const makefileDefsContent = await readTextFile(makefileDefsUri, '');
-    logger.debug(`makefileDefsContent:\r\n${makefileDefsContent}`);
-    if (hexTargetRegex.test(makefileDefsContent)) {
-      return;
-    }
-
-    const { artifactName, toolchainPrefix } = this.BuildConfig;
-    const prependText =
-      'SECONDARY_FLASH += \\\r\n' +
-      `${artifactName}.hex \\\r\n\r\n` +
-      `${artifactName}.hex: ${artifactName}.elf\r\n` +
-      `\t${toolchainPrefix}objcopy -O ihex "${artifactName}.elf" "${artifactName}.hex"\r\n\r\n`;
-    logger.info(`prepend text to "${makefileDefsUri.fsPath}":\r\n${prependText}`);
-    await writeTextFile(makefileDefsUri, prependText + makefileDefsContent);
-  }
-
-  /**
    * 移除顶级目录中的指定子目录（和该子目录的所有子目录）的编译规则。
    *
    * - 移除makefil中的`-include 对应目录.mk`。
