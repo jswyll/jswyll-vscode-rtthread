@@ -1,22 +1,18 @@
 # RT-Thread项目助手
 
-简体中文 | [English](#rt-thread-studio-project-assistant)
-
 [![Version](https://img.shields.io/visual-studio-marketplace/v/jswyll.jswyll-vscode-rtthread?color=blue)](https://marketplace.visualstudio.com/items?itemName=jswyll.jswyll-vscode-rtthread)
 
 > 本扩展适用于使用RT-Thread Studio新建或导入的项目（或使用`scons --dist-ide --target=eclipse`生成然后使用RT-Thread Studio导入的），也适用于支持scons构建的RT-Thread项目，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。
 
 ## 快速开始
 
-1. 使用RT-Thread Studio新建或导入的项目，在RT-Thread Studio构建一次
+1. 在vscode中安装并启用本扩展（`jswyll.jswyll-vscode-rtthread`），依赖的扩展会被自动安装。
 
-2. 在vscode中安装并启用本扩展（`jswyll.jswyll-vscode-rtthread`），依赖的扩展会被自动安装。
-
-3. 打开项目根目录（`.cproject`文件的所在文件夹），点击状态栏的“导入”按钮
+2. 打开项目根目录（`.cproject`或`rt_config.py`文件的所在文件夹），点击状态栏的“导入”按钮
 
     ![images/1735660800001.png](images/1735660800001.png)
 
-4. 根据配置面板提示填写相关信息
+3. 根据配置面板提示填写相关信息
 
     点击“RT-Thread Studio路径”右方的打开文件按钮，选择RT-Thread Studio安装路径（`studio.exe`的所在文件夹）
 
@@ -26,17 +22,21 @@
 
     ![images/1735660800002.gif](images/1735660800002.gif)
 
-5. 点击状态栏的“构建并下载”按钮（或按快捷键`Ctrl+Shift+B`）
+4. 点击状态栏的“构建并下载”按钮（或按快捷键`Ctrl+Shift+B`）
 
     ![images/1735660800003.gif](images/1735660800003.gif)
 
-## 软件特性
+## 扩展特性
 
 - 解析项目信息，生成vscode的配置文件：
 
   - 可视化：通过配置向导面板进行输入或选择参数。从环境变量`PATH`中寻找可用的GCC编译器；Windows环境下选择RT-Thread Studio路径后，自动寻找GCC编译器路径、Make工具路径、调试器服务器等以供选择
 
   - 代码浏览：生成C/C++浏览配置（`.vscode/c_cpp_properties.json`）的宏定义、头文件（搜索）路径；根据排除路径生成vscode资源管理器排除规则（`files.exclude`）。
+
+  - 冷启动运行Env相关命令：可直接打开项目目录在终端运行`scons`、`pkgs`、`sdk`、`menuconfig`命令（无须先打开ComEmu输入`code .`）。
+
+  - [菜单配置](#菜单配置)：可视化操作替代menuconfig。
 
   - 程序编译：
 
@@ -88,6 +88,14 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 启用扩展后，当工作区文件夹中（第一级）有`.cproject`文件或`rt_config.py`文件时，扩展会自动激活。
 
+> **提示**
+>
+> - 如果选择的构建方式RT-Thread Studio Makefile，需要在RT-Thread Studio构建一次。
+>
+> - 在vscode打开的主目录应该是BSP主目录或RT-Thread Studio项目的主目录。如果不是（例如想同时看RT-Thread主仓库源码和BSP），可参考[子文件夹](#子文件夹)将项目转为多根工作区。
+>
+> - BSP的Kconfig中的路径可能是导入后的，如果在RT-Thread主仓库中的BSP开发，可以尝试使用RT-Thread Studio导入项目或使用`scons --dist`相关命令生成标准的目录结构。
+
 ### 导入项目
 
 点击状态里的“导入”（生成）来生成vscode的配置文件。
@@ -99,6 +107,8 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 > - 项目可以是已经移动的（不在RT-Thread Studio workspace文件夹中的）。
 
 #### 面板选项
+
+- **项目类型**：项目的构建方式，`RT-Thread Studio`（eclipse Makefile）或`RT-Thread Env`（scons）。
 
 - **构建配置**：在RT-Thread Studio项目中创建的构建配置。如果只有一个则无需选择。必要项。
 
@@ -116,21 +126,17 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
   可以选择RT-Thread Studio内置的`platform/env_released/env/tools/BuildTools/2.12-20190422-1053/bin`。Windows平台可以前往<https://github.com/skeeto/w64devkit/releases>下载命令更丰富的开发包。
 
+- **芯片名称**：用于下载程序时让调试器识别出对应的FLASH大小。对于STM32，应至少精确到11位字符，例如`STM32L431CC`。
+
 - **调试服务器**：支持OpenOCD、JLink或PyOCD。非必要项（如果你不需要在vscode下载、调试程序）。
 
     ![images/1735660800007.png](images/1735660800007.png)
 
-  - Segger JLink：可以选择RT-Thread Studio内置的v7.50a，RT-Thread Studio v2.2.8以上还可以选v7.92（推荐）。或者，前往<https://www.segger.com/downloads/jlink>下载特定的版本。特点是：快！
+  - Segger JLink：**要求版本大于等于V7.90**，RT-Thread Studio v2.2.8以上可以选内置的v7.92。或者，前往<https://www.segger.com/downloads/jlink>下载特定的版本。特点是：快！
 
     ![images/1735660800008.png](images/1735660800008.png)
 
     ![images/1735660800009.png](images/1735660800009.png)
-
-  - PyOCD：可以选择RT-Thread Studio内置的v0.1.3。但经测试它不支持我的JLink，可以参考<https://pyocd.io/docs/installing>安装最新的新版本（Windows平台pip安装的pyocd可能需要拷贝libusb.dll到python根目录才可用），新版本对ST-Link、JLink和CMSIS-DAP调试器都支持。
-
-    除非是[PyOCD内置目标](https://pyocd.io/docs/builtin-targets.html)，否则需要填写Cmsis包。可以输入关键词然后选择RT-Thread Studio内置的。
-
-    ![images/1735660800010.png](images/1735660800010.png)
 
   - OpenOCD：可以前往<https://github.com/xpack-dev-tools/openocd-xpack/releases>下载，对于Windows还可以前往<https://gnutoolchains.com/arm-eabi/openocd/>下载包含的额外驱动软件的。支持ST-Link、JLink和CMSIS-DAP。特点是：很多芯片厂商都支持。
 
@@ -146,7 +152,32 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
     >
     > ![images/1735660800013.gif](images/1735660800013.gif)
 
-- **芯片名称**：用于下载程序时让调试器识别出对应的FLASH大小。一般来说保持不变即可。对于STM32，应至少精确到11位字符，例如`STM32L431CC`。
+  - PyOCD：可以选择RT-Thread Studio内置的v0.1.3。但经测试它不支持我的JLink，可以参考<https://pyocd.io/docs/installing>安装最新的新版本（Windows平台pip安装的pyocd可能需要拷贝libusb.dll到python根目录才可用），新版本对ST-Link、JLink和CMSIS-DAP调试器都支持。
+
+    除非是[PyOCD内置目标](https://pyocd.io/docs/builtin-targets.html)，否则需要填写Cmsis包的路径。Windows平台可以输入关键词然后选择RT-Thread Studio内置的。
+
+    ![images/1735660800010.png](images/1735660800010.png)
+
+    > **提示**
+    >
+    > 可以通过pyocd命令添加内置的支持包：`pyocd pack find 芯片名称`查找，`pyocd pack install 包名称`安装。例：
+    >
+    > ```sh
+    > D:\RT-ThreadStudio\workspace\stm32f407-atk-explorer-v5.2.0>pyocd pack find STM32F407ZG
+    > 0000455 I No pack index present, downloading now... [pack_cmd]
+    > Part            Vendor               Pack                 Version   Installed  
+    > ---------------------------------------------------------------------------------
+    > STM32F407ZGTx   STMicroelectronics   Keil.STM32F4xx_DFP   3.0.0     False      
+    > 
+    > D:\RT-ThreadStudio\workspace\stm32f407-atk-explorer-v5.2.0>pyocd pack install STM32F407ZGTx
+    > Downloading packs (press Control-C to cancel):
+    >     Keil.STM32F4xx_DFP.3.0.0
+    > Downloading descriptors (001/001)
+    > 
+    > D:\RT-ThreadStudio\workspace\stm32f407-atk-explorer-v5.2.0>
+    > ```
+    >
+    > 添加后不需要填写Cmsis包的路径。
 
 > **说明**
 >
@@ -226,7 +257,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 ### 目录检测
 
-对于已加入编译的文件夹，当文件夹内（第一级）有新增或移除的文件时，会自动更新对应的makefile规则。
+选择RT-Thread Studio构建方式时，对于已加入编译的文件夹，当文件夹内（第一级）有新增或移除的文件时，会自动更新对应的makefile规则。
 
 ![images/1735660800023.png](images/1735660800023.png)
 
@@ -240,9 +271,15 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 ### 先决条件
 
-1. 已安装好Env Windows。（对于Env v2.x联网环境方式，需要先启动一次env.exe以下载相关依赖。）
+1. 已安装好Env。
 
-2. 支持scons方式编译的项目。
+    > **提示**
+    >
+    > - 对于Env Windows v2.x联网环境方式，需要先运行一次env.exe或env.ps1以下载相关依赖和虚拟环境。
+    >
+    > - Ubuntu或MacOS的Env安装方式可参考[其它平台](#其它平台)。
+
+2. 支持scons方式编译的项目。本扩展支持Env v1.x和v2.x，但取决于BSP能使用的Env版本。
 
 打开BSP的所在文件夹（`BSP_DIR`），例如：
 
@@ -314,7 +351,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 > **说明**
 >
-> 对于Env v2.x，安装好依赖后，除非本扩展无法正常使用，否则 **无需** 且 **不建议** 运行`${ENV_ROOT}/env.ps1`或`${ENV_ROOT}/.venv/Scripts/Activate.ps1`激活虚拟环境。
+> 对于Env v2.x，安装好依赖后，除非本扩展无法正常使用，否则 **无需** 运行`${ENV_ROOT}/env.ps1`或`${ENV_ROOT}/.venv/Scripts/Activate.ps1`激活虚拟环境。
 
 1. 点击状态栏的“配置”图标按钮，弹出菜单配置面板：
 
@@ -368,6 +405,12 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
     >
     > - 可以在扩展设置中关闭保存配置时自动更新软件包。
 
+> **提示**
+>
+> `RTT_CC`的默认值是`gcc`。
+>
+> 可以在扩展设置中添加环境变量，名称相同的可覆盖扩展生成的。
+
 ### 终端任务
 
 清除、构建、下载、调试的操作方式与RT-Thread Studio类型的一致。本质上是运行定义的`tasks.json`中的任务，可以通过点击状态栏图标按钮、菜单栏、配置快捷键、使用任务扩展等方式运行终端任务。
@@ -376,11 +419,11 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 ### 终端集成
 
-- 点击状态栏的“终端”图标按钮，弹出终端面板。可以使用scons、pkgs命令。
+- 点击状态栏的“终端”图标按钮，弹出终端面板。可以使用scons、pkgs、sdk、menuconfig命令。
 
     ![images/1735660800040.png](images/1735660800040.png)
 
-    menuconfig也勉强（见[使用限制](#使用限制)）可以使用：
+    menuconfig有[使用限制](#使用限制)：
 
     ![images/1735660800041.png](images/1735660800041.png)
 
@@ -389,8 +432,6 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
     ![images/1735660800042.png](images/1735660800042.png)
 
 ### 原始方式
-
-由于还未能和官方取得联系，对接RT-Thread Env方式实现方法是我通过试用各个Env-Windows版本来推测的，如果存在问题，欢迎反馈。
 
 可以在vscode资源管理器上（文件或文件夹）右键，选择“在此处打开ConEmu”，使用原始方式开发：
 
@@ -466,35 +507,44 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
     - Jlink：
 
+        在<https://www.segger.com/downloads/jlink>下载并安装Linux的安装包，例如`https://www.segger.com/downloads/jlink/JLink_Linux_x86_64.deb`。
+
+        安装后位于`/opt/SEGGER/JLink/JLinkExe`
+
+    - python3、env2.x与pyocd:
+
+        可复制以下命令到终端按回车执行一键安装
+
         ```sh
-        # 安装JLink，安装后JLinkExe会被添加到环境变量PATH。
-        sudo apt install jlink
+        cat << 'EOF' > install_ubuntu.sh
+        #!/usr/bin/env bash
+
+        sudo apt-get update
+        sudo apt-get -qq install python3 python3-venv gcc git libncurses5-dev -y
+
+        url=https://raw.githubusercontent.com/RT-Thread/env/master/touch_env.sh 
+        if [ $1 ] && [ $1 = --gitee ]; then
+            url=https://gitee.com/RT-Thread-Mirror/env/raw/master/touch_env.sh 
+        fi
+
+        wget $url -O touch_env.sh
+        chmod 777 touch_env.sh
+        ./touch_env.sh  $@
+        rm touch_env.sh
+
+        python3 -m venv ~/.env/.venv
+        source ~/.env/.venv/bin/activate
+        pip install scons requests tqdm kconfiglib pyyaml pyocd
+        python3 -m pip install -U pyocd
+        EOF
+        chmod +x install_ubuntu.sh
+        ./install_ubuntu.sh --gitee
+        rm ./install_ubuntu.sh
         ```
 
-        > **注意**
+        > **说明**
         >
-        > Linux下JLink的可执行文件名为`JLinkExe`。
-
-    - PyOCD：
-
-        ```sh
-        # 安装python3
-        sudo apt install pyton3
-
-        # 安装python3的venv模块
-        sudo apt install python3-venv
-
-        # 创建一个虚拟环境
-        python3 -m venv ~/embed-venv
-        # 激活虚拟环境
-        source ~/embed-venv/bin/activate
-
-        # 在虚拟环境中安装pyocd
-        pip3 install pyocd
-
-        # 查看pyocd的所在位置（在~/虚拟环境位置/bin下，例如`~/embed-venv/bin/pyocd`）
-        which pyocd
-        ```
+        > 此处命令行脚本参考<https://github.com/RT-Thread/env/blob/master/install_ubuntu.sh>并改为虚拟环境的方式。
 
 - MacOS
 
@@ -512,9 +562,9 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 3. make。一般是内置的，可以用`make -v`查看版本，如果小于4.0，建议用`brew install make`升级到最新版本。
 
-    > **说明**
+    > **提示**
     >
-    > 新版本的GNU“make”已安装为“gmake”，在`/usr/local/opt/make/libexec/gnubin/make`。
+    > 比较新的版本的GNU“make”可能安装在`/usr/local/opt/make/libexec/gnubin/make`。
 
 4. 调试服务器
 
@@ -531,15 +581,94 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
         安装后位于`/Applications/SEGGER/JLink_Vxxx/JLinkExe`
 
-    - PyOCD：
+    - python3、env2.x与pyocd:
+
+        可复制以下命令到终端按回车执行一键安装
 
         ```sh
-        # 安装python3
-        brew install python3
+        cat << 'EOF' > ./install_macos.sh
+        #!/usr/bin/env bash
 
-        # 安装pyocd，安装后pyocd会被添加到环境变量PATH。
-        python3 -m pip install pyocd
+        if ! [ -x "$(command -v brew)" ]; then
+            echo "Installing Homebrew."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+
+        brew update
+        brew upgrade
+
+        RTT_PYTHON=python3
+
+        $RTT_PYTHON --version >/dev/null 2>&1 || {
+            echo "Installing python3."
+            brew install python3
+        }
+
+        if ! [ -x "$(command -v git)" ]; then
+            echo "Installing git."
+            brew install git
+        fi
+
+        brew list ncurses >/dev/null || {
+            echo "Installing ncurses."
+            brew install ncurses
+        }
+
+        if ! [ -x "$(command -v arm-none-eabi-gcc)" ]; then
+            echo "Installing GNU Arm Embedded Toolchain."
+            brew install gnu-arm-embedded
+        fi
+
+        url=https://raw.githubusercontent.com/RT-Thread/env/master/touch_env.sh
+        if [ $1 ] && [ $1 = --gitee ]; then
+            url=https://gitee.com/RT-Thread-Mirror/env/raw/master/touch_env.sh
+        fi
+        curl $url -o touch_env.sh
+        chmod 777 touch_env.sh
+        ./touch_env.sh $@
+        rm touch_env.sh
+
+        python3 -m venv ~/.env/.venv
+        source ~/.env/.venv/bin/activate
+
+        $RTT_PYTHON -m pip list >/dev/null || {
+            echo "Installing pip."
+            $RTT_PYTHON -m ensurepip --upgrade
+        }
+
+        if ! [ -x "$(command -v scons)" ]; then
+            echo "Installing scons."
+            $RTT_PYTHON -m pip install scons
+        fi
+
+        if ! [ -x "$(command -v tqdm)" ]; then
+            echo "Installing tqdm."
+            $RTT_PYTHON -m pip install tqdm
+        fi
+
+        if ! [ -x "$(command -v kconfiglib)" ]; then
+            echo "Installing kconfiglib."
+            $RTT_PYTHON -m pip install kconfiglib
+        fi
+
+        if ! [ -x "$(command -v pyocd)" ]; then
+            echo "Installing pyocd."
+            $RTT_PYTHON -m pip install -U pyocd
+        fi
+
+        if ! [[ $($RTT_PYTHON -m pip list | grep requests) ]]; then
+            echo "Installing requests."
+            $RTT_PYTHON -m pip install requests
+        fi
+        EOF
+        chmod +x ./install_macos.sh
+        ./install_macos.sh --gitee
+        rm ./install_macos.sh
         ```
+
+        > **说明**
+        >
+        > 此处命令行脚本参考<https://github.com/RT-Thread/env/blob/master/install_macos.sh>并改为虚拟环境的方式。
 
 ### 路径规则
 
@@ -916,44 +1045,30 @@ make (e=2): 系统找不到指定的文件。
 
 - 暂不支持在资源管理器中右键添加新增编译的源文件文件夹，目前需要使用RT-Thread Studio构建一次后才会管理新增的源文件文件夹。
 
-- RT-Thread Env方式暂不支持生成浏览代码的`.vscode/c_cpp_properties.json`。可以使用`scons --target=vsc`相关命令生成，然后（打开一个`.c`文件）在状态栏右下角切换C/C++配置为`rt-thread`。
-
-- 如果在工作区启用Python扩展激活了虚拟环境且虚拟环境的python版本和选择的RT-Thread Env（v1.x是Python2.7）中的（大）版本不一致，很可能导致终端出错，因为Python扩展激活的Python的优先级更高。出现错误请修改Python扩展的设置关闭激活虚拟环境，或（在工作区）禁用Python扩展。
-
-- 在vscode打开的主目录必须是BSP主目录或RT-Thread Studio项目的主目录。如果不是，可参考[子文件夹](#子文件夹)执行操作。
-
-  > **说明**
-  >
-  > BSP的Kconfig中的路径可能是导入后的，如果在RT-Thread主仓库中的BSP开发，可以尝试使用RT-Thread Studio导入项目或使用`scons --dist`相关命令生成标准的目录结构。
+- 如果在工作区启用Python扩展激活了虚拟环境且虚拟环境的python版本和选择的RT-Thread Env中的大版本不一致（v1.x是Python2，v2.x是Python3），很可能导致终端出错，因为Python扩展激活的Python的优先级更高。出现错误请修改Python扩展的设置关闭激活虚拟环境，或（在工作区）禁用Python扩展。
 
 - 终端集成：
 
-    RT-Thread Env 2.x的menuconfig不支持用上下左右箭头来移动，这是[kconfiglib.py](https://github.com/ulfalizer/Kconfiglib)本身的特征（需要`curses`之类的模块来支撑）。进入子菜单请用`Enter`或`L`键；返回上一级请用`ESC`或`H`键；上、下请用`K`、`J`键。
+    在Win10中，RT-Thread Env 2.x的menuconfig不支持用上下左右箭头来移动，进入子菜单请用`Enter`或`L`键；返回上一级请用`ESC`或`H`键；上、下请用`K`、`J`键；RT-Thread Env 1.x的menuconfig如何上下移动尚未清楚。
 
-    RT-Thread Env 1.x的menuconfig如何上下移动尚未清楚。
+- 旧版本RT-Thread Studio内置的`J-Link/v7.50a`不支持解析elf文件，请使用以下方式之一解决：
 
-- 旧版本RT-Thread Studio内置的`J-Link/v7.50a`不支持解析elf文件，如果使用RT-Thread Env方式，请使用以下方式之一解决：
+  - 使用RT-Thread Studio的SDK管理器安装高版本的J-Jlink；
 
-  - 使用RT-Thread Studio的SDK管理器安装高版本的J-Jlink
+  - 升级RT-Thread Studio；
 
-  - 升级RT-Thread Studio
-
-  - 下载[新版本的Segger Jlink](https://www.segger.com/downloads/jlink)并在生成配置时选择
-
-  - 修改编译脚本（例如`rt_config.py`）使它生成`.hex`文件，然后在扩展设置中填入`.hex`文件的路径。
-
-- 作者还不了解其它平台的Env安装与用法，Env方式暂未支持MasOS和Linux。
+  - 下载[新版本的Segger Jlink](https://www.segger.com/downloads/jlink)并在生成配置时选择。
 
 ## 已知问题
 
 - 扩展会在以下情况自动关闭ComEmu：
 
   - 先后两次导入项目（生成配置）如果选择的RT-Thread Env的路径不一样，且之前打开的ComEmu没有关闭；
-  
+
   - 关闭扩展时之前打开的ComEmu没有关闭。
-  
+
   但其中的cmd没有被关闭：
-  
+
   ![images/1735660800045.png](images/1735660800045.png)
 
   手动关闭即可。
@@ -963,12 +1078,6 @@ make (e=2): 系统找不到指定的文件。
 - 如果之前的构建任务启动失败（例如Makefile构建目录不存在），下次运行会一直弹出等待进度。
 
 - 快速连续多次点击状态栏按钮启动构建任务时，如果之前的任务启动失败，任务报告统计可能错乱。
-
-## 未完待续
-
-- 引用`Serial Monitor`扩展，提供监视功能并在运行时发生（硬件）错误时显示对应的源码文件位置。
-
-- 研究MacOS、Linux的Env安装与使用。
 
 ## 问题反馈
 
@@ -984,7 +1093,9 @@ make (e=2): 系统找不到指定的文件。
 
 - 在`.vsocde`下生成相关配置。
 
-- 优化所选构建配置（例如工作区文件夹的`Debug`文件夹）下的makefile。
+- 根据选择的菜单配置，生成配置文件（`.config`）及头文件（`rtconfig_project.h`）。
+
+- 选择RT-Thread Studio构建的方式时，会优化所选构建配置（例如工作区文件夹的`Debug`文件夹）下的makefile。
 
 查看源码：
 
@@ -992,736 +1103,12 @@ make (e=2): 系统找不到指定的文件。
 
 - 开发说明：<https://github.com/jswyll/jswyll-vscode-rtthread/tree/main/docs/README.md>。
 
-## 特别鸣谢
+## 隐私保护指引
 
-- [kconfiglib](https://github.com/ulfalizer/Kconfiglib)：一个灵活的Python 2/3 Kconfig实现和库。
+本扩展的开发者仅处理实现扩展功能所必要的信息，例如读取Env安装目录的Kconfig文件以生成菜单配置界面、查找选择的RT-Thread Studio目录中的GCC编译器以供选择。
 
-- [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug)：一款适用于ARM Cortex-M架构的GDB调试扩展。
+为了便于问题定位与排查，本扩展可能会记录相关日志，vscode可能会将最近的一小段日志存储在电脑本地。本扩展的日志等级与输出面板中`jswyll-vscode-rtthread`设置的等级一致（详细程度：“跟踪”>“调试”>“信息”>“警告”>“错误”>“关”，默认为“信息”），请仅在需要向开发者反馈问题时临时提高输出等级。
 
-    ```sh
-    名称: Cortex-Debug
-    ID: marus25.cortex-debug
-    说明: ARM Cortex-M GDB Debugger support for VSCode
-    发布者: marus25
-    VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug
-    ```
+本扩展不会将你的信息上传到开发者服务器或任何第三方平台。若未来新版本变更了信息的使用目的或范围，将先以弹窗的方式告知并征得你的明示同意。
 
-- [espressif - esp-idf-extension](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension)：参考了该扩展的部分功能和界面设计。
-
-- [eclipse-cdt - gnu2/GnuMakefileGenerator.java](https://github.com/eclipse-cdt/cdt/blob/main/build/org.eclipse.cdt.managedbuilder.core/src/org/eclipse/cdt/managedbuilder/makegen/gnu2/GnuMakefileGenerator.java)：了解了其makefile生成逻辑。
-
-- [rtthread - tools/eclipse.py](https://github.com/RT-Thread/rt-thread/blob/master/tools/eclipse.py)：参考了其eclipse项目解析逻辑。
-
-# RT-Thread Studio Project Assistant
-
-[简体中文](#rt-thread项目助手) | English
-
-[![Version](https://img.shields.io/visual-studio-marketplace/v/jswyll.jswyll-vscode-rtthread?color=blue)](https://marketplace.visualstudio.com/items?itemName=jswyll.jswyll-vscode-rtthread)
-
-> This extension is designed for projects created or imported using RT-Thread Studio, generating configuration files for code browsing, editing, compiling, downloading, and debugging in VSCode.
-
-## Quick Start
-
-1. Build the project once in RT-Thread Studio after creating or importing it.
-2. Install and enable this extension (`jswyll.jswyll-vscode-rtthread`) in VSCode; dependent extensions will be installed automatically.
-3. Open the root directory of the project (the folder containing the `.cproject` file), click the "Import" button on the status bar.
-
-    ![images/1735660800001.png](images/1735660800001.png)
-
-4. Fill in relevant information according to the configuration panel prompts.
-
-    - Click the open file button next to "RT-Thread Studio Path" and select the installation path of RT-Thread Studio (the folder containing `studio.exe`).
-    - Choose the debugger type and its interface based on your situation.
-    - Click the "Generate" button.
-
-    ![images/1735660800002.gif](images/1735660800002.gif)
-
-5. Click the "Build and Download" button on the status bar (or press `Ctrl+Shift+B`).
-
-    ![images/1735660800003.gif](images/1735660800003.gif)
-
-## Software Features
-
-- **Project Information Parsing**: Generates VSCode configuration files through a configuration wizard panel, automatically finding GCC compilers from environment variable `PATH`; under Windows, selecting the RT-Thread Studio path automatically finds paths for GCC compilers, Make tools, and debug servers.
-
-- **Code Browsing**: Generates C/C++ browsing configurations (`.vscode/c_cpp_properties.json`) with macro definitions and header file search paths; generates VSCode resource manager exclusion rules (`files.exclude`).
-
-- **Program Compilation**:
-  - Supports multi-process compilation to speed up the process; if the main version number of make is greater than 4, adds `--output-sync=target` to avoid confusion between compilation errors of different files.
-  - Shields long strings of compilation and linking parameters and adds compilation and linking prompts similar to Keil IDE:
-
-    ```sh
-    compiling ../rt-thread/src/clock.c...
-    compiling ../rt-thread/src/components.c...
-    compiling ../rt-thread/src/device.c...
-    compiling ../applications/main.c...
-    linking ...
-    arm-none-eabi-objcopy -O binary "rtthread.elf"  "rtthread.bin"
-    arm-none-eabi-size --format=berkeley "rtthread.elf"
-    text    data     bss     dec     hex filename
-    55400    1468    3368   60236    eb4c rtthread.elf
-    ```
-
-  - Provides more accurate problem matchers to prevent failed file jumps in the Problems panel.
-
-- **Download Program**: Supports Segger JLink, PyOCD, OpenOCD (the first two are built-in in RT-Thread Studio on Windows); supports common debuggers like JLink, ST-Link, CMSIS-DAP.
-
-- **Debugging**: Supports the same types of debuggers as those used for downloading programs; generates Cortex-Debug extension launch configurations.
-
-  ![images/1735660800004.png](images/1735660800004.png)
-
-- **Cross-platform Development**: Tested on Windows, MacOS (10.13 and 15.2), Linux (Ubuntu 24.04).
-
-- **Interrupt Function Check**: Checks whether functions like `void xxx_IRQHandler(void)` call `rt_interrupt_enter()` and `rt_interrupt_leave()`.
-
-- **Internationalization**: Supports Simplified Chinese and English.
-
-## Operation Instructions
-
-VSCode supports [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces), allowing multiple projects to be opened simultaneously within one workspace.
-
-This extension is compatible with multi-root workspaces. If opening a multi-root workspace with multiple root folders, a workspace folder selector will pop up:
-
-![images/1735660800005.png](images/1735660800005.png)
-
-Subsequent operations will be based on the selected folder, and related configuration files will be saved in that workspace folder. You can switch by clicking the submodule icon on the status bar.
-
-> **Note**
->
-> The term "workspace folder" refers to the selected root folder. If only one root folder is opened or there is only one root folder in a multi-root workspace, "workspace folder" refers to that folder.
-
-### Extension Activation
-
-The extension activates automatically when a `.cproject` file exists in the workspace folder.
-
-### Importing Projects
-
-Click the "Import" (generate) button on the status bar to generate VSCode configuration files.
-
-> **Note**
->
-> - Re-importing should have no side effects; you can re-import to modify or update options.
->
-> - The project can be moved (not in the RT-Thread Studio workspace folder).
-
-#### Panel Options
-
-- **Build Configuration**: Select the build configuration created in the RT-Thread Studio project. If only one exists, no selection is needed. Mandatory.
-
-- **RT-Thread Studio Path**: Your RT-Thread Studio installation path (folder containing `studio.exe`). Currently used only to infer possible tool locations. Not necessary on non-Windows platforms.
-
-- **GCC Compiler Path**: Used for C/C++ extension analysis and program compilation. Mandatory.
-
-  You can directly choose the built-in versions 5.4.1 and 10.3.1 of arm-none-eabi provided by RT-Thread Studio:
-
-  ![images/1735660800006.png](images/1735660800006.png)
-
-  For ARM architecture chips, download specific versions from <https://developer.arm.com/downloads/-/gnu-rm>.
-
-- **Make Tool Path**: Used for building the project. Not necessary if you only want to browse code.
-
-  You can choose the built-in `platform/env_released/env/tools/BuildTools/2.12-20190422-1053/bin` of RT-Thread Studio. On Windows, consider downloading a development kit with richer commands from <https://github.com/skeeto/w64devkit/releases>.
-
-- **Debug Server**: Supports OpenOCD, JLink, or PyOCD. Not necessary if you do not need to download or debug programs in VSCode.
-
-  - **Segger JLink**: Choose the built-in v7.50a or v7.92 (recommended for RT-Thread Studio v2.2.8 and above). Alternatively, download specific versions from <https://www.segger.com/downloads/jlink>. Feature: Fast!
-
-    ![images/1735660800008.png](images/1735660800008.png)
-
-    ![images/1735660800009.png](images/1735660800009.png)
-
-  - **PyOCD**: Choose the built-in v0.1.3. However, it does not support my JLink; refer to <https://pyocd.io/docs/installing> for installing the latest version. Newer versions support ST-Link, JLink, and CMSIS-DAP. Unless it's a [built-in target](https://pyocd.io/docs/builtin-targets.html), you need to fill in the Cmsis package. Input keywords and choose the built-in option.
-
-    ![images/1735660800010.png](images/1735660800010.png)
-
-  - **OpenOCD**: Download from <https://github.com/xpack-dev-tools/openocd-xpack/releases> or <https://gnutoolchains.com/arm-eabi/openocd/> for additional drivers on Windows. Supports ST-Link, JLink, and CMSIS-DAP. Feature: Supported by many chip manufacturers.
-
-    ![images/1735660800011.png](images/1735660800011.png)
-
-    > **Note**
-    >
-    > On Windows, when choosing OpenOCD as the debug server and using JLink as the debugger, use <https://gnutoolchains.com/arm-eabi/openocd/>'s `UsbDriverTool.exe` or [zadig](https://zadig.akeo.ie/) to change the JLink driver to libusb:
-    >
-    > ![images/1735660800012.gif](images/1735660800012.gif)
-    >
-    > After modifying the driver, MDK IDE cannot use JLink for downloading. Use <https://gnutoolchains.com/arm-eabi/openocd/>'s `UsbDriverTool.exe` to restore the JLink driver:
-    >
-    > ![images/1735660800013.gif](images/1735660800013.gif)
-
-- **Chip Name**: Used for the debugger to recognize the corresponding FLASH size during program download. Generally, keep it unchanged. For STM32, it should be at least 11 characters precise, e.g., `STM32L431CC`.
-
-> **Note**
->
-> For "xxx Path" options, you can select via the open file icon on the right, choose from the prompt options, or manually input. See [Path Rules](#path-rules).
-
-#### Starting Generation
-
-Input validation occurs while filling out parameters. Correct any errors based on the prompts.
-
-![images/1735660800014.png](images/1735660800014.png)
-
-For warnings, a popup will appear when clicking "Generate". If certain, click the "Ignore" button.
-
-![images/1735660800015.png](images/1735660800015.png)
-
-![images/1735660800016.png](images/1735660800016.png)
-
-Click the "Generate" button to start validation and configuration file generation. If successful, the configuration panel will close automatically.
-
-For JLink, hex output is added (because: older versions of RT-Thread Studio's built-in `J-Link/v7.50a` do not support parsing elf files).
-
-> **Note**
->
-> After switching compiler versions (if the GCC version chosen in this extension's configuration panel differs from RT-Thread Studio's or if the GCC version was changed twice in this extension's configuration panel), recompile to eliminate unexpected results due to compiler version differences.
-
-### Building the Project
-
-Click the icons on the status bar (`Clear`, `Build`, `Download`, or `Build and Download`) to execute build tasks.
-
-You can also run tasks via `Menu Bar -> Terminal -> Run Task...` and select `Rebuild`.
-
-![images/1735660800017.png](images/1735660800017.png)
-
-If a default build task is specified during [project import](#importing-projects), you can execute it with the shortcut `Ctrl+Shift+B`.
-
-![images/1735660800018.png](images/1735660800018.png)
-
-Task completion will display results and duration.
-
-![images/1735660800019.png](images/1735660800019.png)
-
-> **Note**
->
-> When build fails, you can jump to the corresponding file location in the terminal or Problems panel:
->
-> ![images/1735660800020.png](images/1735660800020.png)
->
-> ![images/1735660800021.png](images/1735660800021.png)
->
-> Error markers will not be immediately removed after code modification; re-execute the build task.
-
-### Download and Run
-
-Install Microsoft's "Serial Monitor" extension to view serial port outputs or use it as a terminal:
-
-```plaintext
-Name: Serial Monitor
-ID: ms-vscode.vscode-serial-monitor
-Description: Send and receive text from serial ports.
-Publisher: Microsoft
-VS Marketplace Link: https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-serial-monitor
-```
-
-![images/1735660800022.gif](images/1735660800022.gif)
-
-### Debugging Code
-
-Press F5 or `Menu Bar -> Run -> Start Debugging` to begin debugging.
-
-In addition to standard GDB debugging features, the Cortex-Debug extension supports viewing memory and on-chip peripheral registers. Refer to the [Cortex-Debug documentation](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) for details.
-
-You can install corresponding chip series peripheral support packs via the VSCode extension search `Cortex Debug Device Support Pack`.
-
-> **Note**
->
-> The debug task calls the default build task before starting and downloads the program upon startup, so there is no need to click build or download before starting or restarting the debug task.
-
-### Directory Detection
-
-When new or removed files appear in the first level of a compiled folder, the corresponding makefile rules are automatically updated.
-
-![images/1735660800023.png](images/1735660800023.png)
-
-This feature can be disabled in extension settings.
-
-> **Note**
->
-> This extension references the source code of [eclipse-cdt - gnu2/GnuMakefileGenerator.java](https://github.com/eclipse-cdt/cdt/blob/main/build/org.eclipse.cdt.managedbuilder.core/src/org/eclipse/cdt/managedbuilder/makegen/gnu2/GnuMakefileGenerator.java) for automatic makefile generation. Currently, it only updates already generated makefiles. If issues arise, disable this feature in extension settings, then build the project once in RT-Thread Studio to revert related files to values generated by GnuMakefileGenerator.
-
-## Best Practices
-
-This extension implements only a small part of the functionality, which may not meet all actual needs. Modifications can be made based on generated configurations or other extensions can be used for embedded development. Regardless, the following operations and suggestions should be generally applicable.
-
-### Other Platforms
-
-#### Linux Distributions (Example: Ubuntu)
-
-1. **Switching APT Sources (Optional)**:
-
-   Modify system configuration to use a faster download mirror, such as [Aliyun's Ubuntu Mirror](https://developer.aliyun.com/mirror/ubuntu?spm=a2c6h.13651102.0.0.68a51b11PeE4rU).
-
-2. **GCC Toolchain**:
-
-   Download the pre-built Linux version from [ARM Developer Downloads](https://developer.arm.com/downloads/-/gnu-rm). For x86/64 architecture, download [gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2](https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2?rev=78196d3461ba4c9089a67b5f33edf82a&hash=5631ACEF1F8F237389F14B41566964EC) and extract it.
-
-   > **Note**
-   >
-   > Older versions of `gcc-arm-none-eabi-gdb` depend on `libncurses.so.5`, which has been removed in Ubuntu 18 and later. You can link it to `libncurses.so.6`:
-   >
-   > ```sh
-   > # Example for version 10.3.1, assuming extracted to ~/Desktop/software/gcc-arm-none-eabi-10.3-2021.10
-   > 
-   > ~/Desktop/software/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gdb -v
-   > # Error message: arm-none-eabi-gdb: error while loading shared libraries: libncurses.so.5: cannot open shared object file: No such file or directory
-   > 
-   > # Check dependencies
-   > ldd ~/Desktop/software/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gdb
-   > #         linux-vdso.so.1 (0x00007fffe41eb000)
-   > #         libncurses.so.5 => not found
-   > #         libtinfo.so.5 => not found
-   > #         libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x000074afbe2ec000)
-   > #         libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x000074afbe000000)
-   > #         libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000074afbdf17000)
-   > #         libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x000074afbe2bc000)
-   > #         libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x000074afbe2b7000)
-   > #         libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000074afbdc00000)
-   > #         /lib64/ld-linux-x86-64.so.2 (0x000074afbe303000)
-   > 
-   > # Find available libncurses
-   > sudo find / -name 'libncurses.so.*'
-   > # /usr/lib/x86_64-linux-gnu/libncurses.so.6
-   > sudo find / -name 'libtinfo.so.*'
-   > # /usr/lib/x86_64-linux-gnu/libtinfo.so.6
-   > # Create symbolic links
-   > sudo ln -s /usr/lib/x86_64-linux-gnu/libncurses.so.6 /lib/x86_64-linux-gnu/libncurses.so.5
-   > sudo ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /lib/x86_64-linux-gnu/libtinfo.so.5
-   > 
-   > # Verify
-   > ~/Desktop/software/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gdb -v
-   > # GNU gdb (GNU Arm Embedded Toolchain 10.3-2021.10) 10.2.90.20210621-git
-   > # Copyright (C) 2021 Free Software Foundation, Inc.
-   > # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
-   > # This is free software: you are free to change and redistribute it.
-   > # There is NO WARRANTY, to the extent permitted by law.
-   > ```
-
-3. **Make**:
-   Usually installed by default. Check the version with `make -v`. If below 4.0, upgrade using:
-
-   ```sh
-   sudo apt update && sudo apt install --reinstall make
-   ```
-
-4. **Debugging Servers**:
-
-   - **OpenOCD**:
-
-     Install OpenOCD, which will be added to the `PATH` environment variable.
-
-     ```sh
-     sudo apt install openocd
-     ```
-
-   - **JLink**:
-
-     Install JLink, which will add `JLinkExe` to the `PATH`.
-
-     ```sh
-     sudo apt install jlink
-     ```
-
-     > **Note**
-     >
-     > The executable name for JLink on Linux is `JLinkExe`.
-
-   - **PyOCD**:
-
-     ```sh
-     # Install Python 3
-     sudo apt install python3
-
-     # Install the venv module for Python 3
-     sudo apt install python3-venv
-
-     # Create a virtual environment
-     python3 -m venv ~/embed-venv
-     # Activate the virtual environment
-     source ~/embed-venv/bin/activate
-
-     # Install pyocd within the virtual environment
-     pip3 install pyocd
-
-     # Check the location of pyocd (in `~/virtual_env_path/bin/pyocd`, e.g., `~/embed-venv/bin/pyocd`)
-     which pyocd
-     ```
-
-#### macOS
-
-1. **Package Manager**:
-
-   Install Homebrew:
-
-   ```sh
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
-
-   Or refer to the [Homebrew Installation Documentation](https://docs.brew.sh/Installation).
-
-2. **GCC Toolchain**:
-
-   Download the pre-built macOS version from [ARM Developer Downloads](https://developer.arm.com/downloads/-/gnu-rm), such as [gcc-arm-none-eabi-10.3-2021.10-mac.pkg](https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-mac.pkg?rev=b382d51ec8d34c3fa421cf57ce97f146&hash=86689FEB39DA7A381FF78A2E70F7ABCE) and install it. After installation, it will be located at `/Applications/ARM/bin/arm-none-eabi-gcc`.
-
-3. **Make**:
-
-   Usually installed by default. Check the version with `make -v`. If below 4.0, upgrade using:
-
-   ```sh
-   brew install make
-   ```
-
-   > **Note**
-   >
-   > Newer versions of GNU "make" are installed as "gmake" in `/usr/local/opt/make/libexec/gnubin/make`.
-
-4. **Debugging Servers**:
-
-   - **OpenOCD**:
-
-     Install OpenOCD, which will be added to the `PATH`.
-
-     ```sh
-     brew install open-ocd
-     ```
-
-   - **JLink**:
-
-     Download and install the macOS package from [SEGGER](https://www.segger.com/downloads/jlink), such as `JLink_MacOSX_Vxxx_universal.pkg`. After installation, it will be located at `/Applications/SEGGER/JLink_Vxxx/JLinkExe`.
-
-   - **PyOCD**:
-
-     ```sh
-     # Install Python 3
-     brew install python3
-
-     # Install pyocd, which will be added to the `PATH`.
-     python3 -m pip install pyocd
-     ```
-
-### Path Rules
-
-Supported path expressions include:
-
-- **Absolute Paths**. For example:
-
-  ```sh
-  D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc.exe
-  ```
-
-- **user's home directory**, such as `~/env/.venv/Scripts`.
-
-- **Relative Paths** to the workspace folder. For example `tools/make.exe`.
-
-- **Paths Added to Environment Variable `PATH`**. For example, if `openocd` is located at `D:/openocd-v0.12.0-i686-w64-mingw32/bin/openocd.exe`, adding `D:/openocd-v0.12.0-i686-w64-mingw32/bin` to the `PATH` allows you to simply write `openocd.exe`.
-
-- **Referencing Environment Variables**.
-
-> **Note**
->
-> Optimization Suggestions:
->
-> - Although Windows uses backslashes `\` as path separators and Linux/macOS use forward slashes `/`, most Windows programs recognize `/`. Conversely, some Windows programs treat `\` as an escape character, leading to compilation failures. Therefore, it's recommended to use `/` consistently.
->
-> - When selecting file paths on Windows, you can omit the `.exe` extension.
->
-> - If the absolute path shares the same drive letter as the workspace, consider converting it to a relative path.
->
-> The extension optimizes paths according to these suggestions when generating configuration files.
-
-### Environment Variables
-
-In cross-platform or team collaboration scenarios, tool and library paths may differ across environments. Using environment variables can resolve this issue.
-
-> **Note**
->
-> On Windows PowerShell, use `Get-ChildItem Env:` to view environment variables; on Linux or macOS, use `printenv`.
-
-The most common environment variable is `PATH`, which lists multiple directories allowing programs to locate necessary tools. For instance, if `arm-none-eabi-gcc.exe` is located in `D:\gcc-arm-none-eabi-10.3-2021.10\bin`, you can:
-
-1. Add `D:\gcc-arm-none-eabi-10.3-2021.10` to the `PATH` environment variable.
-2. Use `arm-none-eabi-gcc` directly when invoking the command.
-
-If multiple versions of `arm-none-eabi-gcc.exe` exist, create separate environment variables for each version. For example, if ARM GCC 10.3.1 is located in `D:\gcc-arm-none-eabi-10.3-2021.10\bin`:
-
-1. Create a new environment variable `ARM_NONE_EABI_GCC_V10_HOME` with the value `D:\gcc-arm-none-eabi-10.3-2021.10`.
-2. Reference the tool as `${env:ARM_NONE_EABI_GCC_V10_HOME}\bin\arm-none-eabi-gcc.exe`.
-
-> **Note**
->
-> Step 1 sets the environment variable system-wide, while step 2 is project-specific, eliminating project differences.
-
-In summary, it is recommended:
-
-- If projects use the same tool version or version differences do not affect the project: Add the tool's directory to the `PATH` environment variable and reference the tool by its base name. For example, `make`, `openocd`, `pyocd`, `Jlink`.
-
-- If different projects use different tool versions: Create environment variables for each tool version. For example:
-
-    1. Three versions of ARM GCC toolchains are located at:
-
-       ```sh
-       D:\foo\gcc-arm-none-eabi-4_9-2015q3-20150921-win32
-       D:\RT-ThreadStudio\repo\Extract\ToolChain_Support_Packages\ARM\GNU_Tools_for_ARM_Embedded_Processors\5.4.1
-       D:\foo\bar\gcc-arm-none-eabi-10.3-2021.10
-       ```
-
-    2. Create environment variables:
-
-       ```sh
-       # Name: ARM_NONE_EABI_GCC_V4_9_3_HOME, Value: D:\foo\gcc-arm-none-eabi-4_9-2015q3-20150921-win32
-       # Name: ARM_NONE_EABI_GCC_V5_4_1_HOME, Value: D:\RT-ThreadStudio\repo\Extract\ToolChain_Support_Packages\ARM\GNU_Tools_for_ARM_Embedded_Processors\5.4.1
-       # Name: ARM_NONE_EABI_GCC_V10_3_1_HOME, Value: D:\foo\bar\gcc-arm-none-eabi-10.3-2021.10
-       ```
-
-    3. If the project uses version 10.3.1 of `arm-none-eabi-gcc`:
-
-       ```sh
-       ${env:ARM_NONE_EABI_GCC_V10_3_1_HOME}/bin/arm-none-eabi-gcc
-       ```
-
-       > **Note**
-       >
-       > On Linux or macOS, omit the `.exe` suffix for compatibility.
-
-### Extension Settings
-
-The scope of extension settings is divided into three categories: User, Workspace, and Workspace Folder.
-
-When generating configurations in the project import panel, the automatically saved settings have a scope of Workspace Folder.
-
-VSCode setting precedence is `Workspace Folder > Workspace > User > Default`. You can modify default values in the "User" domain to provide customized defaults for new workspace folders, eliminating the need to reconfigure each new project. Additionally, changes made in the "User" domain are not saved in the workspace folder, ensuring project compatibility during team collaboration. For example:
-
-![images/1735660800024.png](images/1735660800024.png)
-
-### Interrupt Check
-
-This feature checks if source files under the workspace folder call `rt_interrupt_enter()` and `rt_interrupt_leave()` within each `xxx_IRQHandler` function. If not, it issues a warning:
-
-![images/1735660800025.png](images/1735660800025.png)
-
-You can right-click on the warning in the "Problems" panel (or click "Quick Fix" where the editor shows a warning wavy line) and choose "Add All Missing Calls" to add all missing calls in the file:
-
-![images/1735660800026.gif](images/1735660800026.gif)
-
-> **Note**
->
-> When performing quick fixes, if there are `/* USER CODE BEGIN xxx */` and `/* USER CODE END xxx */`, the calls will be added between these markers; otherwise, they will be added at the beginning and end of the function body.
-
-#### Trigger Conditions
-
-- **Automatic Diagnosis**: The specified path (default is `stm32*_it.c`) contains any of the following lines:
-
-  ```c
-  #include <rtthread.h>
-  #include "rtthread.h"
-  rt_interrupt_enter();
-  rt_interrupt_leave();
-  ```
-
-  > **Note**
-  >
-  > You can modify whether automatic diagnosis is enabled and its path matching pattern in the extension settings. Examples:
-  >
-  > - All source files: `**/*.c`
-  >
-  > - All source files in `Core/Src`: `Core/Src/*.c`
-
-- **Manual Diagnosis**: Right-click on a `.c` file in the Explorer and select "Diagnose Interrupt Functions".
-
-    ![images/1735660800027.png](images/1735660800027.png)
-
-### Custom Tasks
-
-If the generated configuration by this extension does not meet your needs, you can add tasks in `.vscode/tasks.json`, `.vscode/c_cpp_properties.json`, and `.vscode/launch.json`. These additions will not be overwritten when re-importing.
-
-- **Tasks**
-
-    ```json
-    {
-        "tasks": [
-            // ...
-            {
-                "label": "push",
-                "detail": "Push",
-                "command": "git",
-                "args": [
-                    "push",
-                ],
-                "problemMatcher": []
-            }
-        ]
-    }
-    ```
-
-    ![images/1735660800028.png](images/1735660800028.png)
-
-- **Status Bar Buttons**
-
-    The status bar buttons "Clear", "Build", "Download", and "Build and Download" execute tasks with the following labels in `.vscode/tasks.json`:
-
-    ```sh
-    jswyll-vscode-rtthread: clean
-    jswyll-vscode-rtthread: build
-    jswyll-vscode-rtthread: download
-    jswyll-vscode-rtthread: build and download
-    ```
-
-    These tasks will be overwritten upon re-import. To modify the tasks executed by the status bar buttons, define tasks without the `jswyll-vscode-rtthread:` prefix. For example, customizing the "Build and Download" task:
-
-    ```json
-    {
-        "tasks": [
-            // ...
-            {
-                "label": "build and download",
-                "detail": "Build, Download, and Stage",
-                "dependsOn": [
-                    "jswyll-vscode-rtthread: build and download",
-                ],
-                "dependsOrder": "sequence",
-                "command": "git",
-                "args": [
-                    "add",
-                    ".",
-                ],
-                "problemMatcher": []
-            }
-        ]
-    }
-    ```
-
-    This indicates that the custom command runs after the extension-defined "Build and Download". You can freely define dependencies and commands as long as the label meets the requirements.
-
-- **Debugging**
-
-    You can add other debuggers supported by the Cortex-Debug extension or configure debugging for other architectures.
-
-    ```json
-    {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Debug",
-                // ...
-            },
-            {
-                "name": "MyDebug",
-                "cwd": "${workspaceFolder}",
-                "toolchainPrefix": "arm-none-eabi",
-                "executable": "Debug/rtthread.elf",
-                "request": "launch",
-                "type": "cortex-debug",
-                "device": "STM32L431CCTx",
-                "runToEntryPoint": "main",
-                "servertype": "qemu",
-                // ...
-            }
-        ]
-    }
-    ```
-
-    ![images/1735660800029.png](images/1735660800029.png)
-
-- **C/C++ Configuration**
-
-    Example: Switch to using `scons --target=vsc` generated configuration.
-
-    ![images/1735660800030.png](images/1735660800030.png)
-
-### Subfolders
-
-If you want to perform operations on subfolders that contain `.cproject`, you can follow the steps below to convert them into a VSCode [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces).
-
-1. **If it is not already a VSCode workspace:**
-   - Open the parent directory `workspace` in VSCode.
-   - Click on the VSCode menu bar -> File -> Save Workspace As...
-   - In the save dialog, enter the workspace name and location, then click the "Save" button to create a VSCode workspace file (`xxx.code-workspace`).
-
-2. **Add the subfolder to the workspace:**
-   - Click on the VSCode menu bar -> File -> Add Folder to Workspace..., and select the desired subfolder.
-
-3. **Select the current workspace folder as the subfolder:**
-   - Follow the instructions at the beginning of the [Operation Instructions](#operation-instructions) to set the current workspace folder to the selected subfolder.
-
-> **Note**
->
-> In the future, open the `xxx.code-workspace` created in step 1 in VSCode.
-
-## Common Issues
-
-```sh
-error: open failed
-in procedure 'program'
-** OpenOCD init failed **
-shutdown command invoked
-```
-
-Is the debugger correctly connected to both the chip and the computer? Is the selected debugger type correct? Are the debugging server (drivers) installed?
-
----
-
-```sh
-** Programming Started **
-Error: couldn't open Debug/rtthread.elf
-** Programming Failed **
-shutdown command invoked
-```
-
-You attempted to download before building.
-
----
-
-```sh
-process_begin: CreateProcess(NULL, echo " ", ...) failed.
-make (e=2): The system cannot find the file specified.
-```
-
-The `echo` command is not in the `PATH` environment variable. It is built-in on Linux and macOS. On Windows, ensure the RT-Thread make tool path is included in `PATH`, or download and extract [w64devkit](https://github.com/skeeto/w64devkit/releases) and add it to `PATH`.
-
----
-
-## Usage Limitations
-
-- Currently supports projects created or imported using RT-Thread Studio, or generated using `scons --dist-ide --target=eclipse` and then imported into RT-Thread Studio. Eclipse C/C++ projects may work theoretically but have not been tested. Only GCC Make-based compilation methods are supported.
-
-- Debugging depends on the Cortex-Debug extension, supporting only ARM-Cortex architectures (if the GCC compiler prefix is not `arm-none-eabi-`, no debugging configuration `.vscode/launch.json` will be generated).
-
-- Does not support adding new source file directories via the Explorer context menu. Also, it does not support configuring projects through an interface like ESP-IDF's menuconfig. Future support may be added. Currently, new source file directories are managed only after building once with RT-Thread Studio.
-
-## Issue Reporting
-
-Visit [GitHub Issues](https://github.com/jswyll/jswyll-vscode-rtthread/issues?utm_source=vsmp&utm_medium=ms%20web&utm_campaign=mpdetails) or contact <jswyll@qq.com>.
-
-If necessary, open the Output panel, set the log level to "Debug", reproduce the issue, and provide sanitized logs.
-
-![images/1735660800031.png](images/1735660800031.png)
-
-## Implementation Details
-
-Affected files:
-
-- Generate related configurations under `.vscode`.
-
-- Optimize the makefile in the selected build configuration (e.g., the `Debug` folder under the workspace folder).
-
-View source code:
-
-- Repository: <https://github.com/jswyll/jswyll-vscode-rtthread/>
-
-- Development notes: <https://github.com/jswyll/jswyll-vscode-rtthread/tree/main/docs/README.md>
-
-## Special Thanks
-
-- [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug): An ARM Cortex-M GDB debugging extension for VSCode.
-
-    ```sh
-    Name: Cortex-Debug
-    ID: marus25.cortex-debug
-    Description: ARM Cortex-M GDB Debugger support for VSCode
-    Publisher: marus25
-    VS Marketplace Link: https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug
-    ```
-
-- [Espressif - esp-idf-extension](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension): Referenced some functionalities and UI design from this extension.
-
-- [Eclipse CDT - gnu2/GnuMakefileGenerator.java](https://github.com/eclipse-cdt/cdt/blob/main/build/org.eclipse.cdt.managedbuilder.core/src/org/eclipse/cdt/managedbuilder/makegen/gnu2/GnuMakefileGenerator.java): Studied its makefile generation logic.
-
-- [RT-Thread - tools/eclipse.py](https://github.com/RT-Thread/rt-thread/blob/master/tools/eclipse.py): Referenced its Eclipse project parsing logic.
+你可以在生成配置文件后禁用此扩展。

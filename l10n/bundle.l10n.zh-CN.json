@@ -28,8 +28,8 @@
   "Release Notes": "更新日志",
   "The format of \"{0}\" is invalid": "\"{0}\"的格式无效",
   "This chip is not supported at present, please manually configure .vsocde/xxx.cfg file to support download or debug.": "暂不支持该芯片，请手动配置.vsocde/xxx.cfg文件以支持下载或调试。",
-  "The path \"{0}\" does not exists": "路径 \"{0}\" 不存在",
   "Not selected": "未选择",
+  "The path \"{0}\" does not exists": "路径 \"{0}\" 不存在",
   "Not Found {0} in {1}": "在 {1} 中未找到 {0} ",
   "Cortex-Debug requires GDB 9 +, the toolchain of your choice has a GDB version of {0}. This will prevent you from debugging your program.": "Cortex-Debug要求GDB版本9以上，你选择的工具链的GDB的版本为{0}。这将导致你无法调试程序。",
   "Calling \"{0}\" to get the version of gdb failed, which prevents you from debugging the program using the debugger.": "调用{0}获取gdb的版本失败，这将导致你无法调试程序。",
@@ -49,6 +49,7 @@
   "No workspace folder selected for use": "未选择工作区文件夹",
   "An error occurred while read text file \"{0}\": {1}": "读取文本文件\"{0}\"时出现错误: {1}",
   "Update Packages": "更新软件包",
+  "Generate VSCode Workspace": "生成vscode工作区",
   "Rebuild": "重新构建",
   "Monit": "监视"
 }

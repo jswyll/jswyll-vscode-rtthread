@@ -227,7 +227,15 @@ export class MenuConfig {
       switch (msg.command) {
         case 'getMenuconfigData': {
           process.env.srctree = wsFolder.fsPath;
-          const envVars = getConfig(wsFolder, 'terminal.integrated.env.windows', {}, true);
+          const osPlatform = platform();
+          let envVars: Record<string, string>;
+          if (osPlatform === 'win32') {
+            envVars = getConfig(wsFolder, 'terminal.integrated.env.windows', {}, true);
+          } else if (osPlatform === 'darwin') {
+            envVars = getConfig(wsFolder, 'terminal.integrated.env.osx', {}, true);
+          } else {
+            envVars = getConfig(wsFolder, 'terminal.integrated.env.linux', {}, true);
+          }
           const parsedVars: Record<string, string> = {};
           for (const key in envVars) {
             if (key === 'PATH') {
