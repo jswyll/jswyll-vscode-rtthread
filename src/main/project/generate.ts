@@ -1,9 +1,17 @@
 import * as vscode from 'vscode';
 import { load } from 'cheerio';
-import { basename, delimiter, extname, join } from 'path';
+import { basename, extname, join } from 'path';
 import { Logger } from '../base/logger';
 import { ExtensionToWebviewDatas, WebviewToExtensionData } from '../../common/types/type';
-import { getConfig, normalizePathForWorkspace, parsePath, updateConfig } from '../base/workspace';
+import {
+  getConfig,
+  getPlatformType,
+  normalizePathForWorkspace,
+  parsePath,
+  updateConfig,
+  inEnvironmentPath,
+  getAllFullPathsInEnvironmentPath,
+} from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import { TASKS, CONFIG_GROUP, TASKS_JSON_RELATIVE_PATH } from '../base/constants';
 import { EXTENSION_ID } from '../../common/constants';
@@ -92,7 +100,6 @@ const compilerFileNames = [
   'riscv64-unknown-elf-gcc',
   'riscv32-unknown-elf-gcc',
   'riscv-nuclei-elf-gcc',
-  'riscv-none-embed-gcc',
   'arm-linux-musleabi-gcc',
 ];
 
@@ -126,32 +133,6 @@ function postMessageToWebview(msg: ExtensionToWebviewDatas) {
  */
 function disposeWebviewPanel() {
   webviewPanel?.dispose();
-}
-
-/**
- * 获取文件夹下所有文件基本名为指定数组中的文件。
- * @param dirs 文件夹列表
- * @param basenameWithoutExts 文件
- * @returns 所有匹配的文件的绝对路径
- */
-async function getfsPathsIndirs(dirs: string[], basenameWithoutExts: string[]) {
-  const absolutePaths = new Set<string>();
-  const dirUris = dirs.map((dir) => vscode.Uri.file(dir));
-  for (const dir of dirUris) {
-    try {
-      const dirFiles = await vscode.workspace.fs.readDirectory(dir);
-      for (const [fileName, fileType] of dirFiles) {
-        if (fileType !== vscode.FileType.File) {
-          continue;
-        }
-        const basenameWithoutExt = basename(fileName, extname(fileName));
-        if (basenameWithoutExts.some((file) => basenameWithoutExt === file)) {
-          absolutePaths.add(convertPathToUnixLike(vscode.Uri.joinPath(dir, fileName).fsPath));
-        }
-      }
-    } catch {}
-  }
-  return Array.from(absolutePaths);
 }
 
 /**
@@ -1036,14 +1017,8 @@ async function startGenerate(params: GenerateParamsInternal) {
     await vscode.workspace.fs.createDirectory(vscodeFolder);
   }
 
-  const osPlatform = platform();
-  if (osPlatform === 'win32') {
-    await updateTerminalIntegratedEnv(params, 'windows');
-  } else if (osPlatform === 'darwin') {
-    await updateTerminalIntegratedEnv(params, 'osx');
-  } else {
-    await updateTerminalIntegratedEnv(params, 'linux');
-  }
+  const platformType = getPlatformType();
+  await updateTerminalIntegratedEnv(params, platformType);
 
   await updateFilesAssociationsAndExclude(params);
 
@@ -1137,33 +1112,24 @@ async function withFormitemValidate(msg: WebviewToExtensionData, fn: () => Promi
  *
  * @param p 路径
  * @param wsFolder 工作区文件夹
- * @returns
+ * @returns 指定的路径是否有效
  */
 async function isPathExists(p: string, wsFolder: vscode.Uri) {
   p = parsePath(p);
 
+  const platformType = getPlatformType();
   if (isAbsolutePath(p)) {
-    return (await existsAsync(p)) || (await existsAsync(`${p}.exe`));
+    return (await existsAsync(p)) || (platformType === 'windows' && (await existsAsync(`${p}.exe`)));
   }
 
   if (await existsAsync(join(wsFolder.fsPath, p))) {
     return true;
   }
-  if (await existsAsync(join(wsFolder.fsPath, `${p}.exe`))) {
+  if (platformType === 'windows' && (await existsAsync(join(wsFolder.fsPath, `${p}.exe`)))) {
     return true;
   }
 
-  const envPaths = (process.env.PATH || '').split(delimiter);
-  for (const envPath of envPaths) {
-    if (await existsAsync(join(envPath, p))) {
-      return true;
-    }
-    if (await existsAsync(join(envPath, `${p}.exe`))) {
-      return true;
-    }
-  }
-
-  return false;
+  return await inEnvironmentPath(p);
 }
 
 /**
@@ -1213,17 +1179,46 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             break;
         }
       }
-
-      // 从环境变量中获取可用的各种GCC编译器
-      const compilerPaths = new Set<string>();
-      const matchPaths = await getfsPathsIndirs(
-        (process.env.PATH || '').split(delimiter),
-        compilerFileNames.concat(compilerFileNames.map((name) => `${name}.exe`)),
-      );
-      for (const path of matchPaths) {
-        compilerPaths.add(convertPathToUnixLike(path));
-      }
       const workspaceFolders = vscode.workspace.workspaceFolders || [];
+
+      postMessageToWebview({
+        command: msg.command,
+        params: {
+          settings: {
+            ...lastGenerateConfig,
+            debuggerAdapter: lastGenerateConfig.debuggerAdapter || projcfgIniInfoDebuggerAdapter,
+            chipName: lastGenerateConfig.chipName || projcfgIni.chipName || '',
+          },
+          workspaceFolderPicked: workspaceFolders.length >= 2 ? wsFolder.fsPath : undefined,
+          compilerPaths: [],
+          makeToolPaths: [],
+          debuggerServerPaths: [],
+          cmsisPackPaths: [],
+          cprojectBuildConfigs: buildConfigs,
+        },
+      });
+
+      const compilerPaths = new Set<string>();
+      for (const p of compilerFileNames) {
+        const fsPaths = await getAllFullPathsInEnvironmentPath(p);
+        for (const fsPath of fsPaths) {
+          compilerPaths.add(fsPath);
+        }
+        if (fsPaths.length) {
+          compilerPaths.add(p);
+        }
+      }
+      const debuggerServerPaths = new Set<string>();
+      const debuggerServerBasenames = ['openocd', 'JLink', 'JLinkExe', 'pyocd'];
+      for (const p of debuggerServerBasenames) {
+        const fsPaths = await getAllFullPathsInEnvironmentPath(p);
+        for (const fsPath of fsPaths) {
+          debuggerServerPaths.add(fsPath);
+        }
+        if (fsPaths.length) {
+          debuggerServerPaths.add(p);
+        }
+      }
       postMessageToWebview({
         command: msg.command,
         params: {
@@ -1235,7 +1230,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           workspaceFolderPicked: workspaceFolders.length >= 2 ? wsFolder.fsPath : undefined,
           compilerPaths: Array.from(compilerPaths),
           makeToolPaths: [],
-          debuggerServerPaths: [],
+          debuggerServerPaths: Array.from(debuggerServerPaths),
           cmsisPackPaths: [],
           cprojectBuildConfigs: buildConfigs,
         },
@@ -1477,23 +1472,36 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       const { path } = msg.params;
       withFormitemValidate(msg, async () => {
         assertParam(await isPathExists(path, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
-        const envToolPath = join(path, 'tools');
+        const envPathParsed = parsePath(path);
+        const envToolPathParsed = join(envPathParsed, 'tools');
         assertParam(
-          await isPathExists(envToolPath, wsFolder),
-          vscode.l10n.t('The path "{0}" does not exists', [envToolPath]),
+          await isPathExists(envToolPathParsed, wsFolder),
+          vscode.l10n.t('The path "{0}" does not exists', [envToolPathParsed]),
         );
-        const folderUri = vscode.Uri.file(path);
-        const uris = await vscode.workspace.findFiles(
+        let uris;
+        uris = await vscode.workspace.findFiles(
           new vscode.RelativePattern(
-            folderUri,
+            vscode.Uri.file(envPathParsed),
             'tools/gnu_gcc/arm_gcc/mingw/bin/{arm-none-eabi-gcc.exe,arm-none-eabi-gcc}',
           ),
         );
+        const compilerPaths = uris.map((uri) => removeExeSuffix(convertPathToUnixLike(uri.fsPath)));
+
+        uris = await vscode.workspace.findFiles(
+          new vscode.RelativePattern(vscode.Uri.file(envPathParsed), '{.venv/Scripts/pyocd.exe,.venv/bin/pyocd}'),
+        );
+        const debuggerServerPaths: string[] = [];
+        if (await existsAsync(join(envPathParsed, '.venv/bin/pyocd'))) {
+          debuggerServerPaths.push(`${path}/.venv/bin/pyocd`);
+        } else if (platform() === 'win32' && (await existsAsync(join(envPathParsed, '.venv/Scripts/pyocd.exe')))) {
+          debuggerServerPaths.push(`${path}/.venv/Scripts/pyocd`);
+        }
         postMessageToWebview({
           command: msg.command,
           params: {
             validateResult: { result: true, message: '' },
-            compilerPaths: uris.map((uri) => removeExeSuffix(convertPathToUnixLike(uri.fsPath))),
+            compilerPaths,
+            debuggerServerPaths,
           },
         });
       });

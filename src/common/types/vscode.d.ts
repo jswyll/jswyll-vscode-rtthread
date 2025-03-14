@@ -380,6 +380,11 @@ export interface ExtensionToWebviewDataMap {
        * 可供选择的编译器文件路径
        */
       compilerPaths: string[];
+
+      /**
+       * 可供选择的调试服务器的文件路径
+       */
+      debuggerServerPaths: string[];
     };
   };
 

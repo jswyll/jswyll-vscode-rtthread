@@ -48,7 +48,7 @@ function checkL10nTranslationCompleteness() {
       console.warn(`Key "${key}" is not used in l10n/bundle.l10n.json, removing it`);
     }
   }
-  writeFileSync('l10n/bundle.l10n.zh-CN.json', JSON.stringify(sortedBundleL10nZhcn, null, 2).replace(/\n/g, '\r\n'));
+  writeFileSync('l10n/bundle.l10n.zh-CN.json', JSON.stringify(sortedBundleL10nZhcn, null, 2));
   if (errors.length > 0) {
     throw new Error(errors.join('\n'));
   }

@@ -1,20 +1,27 @@
 <template>
-  <TAutoComplete v-model="modelValue" v-bind="computedProps" highlight-keyword />
+  <TAutoComplete v-model="modelValue" v-bind="computedProps" />
 </template>
 
 <script lang="ts" setup>
 import { escapeRegExp } from 'lodash';
 import { AutoComplete as TAutoComplete, type AutoCompleteOption, type AutoCompleteProps } from 'tdesign-vue-next';
-import { computed, ref, useAttrs } from 'vue';
+import { computed, ref } from 'vue';
 
 defineOptions({
   inheritAttrs: false,
 });
 
+type MSelectInputProps = AutoCompleteProps & {
+  /**
+   * 是否总是显示所有选项，如果为ture则不管输入是否匹配选项都显示，默认为false
+   */
+  mShowAllOptions?: boolean;
+};
+
 /**
  * 组件属性
  */
-const attrs = useAttrs() as AutoCompleteProps;
+const props = defineProps<MSelectInputProps>();
 
 /**
  * 绑定值
@@ -30,6 +37,9 @@ const popupVisible = ref(false);
  * 过滤选项
  */
 function filterWords(keyword: string, option: AutoCompleteOption) {
+  if (props.mShowAllOptions !== undefined) {
+    return true;
+  }
   const regExp = new RegExp(escapeRegExp(keyword), 'i');
   if (typeof option === 'string') {
     return regExp.test(option);
@@ -45,7 +55,7 @@ function filterWords(keyword: string, option: AutoCompleteOption) {
  */
 function countMatch(keyword: string, onFirstMatch?: (value: string) => void) {
   let count = 0;
-  for (const option of attrs.options ?? []) {
+  for (const option of props.options ?? []) {
     if (filterWords(keyword, option)) {
       count++;
       if (count === 1 && onFirstMatch) {
@@ -64,11 +74,12 @@ function countMatch(keyword: string, onFirstMatch?: (value: string) => void) {
  * 计算属性，用于合并属性和自定义属性
  */
 const computedProps = computed<AutoCompleteProps>(() => ({
-  ...attrs,
-  filter: attrs.filterable ? filterWords : undefined,
+  ...props,
+  highlightKeyword: true,
+  filter: props.filterable ? filterWords : undefined,
   onBlur(e) {
     popupVisible.value = false;
-    attrs.onBlur?.(e);
+    props.onBlur?.(e);
   },
   onChange(value: string) {
     if (value && countMatch(value) === 0) {

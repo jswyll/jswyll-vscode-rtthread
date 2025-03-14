@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { relative, sep } from 'path';
+import { delimiter, join, relative, sep } from 'path';
 import { ExtensionConfiguration } from './type';
 import { EXTENSION_ID } from '../../common/constants';
 import { convertPathToUnixLike, isAbsolutePath, windowsAbsolutePathPattern } from '../../common/platform';
@@ -7,6 +7,7 @@ import { Logger } from './logger';
 import { disposeWebviewPanel } from '../project/generate';
 import { debounce } from 'lodash';
 import { homedir } from 'os';
+import { existsAsync } from './fs';
 
 /**
  * 全局状态
@@ -276,4 +277,75 @@ export function parsePath(p: string) {
     }
     return match[0];
   });
+}
+
+/**
+ * 获取当前平台类型。
+ *
+ * - `windows`：Windows
+ * - `osx`：MacOS
+ * - `linux`：Linux
+ */
+export function getPlatformType() {
+  if (process.platform === 'win32') {
+    return 'windows';
+  }
+  if (process.platform === 'darwin') {
+    return 'osx';
+  }
+  return 'linux';
+}
+
+/**
+ * 判断指定的路径是否在环境变量中。
+ *
+ * @param p 路径，可以省略`.exe`后缀，例如`openocd`
+ * @returns 指定的路径是否在环境变量中
+ */
+export async function inEnvironmentPath(p: string) {
+  const platformType = getPlatformType();
+  const envPaths = (process.env.PATH || '').split(delimiter);
+  for (const envPath of envPaths) {
+    if (await existsAsync(join(envPath, p))) {
+      return true;
+    }
+    if (platformType === 'windows' && (await existsAsync(join(envPath, `${p}.exe`)))) {
+      return true;
+    }
+  }
+}
+
+/**
+ * 获取环境变量中指定的路径的所有全路径。
+ *
+ * @param p 路径，可以省略`.exe`后缀，例如`openocd`
+ * @returns 指定的路径的所有全路径
+ */
+export async function getAllFullPathsInEnvironmentPath(p: string) {
+  const platformType = getPlatformType();
+  const envPaths = (process.env.PATH || '').split(delimiter);
+  const paths: string[] = [];
+  const promises = [];
+  for (const envPath of envPaths) {
+    if (platformType === 'windows') {
+      const fsPath = join(envPath, `${p}.exe`);
+      promises.push(
+        existsAsync(fsPath).then((b) => {
+          if (b) {
+            paths.push(convertPathToUnixLike(fsPath));
+          }
+        }),
+      );
+    }
+    const fsPath = join(envPath, p);
+    promises.push(
+      existsAsync(fsPath).then((b) => {
+        if (b) {
+          paths.push(convertPathToUnixLike(fsPath));
+        }
+      }),
+    );
+  }
+  await Promise.all(promises);
+  return paths;
 }

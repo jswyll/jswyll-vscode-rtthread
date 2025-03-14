@@ -8,7 +8,7 @@ jswyll-vscode-rtthread/
 ├── images/                    # 主说明文档的图片
 ├── l10n/                      # 扩展进程的本地化文件
 │   ├── bundle.l10n.json               # 默认翻译
-│   └── bundle.l10n.zh-CN.json         # 简体中文翻译
+│   └── bundle.l10n.zh-cn.json         # 简体中文翻译
 ├── out/                           # 构建输出
 │   ├── main/                          # 扩展进程
 │   │   └── extension.js                   # 扩展进程入口
@@ -106,7 +106,7 @@ jswyll-vscode-rtthread/
 ├── package-lock.json              # 依赖锁定
 ├── package.json                   # 扩展配置
 ├── package.nls.json               # package.json的默认翻译
-└── package.nls.zh-CN.json         # package.json的简体中文翻译
+└── package.nls.zh-cn.json         # package.json的简体中文翻译
 ```
 
 ## 开发说明

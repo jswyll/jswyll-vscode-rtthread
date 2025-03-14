@@ -1,6 +1,6 @@
 {
   "jswyll-vscode-rtthread.makeBaseDirectory.markdownDescription": "make's working root directory. It should be an absolute path, otherwise will not be able to locate the failed file.",
-  "jswyll-vscode-rtthread.generate.title": "生成",
+  "jswyll-vscode-rtthread.generate.title": "generate",
   "jswyll-vscode-rtthread.studioInstallPath.markdownDescription": "The folder of RT-Thread Studio Install. Select or manually enter the path, which may contain environment variables, such as ${'env:RTTHREAD_STUDIO_HOME} .",
   "jswyll-vscode-rtthread.makeToolPath.markdownDescription": "The folder of make tool. Select or manually enter the path, which may contain environment variables, such as `${env:MAKE_HOME}` .",
   "jswyll-vscode-rtthread.compilerPath.markdownDescription": "The GCC compiler file path, such as `D:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc` .",
