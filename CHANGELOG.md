@@ -4,11 +4,11 @@
 
 - 优化 从环境变量中获取可用的调试服务器以供选择。
 
-- 修复 Ubuntu平台下不能正确和显示中文的问题。
+- 修复 Ubuntu平台下不能正确显示中文的问题。
 
 ## 2025-03-13 - v0.3.0
 
-- 新增 RT-Thread Env冷启动与可视化菜单配置操作支持Linux与MacOS平台；
+- 新增 对接Ubuntu与MacOS平台的Env。
 
 - 新增 生成RT-Thread Env配置时，如果没有`.vscode/c_cpp_properties.json`文件则自动调用`scons --target=vsc`生成。
 

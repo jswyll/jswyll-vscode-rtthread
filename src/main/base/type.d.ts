@@ -388,60 +388,6 @@ interface VscodeSettings {
   };
 
   /**
-   * 集成终端配置 - macOS平台
-   */
-  'terminal.integrated.profiles.osx': {
-    [name: string]: {
-      /**
-       * 终端命令路径
-       */
-      path: string;
-
-      /**
-       * 终端命令参数
-       */
-      args?: string[];
-
-      /**
-       * 终端命令环境变量
-       */
-      env?: Record<string, string>;
-
-      /**
-       * 是否覆盖名称
-       */
-      overrideName?: boolean;
-    };
-  };
-
-  /**
-   * 集成终端配置 - Linux平台
-   */
-  'terminal.integrated.profiles.linux': {
-    [name: string]: {
-      /**
-       * 终端命令路径
-       */
-      path: string;
-
-      /**
-       * 终端命令参数
-       */
-      args?: string[];
-
-      /**
-       * 终端命令环境变量
-       */
-      env?: Record<string, string>;
-
-      /**
-       * 是否覆盖名称
-       */
-      overrideName?: boolean;
-    };
-  };
-
-  /**
    * 集成终端默认配置 - windows平台
    */
   'terminal.integrated.defaultProfile.windows': string;
