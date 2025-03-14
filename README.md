@@ -509,7 +509,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
         在<https://www.segger.com/downloads/jlink>下载并安装Linux的安装包，例如`https://www.segger.com/downloads/jlink/JLink_Linux_x86_64.deb`。
 
-        安装后位于`/opt/SEGGER/JLink/JLinkExe`
+        安装后位于`/opt/SEGGER/JLink/JLinkExe`，会将JLinkExe添加到环境变量PATH。
 
     - python3、env2.x与pyocd:
 
@@ -1051,7 +1051,7 @@ make (e=2): 系统找不到指定的文件。
 
     在Win10中，RT-Thread Env 2.x的menuconfig不支持用上下左右箭头来移动，进入子菜单请用`Enter`或`L`键；返回上一级请用`ESC`或`H`键；上、下请用`K`、`J`键；RT-Thread Env 1.x的menuconfig如何上下移动尚未清楚。
 
-- 旧版本RT-Thread Studio内置的`J-Link/v7.50a`不支持解析elf文件，请使用以下方式之一解决：
+- 旧版本RT-Thread Studio内置的`J-Link/v7.50a`不支持解析elf文件，请使用以下方式之一升级到V7.90（2023-08-02）及以上版本：
 
   - 使用RT-Thread Studio的SDK管理器安装高版本的J-Jlink；
 

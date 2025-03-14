@@ -395,24 +395,23 @@ function getSelectedBuildConfigAndCheck() {
 }
 
 /**
- * 校验编译器路径
- * @param value 编译器路径
+ * 校验Env路径
+ * @param value Env路径
  * @returns 校验结果
  */
 async function validateEnvPath(value: string) {
-  const { validateResult, compilerPaths } = await requestExtension({
+  const { validateResult, compilerPaths, debuggerServerPaths } = await requestExtension({
     command: 'validateEnvPath',
     params: {
       path: value,
     },
   });
 
-  if (compilerPaths) {
-    data.value.compilerPaths = [...new Set([...compilerPaths, ...data.value.compilerPaths])];
-    if (data.value.compilerPaths.length > 0 && !data.value.settings.compilerPath) {
-      data.value.settings.compilerPath = data.value.compilerPaths[0];
-    }
+  data.value.compilerPaths = [...new Set([...compilerPaths, ...data.value.compilerPaths])];
+  if (data.value.compilerPaths.length > 0 && !data.value.settings.compilerPath) {
+    data.value.settings.compilerPath = data.value.compilerPaths[0];
   }
+  data.value.debuggerServerPaths = [...new Set([...debuggerServerPaths, ...data.value.debuggerServerPaths])];
   return validateResult;
 }
 
@@ -847,6 +846,7 @@ onUnmounted(() => {
           v-model="data.settings.compilerPath"
           clearable
           :filterable="false"
+          m-show-all-options
           :options="data.compilerPaths"
           @blur="data.settings.compilerPath = convertPathToUnixLike(data.settings.compilerPath)"
         >
@@ -894,6 +894,7 @@ onUnmounted(() => {
           v-model="data.settings.debuggerServerPath"
           clearable
           :filterable="false"
+          m-show-all-options
           :options="data.debuggerServerPaths"
           @blur="data.settings.debuggerServerPath = convertPathToUnixLike(data.settings.debuggerServerPath)"
         >
