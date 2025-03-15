@@ -236,19 +236,16 @@ export class MenuConfig {
           } else {
             envVars = getConfig(wsFolder, 'terminal.integrated.env.linux', {}, true);
           }
-          const parsedVars: Record<string, string> = {};
           for (const key in envVars) {
             if (key === 'PATH') {
               continue;
             }
             let p = parsePath(envVars[key]);
-            if (!isAbsolutePath(p)) {
-              // TODO: 环境变量都是路径？
+            if (!isAbsolutePath(p) && ['BSP_ROOT', 'BSP_DIR', 'RTT_ROOT', 'RTT_DIR'].includes(key)) {
               p = join(wsFolder.fsPath, p);
             }
-            parsedVars[key] = p;
+            process.env[key] = p;
           }
-          process.env = { ...process.env, ...parsedVars };
           // 新版Env2.x的SDK所需环境变量
           process.env['HOSTOS'] = platform() === 'win32' ? 'Windows' : 'Linux';
 

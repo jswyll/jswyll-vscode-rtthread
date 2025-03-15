@@ -70,7 +70,7 @@ export class AppVersion {
   }
 
   /**
-   * 解析形如`x.y.z`的版本号字符串
+   * 解析形如`x.y.z`的3位数字版本号字符串，可包含`v`或`V`前缀，可包含非数字后缀。
    * @param version 版本号字符串，例如`1.2.3`。
    * @returns 包含主版本号、次版本号和补丁版本号的对象，如果解析失败则返回`{major: -1, minor: -1, patch: -1}`。
    */
@@ -80,7 +80,7 @@ export class AppVersion {
       return invalidVersion;
     }
 
-    const versionRegex = /^(\d+)\.(\d+)\.(\d+)$/;
+    const versionRegex = /[vV]?^(\d+)\.(\d+)\.(\d+)/;
     const match = version.match(versionRegex);
     if (!match) {
       return invalidVersion;
@@ -138,7 +138,7 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否大于
    */
-  isGreaterTo(v: AppVersion) {
+  isGreaterThan(v: AppVersion) {
     return this.Compare(this.version, v.version) > 0;
   }
 
@@ -147,7 +147,7 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否小于
    */
-  isLessTo(v: AppVersion) {
+  isLessThan(v: AppVersion) {
     return this.Compare(this.version, v.version) < 0;
   }
 

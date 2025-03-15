@@ -1,27 +1,32 @@
 <template>
-  <TAutoComplete v-model="modelValue" v-bind="computedProps" />
+  <TAutoComplete v-model="modelValue" v-bind="computedProps">
+    <template v-if="options?.length" #suffix>
+      <ChevronDownIcon style="cursor: pointer" />
+    </template>
+  </TAutoComplete>
 </template>
 
 <script lang="ts" setup>
 import { escapeRegExp } from 'lodash';
 import { AutoComplete as TAutoComplete, type AutoCompleteOption, type AutoCompleteProps } from 'tdesign-vue-next';
+import { ChevronDownIcon } from 'tdesign-icons-vue-next';
 import { computed, ref } from 'vue';
 
 defineOptions({
   inheritAttrs: false,
 });
 
-type MSelectInputProps = AutoCompleteProps & {
-  /**
-   * 是否总是显示所有选项，如果为ture则不管输入是否匹配选项都显示，默认为false
-   */
-  mShowAllOptions?: boolean;
-};
-
 /**
  * 组件属性
  */
-const props = defineProps<MSelectInputProps>();
+const props = defineProps<
+  AutoCompleteProps & {
+    /**
+     * 是否总是显示所有选项，如果为ture则不管输入是否匹配选项都显示，默认为false
+     */
+    mShowAllOptions?: boolean;
+  }
+>();
 
 /**
  * 绑定值
@@ -75,8 +80,9 @@ function countMatch(keyword: string, onFirstMatch?: (value: string) => void) {
  */
 const computedProps = computed<AutoCompleteProps>(() => ({
   ...props,
-  highlightKeyword: true,
+  clearable: !props.options?.length,
   filter: props.filterable ? filterWords : undefined,
+  highlightKeyword: true,
   onBlur(e) {
     popupVisible.value = false;
     props.onBlur?.(e);

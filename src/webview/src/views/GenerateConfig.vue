@@ -91,8 +91,8 @@ const { t } = useI18n({
       'Path to the server to download or debug. Supports `pyocd`, `openocd`, and `jlink`. You can just fill in the base filename (e.g., `openocd`) if you have added the folder to the `PATH` environment variable.':
         '用于下载或调试的服务器的路径。支持`pyocd`、`openocd`、`jlink`。如果你已经将它的所在文件夹添加到环境变量`PATH`则可只填基本文件名（例如`openocd`）。',
       'Cmsis Pack': 'Cmsis包',
-      'File path of the Cmsis package corresponding to the chip. If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.':
-        '芯片对应的Cmsis包的文件路径。如果芯片名称不是[pyocd内置目标](https://pyocd.io/docs/builtin-targets.html)则应指定。',
+      'File path of the Cmsis package corresponding to the chip. **If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.** Built-in packages can be added via the `pyocd pack` related commands.':
+        '芯片对应的Cmsis包的文件路径。**如果芯片名称不是[pyocd内置目标](https://pyocd.io/docs/builtin-targets.html)则应指定。** 可以通过`pyocd pack`相关命令添加内置包。',
       'Parsing project information...': '解析项目信息...',
       'Validating the form parameter...': '校验表单参数...',
       'Generating...': '生成...',
@@ -277,13 +277,8 @@ const formRules = computed<FormRules>(() => {
     cmsisPack: [
       {
         validator: async (value: string) => {
-          if (isPyocdServer.value && !value) {
-            const validateResult: TdesignCustomValidateResult = {
-              type: 'warning',
-              message: t('"{0}" is required', [t('Cmsis Pack')]),
-              result: false,
-            };
-            return validateResult;
+          if (!isPyocdServer.value || !value) {
+            return true;
           }
 
           const { validateResult } = await requestExtension({
@@ -408,9 +403,6 @@ async function validateEnvPath(value: string) {
   });
 
   data.value.compilerPaths = [...new Set([...compilerPaths, ...data.value.compilerPaths])];
-  if (data.value.compilerPaths.length > 0 && !data.value.settings.compilerPath) {
-    data.value.settings.compilerPath = data.value.compilerPaths[0];
-  }
   data.value.debuggerServerPaths = [...new Set([...debuggerServerPaths, ...data.value.debuggerServerPaths])];
   return validateResult;
 }
@@ -665,7 +657,7 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
 
   switch (msg.command) {
     case 'requestInitialValues':
-      if (msg.params.cprojectBuildConfigs.length && !msg.params.settings.buildConfigName) {
+      if (msg.params.cprojectBuildConfigs?.length && msg.params.settings && !msg.params.settings?.buildConfigName) {
         msg.params.settings.buildConfigName = msg.params.cprojectBuildConfigs[0].name;
       }
       data.value = { ...data.value, ...msg.params };
@@ -844,7 +836,6 @@ onUnmounted(() => {
       <TFormItem :label="t('GCC Compiler Path')" name="settings.compilerPath" required-mark>
         <MSelectInput
           v-model="data.settings.compilerPath"
-          clearable
           :filterable="false"
           m-show-all-options
           :options="data.compilerPaths"
@@ -892,7 +883,6 @@ onUnmounted(() => {
       <TFormItem :label="t('Debugger Server')" name="settings.debuggerServerPath">
         <MSelectInput
           v-model="data.settings.debuggerServerPath"
-          clearable
           :filterable="false"
           m-show-all-options
           :options="data.debuggerServerPaths"
@@ -918,7 +908,7 @@ onUnmounted(() => {
           <TFormItem :label="t('Debugger type')" name="settings.debuggerAdapter">
             <TSelect
               v-model="data.settings.debuggerAdapter"
-              :readonly="isJlinkServer"
+              :disabled="isJlinkServer"
               :options="debuggerAdapterOptions"
               :popup-props="{ overlayInnerStyle: getSelectPopupWidth }"
             >
@@ -965,7 +955,6 @@ onUnmounted(() => {
         <TFormItem :label="t('Cmsis Pack')" name="settings.cmsisPack">
           <MSelectInput
             v-model="data.settings.cmsisPack"
-            clearable
             :options="data.cmsisPackPaths"
             @blur="data.settings.cmsisPack = convertPathToUnixLike(data.settings.cmsisPack)"
           >
@@ -976,7 +965,7 @@ onUnmounted(() => {
               inline
               :markdown-text="
                 t(
-                  'File path of the Cmsis package corresponding to the chip. If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.',
+                  'File path of the Cmsis package corresponding to the chip. **If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.** Built-in packages can be added via the `pyocd pack` related commands.',
                 )
               "
             ></MMarkdown>

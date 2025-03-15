@@ -164,7 +164,7 @@ async function parseProjcfgIni(wsFolder: vscode.Uri) {
       projcfgIni.hardwareAdapter = match[1].trim();
     }
   } catch (error) {
-    logger.error(error);
+    logger.debug('parseProjcfgIni error:', error);
   }
   return projcfgIni;
 }
@@ -246,7 +246,7 @@ async function parseBuildConfigs(wsFolder: vscode.Uri) {
       });
     });
   } catch (error) {
-    logger.error('Failed to read the `.cproject` file in workspace Folder:', error);
+    logger.debug('Failed to read the `.cproject` file in workspace Folder:', error);
   }
   logger.debug('buildConfigs:', buildConfigs);
   return buildConfigs;
@@ -1190,15 +1190,20 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             chipName: lastGenerateConfig.chipName || projcfgIni.chipName || '',
           },
           workspaceFolderPicked: workspaceFolders.length >= 2 ? wsFolder.fsPath : undefined,
-          compilerPaths: [],
           makeToolPaths: [],
-          debuggerServerPaths: [],
           cmsisPackPaths: [],
           cprojectBuildConfigs: buildConfigs,
         },
       });
 
       const compilerPaths = new Set<string>();
+      const platformType = getPlatformType();
+      if (platformType === 'osx') {
+        const fsPath = '/Applications/ARM/bin/arm-none-eabi-gcc';
+        if (await existsAsync(fsPath)) {
+          compilerPaths.add(fsPath);
+        }
+      }
       for (const p of compilerFileNames) {
         const fsPaths = await getAllFullPathsInEnvironmentPath(p);
         for (const fsPath of fsPaths) {
@@ -1222,17 +1227,8 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       postMessageToWebview({
         command: msg.command,
         params: {
-          settings: {
-            ...lastGenerateConfig,
-            debuggerAdapter: lastGenerateConfig.debuggerAdapter || projcfgIniInfoDebuggerAdapter,
-            chipName: lastGenerateConfig.chipName || projcfgIni.chipName || '',
-          },
-          workspaceFolderPicked: workspaceFolders.length >= 2 ? wsFolder.fsPath : undefined,
           compilerPaths: Array.from(compilerPaths),
-          makeToolPaths: [],
           debuggerServerPaths: Array.from(debuggerServerPaths),
-          cmsisPackPaths: [],
-          cprojectBuildConfigs: buildConfigs,
         },
       });
       break;
@@ -1513,11 +1509,29 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       const parsedPath = parsePath(path);
       withFormitemValidate(msg, async () => {
         assertParam(await isPathExists(parsedPath, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
-        const kconfigPath = join(parsedPath, 'src');
+        let rtdefPath = join(parsedPath, 'include/rtdef.h');
         assertParam(
-          await isPathExists(kconfigPath, wsFolder),
-          vscode.l10n.t('The path "{0}" does not exists', [kconfigPath]),
+          await isPathExists(rtdefPath, wsFolder),
+          vscode.l10n.t('The path "{0}" does not exists', [rtdefPath]),
         );
+        if (!isAbsolutePath(rtdefPath)) {
+          rtdefPath = join(wsFolder.fsPath, rtdefPath);
+        }
+        const fileContent = await readTextFile(vscode.Uri.file(rtdefPath));
+        let majorMatch = fileContent.match(/#define\s+RT_VERSION_MAJOR\s+(\d+)/);
+        let minorMatch = fileContent.match(/#define\s+RT_VERSION_MINOR\s+(\d+)/);
+        let patchMatch = fileContent.match(/#define\s+RT_VERSION_PATCH\s+(\d+)/);
+        if (!majorMatch || !minorMatch || !patchMatch) {
+          // 尝试匹配旧版本的版本号定义格式
+          majorMatch = fileContent.match(/#define\s+RT_VERSION\s+(\d+)/);
+          minorMatch = fileContent.match(/#define\s+RT_SUBVERSION\s+(\d+)/);
+          patchMatch = fileContent.match(/#define\s+RT_REVISION\s+(\d+)/);
+        }
+        if (!majorMatch || !minorMatch || !patchMatch) {
+          throw new Error(vscode.l10n.t('Failed to parse RT-Thread version from {0}', [rtdefPath]));
+        }
+
+        logger.info(`RT-Thread version: ${majorMatch[1]}.${minorMatch[1]}.${patchMatch[1]}`);
         return true;
       });
       break;
