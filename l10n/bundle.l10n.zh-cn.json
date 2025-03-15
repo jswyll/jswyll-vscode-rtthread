@@ -35,6 +35,7 @@
   "Execute \"{0} -v\" to get the GCC version fail": "执行\"{0} -v\"获取GCC版本失败",
   "\"make\" is not in the environment variable; the \"Make Tool Path\" should be filled in.": "\"make\"不在环境变量中，应填写\"Make工具路径\"。",
   "Failed to get the version of \"{0}\"": "获取\"{0}\"的版本失败",
+  "Env is not initialized. Do you want to initialize the virtual environment?": "Env未初始化，现在初始化虚拟环境？",
   "Failed to parse RT-Thread version from {0}": "从{0}解析RT-Thread版本失败",
   "You will not be able to download or debug the program": "你将不能下载或调试程序",
   "Unsupported Debugger Server: {0}": "不支持的调试服务器: {0}",

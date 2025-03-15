@@ -197,6 +197,11 @@ export interface InputGenerateParams {
    * 可供选择的pack的文件路径
    */
   cmsisPackPaths: string[];
+
+  /**
+   * 可供选择的env路径
+   */
+  envPaths: string[];
 }
 
 /**

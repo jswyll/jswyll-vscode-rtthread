@@ -34,7 +34,6 @@ import { WebviewPanel } from '../base/webview';
 import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../../common/types/generate';
 import { TdesignCustomValidateResult } from '../../common/types/vscode';
 import { isEqual } from 'lodash';
-import { platform } from 'os';
 
 /**
  * 生成的参数
@@ -1062,6 +1061,9 @@ async function startGenerate(params: GenerateParamsInternal) {
  *
  * 如果fn的返回值类型不为true且未抛出异常，则校验结果由fn负责发送应答。
  *
+ * @attention 校验失败不会导致webview的requestExtension调用失败，
+ * webview应根据应答结果的validateResult.result来判断校验是否通过。
+ *
  * @param msg webview发送过来的消息
  * @param fn 校验函数
  */
@@ -1114,7 +1116,7 @@ async function withFormitemValidate(msg: WebviewToExtensionData, fn: () => Promi
  * @param wsFolder 工作区文件夹
  * @returns 指定的路径是否有效
  */
-async function isPathExists(p: string, wsFolder: vscode.Uri) {
+async function pathExists(p: string, wsFolder: vscode.Uri) {
   p = parsePath(p);
 
   const platformType = getPlatformType();
@@ -1224,11 +1226,19 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           debuggerServerPaths.add(p);
         }
       }
+      const envPaths = new Set<string>();
+      for (const p of ['c:/env-windows', '${userHome}/.env']) {
+        const parsedPath = parsePath(p);
+        if (await existsAsync(parsedPath)) {
+          envPaths.add(convertPathToUnixLike(parsedPath));
+        }
+      }
       postMessageToWebview({
         command: msg.command,
         params: {
           compilerPaths: Array.from(compilerPaths),
           debuggerServerPaths: Array.from(debuggerServerPaths),
+          envPaths: Array.from(envPaths),
         },
       });
       break;
@@ -1273,7 +1283,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
     case 'validatePathExists': {
       const { path } = msg.params;
       withFormitemValidate(msg, async () => {
-        if (!(await isPathExists(path, wsFolder))) {
+        if (!(await pathExists(path, wsFolder))) {
           const message = vscode.l10n.t('The path "{0}" does not exists', [path]);
           throw new TdesignValidateError(message, 'error');
         }
@@ -1467,11 +1477,12 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
     case 'validateEnvPath': {
       const { path } = msg.params;
       withFormitemValidate(msg, async () => {
-        assertParam(await isPathExists(path, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
+        const platformType = getPlatformType();
+        assertParam(await pathExists(path, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
         const envPathParsed = parsePath(path);
         const envToolPathParsed = join(envPathParsed, 'tools');
         assertParam(
-          await isPathExists(envToolPathParsed, wsFolder),
+          await pathExists(envToolPathParsed, wsFolder),
           vscode.l10n.t('The path "{0}" does not exists', [envToolPathParsed]),
         );
         let uris;
@@ -1489,7 +1500,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         const debuggerServerPaths: string[] = [];
         if (await existsAsync(join(envPathParsed, '.venv/bin/pyocd'))) {
           debuggerServerPaths.push(`${path}/.venv/bin/pyocd`);
-        } else if (platform() === 'win32' && (await existsAsync(join(envPathParsed, '.venv/Scripts/pyocd.exe')))) {
+        } else if (platformType === 'windows' && (await existsAsync(join(envPathParsed, '.venv/Scripts/pyocd.exe')))) {
           debuggerServerPaths.push(`${path}/.venv/Scripts/pyocd`);
         }
         postMessageToWebview({
@@ -1500,6 +1511,38 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             debuggerServerPaths,
           },
         });
+        if (platformType === 'windows') {
+          const python27Dir = join(envPathParsed, 'tools', 'Python27');
+          const venvDir = join(envPathParsed, '.venv');
+          if (!(await existsAsync(python27Dir)) && !(await existsAsync(venvDir))) {
+            const envPs1Path = join(envPathParsed, 'env.ps1');
+            const envExePath = join(envPathParsed, 'env.exe');
+            let confirmAction;
+            if (await existsAsync(envPs1Path)) {
+              confirmAction = () => {
+                const terminal = vscode.window.createTerminal({
+                  shellPath: 'powershell.exe',
+                });
+                terminal.show();
+                terminal.sendText(`& "${envPs1Path}"`);
+              };
+            } else if (await existsAsync(envExePath)) {
+              confirmAction = () => {
+                spawnPromise(envExePath, [], { cwd: envPathParsed });
+              };
+            }
+            if (confirmAction) {
+              const message = vscode.l10n.t(
+                'Env is not initialized. Do you want to initialize the virtual environment?',
+              );
+              const confirmText = vscode.l10n.t('Yes');
+              const selectedAction = await vscode.window.showWarningMessage(message, confirmText, vscode.l10n.t('No'));
+              if (selectedAction === confirmText) {
+                confirmAction();
+              }
+            }
+          }
+        }
       });
       break;
     }
@@ -1508,10 +1551,10 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       const { path } = msg.params;
       const parsedPath = parsePath(path);
       withFormitemValidate(msg, async () => {
-        assertParam(await isPathExists(parsedPath, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
+        assertParam(await pathExists(parsedPath, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
         let rtdefPath = join(parsedPath, 'include/rtdef.h');
         assertParam(
-          await isPathExists(rtdefPath, wsFolder),
+          await pathExists(rtdefPath, wsFolder),
           vscode.l10n.t('The path "{0}" does not exists', [rtdefPath]),
         );
         if (!isAbsolutePath(rtdefPath)) {
@@ -1547,7 +1590,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           );
         }
         assertParam(
-          await isPathExists(debuggerServerPath, wsFolder),
+          await pathExists(debuggerServerPath, wsFolder),
           vscode.l10n.t('The path "{0}" does not exists', [debuggerServerPath]),
         );
         const filePath = parsePath(debuggerServerPath);
