@@ -21,8 +21,7 @@ export async function existsAsync(pathOrUri: string | vscode.Uri) {
     }
     await vscode.workspace.fs.stat(pathOrUri);
     return true;
-  } catch (error) {
-    logger.error(error);
+  } catch {
     return false;
   }
 }

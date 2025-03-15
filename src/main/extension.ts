@@ -249,7 +249,7 @@ export async function activate(context: vscode.ExtensionContext) {
   logger.info('################################################################################');
   logger.info(`# activate extension, version: ${thisVersion}`);
   logger.info('################################################################################');
-  if (thisVersion.isGreaterTo(lastVersion)) {
+  if (thisVersion.isGreaterThan(lastVersion)) {
     logger.info(`extension upgraded from version ${lastVersion}`);
     updateGlobalState('lastVersion', thisVersion.toString());
     if (thisVersion.isUpgradeMajor(lastVersion) || thisVersion.isUpgradeMinor(lastVersion)) {
@@ -389,26 +389,25 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(
     vscode.commands.registerCommand(`${EXTENSION_ID}.${COMMANDS.OPEN_CONEMU}`, async (uri: vscode.Uri) => {
-      if (platform() === 'win32') {
-        const workspaceFolder = await getOrPickWorkspaceFolder();
-        const fileType = await getFileType(uri);
-        let cwd: string;
-        if (fileType === vscode.FileType.Directory) {
-          cwd = uri.fsPath;
-        } else if (fileType === vscode.FileType.File) {
-          cwd = dirname(uri.fsPath);
-        } else {
-          cwd = workspaceFolder.uri.fsPath;
-        }
-        const envPath = parsePath(getConfig(workspaceFolder, 'generate.envPath', ''));
-        const ConEmuExe = join(envPath, 'tools', 'ConEmu', 'ConEmu64');
-        conEmuProcess = spawn(ConEmuExe, [], { cwd });
-        conEmuProcess.on('close', () => {
-          conEmuProcess = null;
-        });
+      const workspaceFolder = await getOrPickWorkspaceFolder();
+      const fileType = await getFileType(uri);
+      let cwd: string;
+      if (fileType === vscode.FileType.Directory) {
+        cwd = uri.fsPath;
+      } else if (fileType === vscode.FileType.File) {
+        cwd = dirname(uri.fsPath);
       } else {
-        throw new Error(vscode.l10n.t('Not implemented'));
+        cwd = workspaceFolder.uri.fsPath;
       }
+      const envPath = parsePath(getConfig(workspaceFolder, 'generate.envPath', ''));
+      const ConEmuExe = join(envPath, 'tools', 'ConEmu', 'ConEmu64.exe');
+      if (!(await existsAsync(ConEmuExe))) {
+        vscode.window.showErrorMessage(vscode.l10n.t('The path \"{0}\" does not exists', [ConEmuExe]));
+      }
+      conEmuProcess = spawn(ConEmuExe, [], { cwd });
+      conEmuProcess.on('close', () => {
+        conEmuProcess = null;
+      });
     }),
   );
   context.subscriptions.push(

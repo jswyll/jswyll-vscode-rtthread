@@ -232,7 +232,7 @@ export interface ExtensionToWebviewDataMap {
     /**
      * 参数
      */
-    params: InputGenerateParams;
+    params: Partial<InputGenerateParams>;
   };
 
   /**
