@@ -34,6 +34,7 @@ import { WebviewPanel } from '../base/webview';
 import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../../common/types/generate';
 import { TdesignCustomValidateResult } from '../../common/types/vscode';
 import { isEqual } from 'lodash';
+import { AppVersion } from '../../common/version';
 
 /**
  * 生成的参数
@@ -534,7 +535,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
             '/c',
             projectType === 'Env'
               ? ['chcp', '437', '&&', buildCommand, ...cleanArgs].join(' ')
-              : [buildCommand, ...buildArgs].join(' '),
+              : [buildCommand, ...cleanArgs].join(' '),
           ],
           options: {
             env: {
@@ -1601,6 +1602,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             'error',
           );
         }
+        let message = vscode.l10n.t('Failed to get the version of "{0}"', [debuggerServer]);
         try {
           const { stdout, stderr } = await spawnPromise(filePath, ['--version'], {
             resolveWhenExitCodeNotZero: true,
@@ -1609,7 +1611,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           logger.debug('std:', std);
           if (debuggerServer === 'openocd') {
             assertParam(/^Open On-Chip Debugger (\d+)\.(\d+)/m.test(std), '');
-          } else if (isJlinkDebugger(filePath)) {
+          } else if (debuggerServer === 'jlink') {
             /*
              * jlink took about 3.1s and std is:
              * ```sh
@@ -1619,15 +1621,21 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
              * Unknown command line option --version.
              * ```
              */
-            assertParam(/V(\d+)\.(\d+)/i.test(std), '');
+            const match = std.match(/V(\d+)\.(\d+)/i);
+            assertParam(match, '');
+            const versionString = match[0];
+            message = vscode.l10n.t(
+              'You should select the version >= V7.90 of the JLink server, otherwise you will not be able to download elf files',
+            );
+            const jlinkVersion = new AppVersion(`${versionString}.0`);
+            assertParam(jlinkVersion.isGreaterOrEqualsThan(new AppVersion(7, 90, 0)));
           } else if (debuggerServer === 'pyocd') {
             assertParam(/^(\d+)\.(\d+)\.(\d+)/m.test(std), '');
           }
           return true;
         } catch (error) {
           logger.error(error);
-          let message = vscode.l10n.t('Failed to get the version of "{0}"', [debuggerServer]);
-          if (isJlinkDebugger(debuggerServerPath)) {
+          if (debuggerServer === 'jlink') {
             message += vscode.l10n.t('. You can go to {0} to download the latest version', [
               'https://www.segger.com/downloads/jlink',
             ]);

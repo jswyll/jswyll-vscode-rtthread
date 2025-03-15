@@ -743,7 +743,7 @@ onUnmounted(() => {
     <TForm ref="form" :data="data" label-align="right" label-width="14em" :rules="formRules">
       <TFormItem :label="t('Project Type')" name="settings.projectType">
         <TRadioGroup v-model="data.settings.projectType" variant="default-filled">
-          <TRadioButton value="RT-Thread Studio">RT-Thread Studio</TRadioButton>
+          <TRadioButton value="RT-Thread Studio">RT-Thread Studio Makefile</TRadioButton>
           <TRadioButton value="Env">RT-Thread Env</TRadioButton>
         </TRadioGroup>
         <template #help>

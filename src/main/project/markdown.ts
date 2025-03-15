@@ -70,7 +70,7 @@ export async function openChangeLog(lastVersion?: AppVersion) {
     let count = 0;
     for (const match of matches) {
       const v = new AppVersion(match[2]);
-      if (count > 0 && v.isLessOrEqualsTo(lastVersion)) {
+      if (count > 0 && v.isLessOrEqualsThan(lastVersion)) {
         changelogText =
           changelogText.slice(0, match.index) + '---\r\n\r\n---\r\n\r\n---\r\n\r\n' + changelogText.slice(match.index);
         break;
