@@ -80,7 +80,7 @@ export class AppVersion {
       return invalidVersion;
     }
 
-    const versionRegex = /[vV]?^(\d+)\.(\d+)\.(\d+)/;
+    const versionRegex = /^[vV]?(\d+)\.(\d+)\.(\d+)/;
     const match = version.match(versionRegex);
     if (!match) {
       return invalidVersion;
@@ -129,7 +129,7 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否相等
    */
-  isEqualsTo(v: AppVersion) {
+  isEqualsThan(v: AppVersion) {
     return this.Compare(this.version, v.version) === 0;
   }
 
@@ -152,11 +152,20 @@ export class AppVersion {
   }
 
   /**
+   * 判断版本号是否大于等于另一个版本号
+   * @param v 要比较的版本
+   * @returns 是否大于等于
+   */
+  isGreaterOrEqualsThan(v: AppVersion) {
+    return this.Compare(this.version, v.version) >= 0;
+  }
+
+  /**
    * 判断版本号是否小于等于另一个版本号
    * @param v 要比较的版本
    * @returns 是否小于等于
    */
-  isLessOrEqualsTo(v: AppVersion) {
+  isLessOrEqualsThan(v: AppVersion) {
     return this.Compare(this.version, v.version) <= 0;
   }
 

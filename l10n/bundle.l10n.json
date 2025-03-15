@@ -39,6 +39,7 @@
   "Failed to parse RT-Thread version from {0}": "Failed to parse RT-Thread version from {0}",
   "You will not be able to download or debug the program": "You will not be able to download or debug the program",
   "Unsupported Debugger Server: {0}": "Unsupported Debugger Server: {0}",
+  "You should select the version >= V7.90 of the JLink server, otherwise you will not be able to download elf files": "You should select the version >= V7.90 of the JLink server, otherwise you will not be able to download elf files",
   ". You can go to {0} to download the latest version": ". You can go to {0} to download the latest version",
   "Generate project configuration files": "Generate project configuration files",
   "Add {0}() call": "Add {0}() call",
