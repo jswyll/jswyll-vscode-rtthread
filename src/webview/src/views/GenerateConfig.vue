@@ -150,6 +150,7 @@ const data = ref<InputGenerateParams & DoGenerateParams>({
   workspaceFolderPicked: undefined,
   makeMajorVersion: undefined,
   toolchainPrefix: 'arm-none-eabi-',
+  envPaths: [],
 });
 
 /**
@@ -402,8 +403,10 @@ async function validateEnvPath(value: string) {
     },
   });
 
-  data.value.compilerPaths = [...new Set([...compilerPaths, ...data.value.compilerPaths])];
-  data.value.debuggerServerPaths = [...new Set([...debuggerServerPaths, ...data.value.debuggerServerPaths])];
+  if (validateResult.result) {
+    data.value.compilerPaths = [...new Set([...compilerPaths, ...data.value.compilerPaths])];
+    data.value.debuggerServerPaths = [...new Set([...debuggerServerPaths, ...data.value.debuggerServerPaths])];
+  }
   return validateResult;
 }
 
@@ -467,10 +470,12 @@ async function validateStudioInstallPath(value: string) {
       folder: value,
     },
   });
-  addToSet(data.value.compilerPaths, result.compilerPaths);
-  addToSet(data.value.debuggerServerPaths, result.debuggerServerPaths);
-  addToSet(data.value.makeToolPaths, [result.makeToolPath]);
-  addToSet(data.value.cmsisPackPaths, result.cmsisPackPaths);
+  if (result.validateResult.result) {
+    addToSet(data.value.compilerPaths, result.compilerPaths);
+    addToSet(data.value.debuggerServerPaths, result.debuggerServerPaths);
+    addToSet(data.value.makeToolPaths, [result.makeToolPath]);
+    addToSet(data.value.cmsisPackPaths, result.cmsisPackPaths);
+  }
   return result.validateResult;
 }
 
@@ -749,13 +754,13 @@ onUnmounted(() => {
       <template v-if="data.settings.projectType === 'Env'">
         <div class="mt2"></div>
         <TFormItem :label="t('Env Tool Path')" name="settings.envPath">
-          <TInput
+          <MSelectInput
             v-model="data.settings.envPath"
-            clearable
-            :placeholder="t('Input or select a folder')"
-            @blur="data.settings.envPath = convertPathToUnixLike($event as string)"
-          >
-          </TInput>
+            :filterable="false"
+            m-show-all-options
+            :options="data.envPaths"
+            @blur="data.settings.envPath = convertPathToUnixLike(data.settings.envPath)"
+          ></MSelectInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectEnvPath" />
           <template #help>
             <MMarkdown

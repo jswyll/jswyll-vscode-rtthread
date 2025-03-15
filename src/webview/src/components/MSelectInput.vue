@@ -12,10 +12,6 @@ import { AutoComplete as TAutoComplete, type AutoCompleteOption, type AutoComple
 import { ChevronDownIcon } from 'tdesign-icons-vue-next';
 import { computed, ref } from 'vue';
 
-defineOptions({
-  inheritAttrs: false,
-});
-
 /**
  * 组件属性
  */

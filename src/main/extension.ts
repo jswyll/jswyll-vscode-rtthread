@@ -486,9 +486,9 @@ export async function activate(context: vscode.ExtensionContext) {
           const message = vscode.l10n.t(
             "It won't work until the next time you import it, so do you want to do it again?",
           );
-          const confirmAction = vscode.l10n.t('Yes');
-          const selectedAction = await vscode.window.showWarningMessage(message, confirmAction, vscode.l10n.t('No'));
-          if (selectedAction === confirmAction) {
+          const confirmText = vscode.l10n.t('Yes');
+          const selectedAction = await vscode.window.showWarningMessage(message, confirmText, vscode.l10n.t('No'));
+          if (selectedAction === confirmText) {
             const workspaceFolder = await getOrPickWorkspaceFolder();
             await doCheckAndOpenGenerateWebview(workspaceFolder.uri);
           }
@@ -496,9 +496,9 @@ export async function activate(context: vscode.ExtensionContext) {
           const message = vscode.l10n.t(
             'The Settings have changed and the window needs to be reloaded to apply the changes.',
           );
-          const confirmAction = vscode.l10n.t('Reload Now');
-          vscode.window.showInformationMessage(message, confirmAction).then((selectedAction) => {
-            if (selectedAction === confirmAction) {
+          const confirmText = vscode.l10n.t('Reload Now');
+          vscode.window.showInformationMessage(message, confirmText).then((selectedAction) => {
+            if (selectedAction === confirmText) {
               vscode.commands.executeCommand('workbench.action.reloadWindow');
             }
           });

@@ -35,6 +35,7 @@
   "Execute \"{0} -v\" to get the GCC version fail": "Execute \"{0} -v\" to get the GCC version fail",
   "\"make\" is not in the environment variable; the \"Make Tool Path\" should be filled in.": "\"make\" is not in the environment variable; the \"Make Tool Path\" should be filled in.",
   "Failed to get the version of \"{0}\"": "Failed to get the version of \"{0}\"",
+  "Env is not initialized. Do you want to initialize the virtual environment?": "Env is not initialized. Do you want to initialize the virtual environment?",
   "Failed to parse RT-Thread version from {0}": "Failed to parse RT-Thread version from {0}",
   "You will not be able to download or debug the program": "You will not be able to download or debug the program",
   "Unsupported Debugger Server: {0}": "Unsupported Debugger Server: {0}",

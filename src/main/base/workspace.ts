@@ -297,9 +297,9 @@ export function getPlatformType() {
 }
 
 /**
- * 判断指定的路径是否在环境变量中。
+ * 判断指定的路径是否在环境变量`PATH`中。
  *
- * @param p 路径，可以省略`.exe`后缀，例如`openocd`
+ * @param p 相对路径或命令，可以省略`.exe`后缀，例如`openocd`
  * @returns 指定的路径是否在环境变量中
  */
 export async function inEnvironmentPath(p: string) {
