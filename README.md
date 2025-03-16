@@ -197,8 +197,6 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 点击“生成”按钮，开始校验并生成配置文件。如果生成成功，配置面板将自动关闭。
 
-对于JLink，会添加hex输出（这是因为：旧版本RT-Thread Studio内置的`J-Link/v7.50a`不支持解析elf文件）。
-
 > **注意**
 >
 > 切换编译器版本后（在本扩展的配置面板选择的GCC版本和RT-Thread Studio的不一样，或前后两次在本扩展的配置面板选择GCC版本不一样，先后编译），应重新编译，以消除编译器版本差异引发不可预料的结果。

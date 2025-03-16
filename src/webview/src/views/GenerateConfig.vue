@@ -735,9 +735,10 @@ onUnmounted(() => {
 
 <template>
   <div class="m-config-project">
-    <h1 v-if="data.workspaceFolderPicked">
-      {{ t('Current workspace folder') + ': ' }} <code>{{ data.workspaceFolderPicked }}</code>
-    </h1>
+    <div v-if="data.workspaceFolderPicked" class="m-row--center m-workspace-folder">
+      {{ t('Current workspace folder') + ': ' }}
+      <code>{{ data.workspaceFolderPicked }}</code>
+    </div>
 
     <div class="mt2"></div>
     <TForm ref="form" :data="data" label-align="right" label-width="14em" :rules="formRules">
@@ -1004,6 +1005,11 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.m-workspace-folder {
+  text-align: center;
+  font-size: 1.2rem;
+}
+
 .m-folderopen-icon {
   font-size: 1.5em;
   margin-left: 0.75rem;
@@ -1012,10 +1018,5 @@ onUnmounted(() => {
 
 .m-config-project {
   margin: 1% 5%;
-}
-
-.m-config-project h1 {
-  text-align: center;
-  margin-block-end: 0;
 }
 </style>

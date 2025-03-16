@@ -24,7 +24,7 @@
   "jswyll-vscode-rtthread.customExtraPathVar.markdownDescription": "自定义额外追加到环境变量`PATH`的路径",
   "jswyll-vscode-rtthread.customExtraVars.markdownDescription": "自定义额外的环境变量键值对",
   "jswyll-vscode-rtthread.projectType.markdownDescription": "项目类型，默认为`RT-Thread Studio`。",
-  "jswyll-vscode-rtthread.envPath.markdownDescription": "env工具的文件夹路径，默认为`c:/env-windows`。",
+  "jswyll-vscode-rtthread.envPath.markdownDescription": "env工具的文件夹路径，默认为`${userHome}/.env`。",
   "jswyll-vscode-rtthread.rttDir.markdownDescription": "RT-Thread源码的根目录（RTT_DIR）。",
   "jswyll-vscode-rtthread.RttEnv.title": "RT-Thread Env",
   "jswyll-vscode-rtthread.RttEnv.autoUpdatePackages.markdownDescription": "是否在保存菜单配置成功后自动更新软件包。",

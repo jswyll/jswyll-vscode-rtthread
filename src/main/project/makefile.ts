@@ -47,6 +47,11 @@ const SUBDIR_SOURCE_EXTNAMES = ['.c', '.S', '.s'];
 const IGNORE_EXTNAMES = ['.o', '.d', '.a', '.elf', '.bin', '.hex', '.map', '.list', '.lst', '.out'];
 
 /**
+ * gcc的include指令正则表达式
+ */
+const INCLUDE_PATH_REGEX = /(\s+-I|-include|-T\s*)"([^"]*)"/g;
+
+/**
  * makefile处理器
  */
 export class MakefileProcessor {
@@ -144,6 +149,29 @@ export class MakefileProcessor {
   }
 
   /**
+   * 猜测原本项目的根目录。
+   */
+  private static async GuessOriginProjectRoot() {
+    const uri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name, 'rt-thread/src/subdir.mk');
+    let guessPath = '';
+    try {
+      const fileContent = await readTextFile(uri);
+      const matches = fileContent.matchAll(INCLUDE_PATH_REGEX);
+      for (const match of matches) {
+        const p = convertPathToUnixLike(match[2]);
+        logger.debug('p:', p);
+        if (p.endsWith('rt-thread/include')) {
+          guessPath = p.slice(0, p.length - 'rt-thread/include'.length);
+          break;
+        }
+      }
+    } catch {
+      logger.debug('guess error:', uri.fsPath);
+    }
+    return guessPath;
+  }
+
+  /**
    * 处理单个Makefile文件，不抛出出现的错误。
    *
    * 1. 在编译文件的gcc或g++指令前添加提示正在编译的文件，并使用`@`屏蔽命令及其参数，例如：
@@ -187,8 +215,8 @@ export class MakefileProcessor {
   private static async ProcessMakefile(uri: vscode.Uri): Promise<void> {
     try {
       const { toolchainPrefix } = this.BuildConfig;
-      const linkRegex = new RegExp(`^(.*?\\.elf:.*\\r\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'm');
-      const compileRegex = new RegExp(`^(.*?\\.o:.*\\r\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'gm');
+      const linkRegex = new RegExp(`^(.*?\\.elf:.*\\r?\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'm');
+      const compileRegex = new RegExp(`^(.*?\\.o:.*\\r?\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'gm');
       const oldContent = await readTextFile(uri);
       let newContent = oldContent.replace(linkRegex, (...match) => {
         return `${match[1]}\t-@echo linking ...\r\n\t@${toolchainPrefix}${match[2]}`;
@@ -196,9 +224,8 @@ export class MakefileProcessor {
       newContent = newContent.replace(compileRegex, (...match) => {
         return `${match[1]}\t-@echo compiling $<...\r\n\t@${toolchainPrefix}${match[2]}`;
       });
-      const { projectRootDir } = this.ProjcfgIni;
-      const gccIncludeDirRegex = /(\s+-I|-include|-T\s*)"([^"]*)"/g;
-      newContent = newContent.replace(gccIncludeDirRegex, (...match) => {
+      const projectRootDir = await MakefileProcessor.GuessOriginProjectRoot();
+      newContent = newContent.replace(INCLUDE_PATH_REGEX, (...match) => {
         if (isAbsolutePath(match[2])) {
           if (isPathUnderOrEqual(this.CurrentProjectRoot.fsPath, match[2])) {
             // 可能已经移动，先尝试转为工作区文件夹的相对路径
@@ -206,8 +233,9 @@ export class MakefileProcessor {
             const from = convertPathToUnixLike(buildAbsolutePath);
             const to = convertPathToUnixLike(match[2]);
             return `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
-          } else if (projectRootDir) {
+          } else {
             // 尝试转为新建项目的相对路径
+            // TODO: 尝试分析projectRootDir，然后让用户其确认
             const buildAbsolutePath = join(projectRootDir, this.BuildConfig.name);
             const from = convertPathToUnixLike(buildAbsolutePath);
             const to = convertPathToUnixLike(match[2]);

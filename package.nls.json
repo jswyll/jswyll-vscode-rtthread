@@ -24,7 +24,7 @@
   "jswyll-vscode-rtthread.customExtraPathVar.markdownDescription": "Customize the additional path appended to the `PATH` environment variable",
   "jswyll-vscode-rtthread.customExtraVars.markdownDescription": "Custom environment variables as key-value pairs",
   "jswyll-vscode-rtthread.projectType.markdownDescription": "Project type, defaults to `RT-Thread Studio`.",
-  "jswyll-vscode-rtthread.envPath.markdownDescription": "env tool folder path, defaults to `c:/env-windows`.",
+  "jswyll-vscode-rtthread.envPath.markdownDescription": "env tool folder path, defaults to `${userHome}/.env`.",
   "jswyll-vscode-rtthread.rttDir.markdownDescription": "The root directory of the RT-Thread source code (RTT_DIR).",
   "jswyll-vscode-rtthread.RttEnv.title": "RT-Thread Env",
   "jswyll-vscode-rtthread.RttEnv.autoUpdatePackages.markdownDescription": "Whether to automatically update packages when the save menu configuration is successful.",

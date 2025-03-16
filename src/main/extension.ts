@@ -87,30 +87,34 @@ async function setWhenContext() {
  * - 设置是否自动处理makefile。
  *
  * @param wsFolder 当前工作区文件夹
+ * @param hasGenerateConfig 是否已经生成配置
  */
-async function changeFeature(wsFolder: vscode.Uri) {
+async function changeFeature(wsFolder: vscode.Uri, hasGenerateConfig: boolean) {
   const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
   for (const statusbar of buildStatusBarItems) {
-    if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.MENUCONFIG}`) {
-      if (projectType === 'Env') {
-        statusbar.show();
-      } else {
-        statusbar.hide();
-      }
-    } else if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.PICK_A_WORKSPACEFOLDER}`) {
+    if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.PICK_A_WORKSPACEFOLDER}`) {
       if ((vscode.workspace.workspaceFolders ?? []).length > 1) {
         statusbar.show();
       } else {
         statusbar.hide();
       }
-    } else {
-      statusbar.show();
+    } else if (statusbar.command === `${EXTENSION_ID}.${COMMANDS.MENUCONFIG}`) {
+      if (projectType === 'Env' && hasGenerateConfig) {
+        statusbar.show();
+      } else {
+        statusbar.hide();
+      }
+    } else if (statusbar.command !== `${EXTENSION_ID}.${COMMANDS.GENERATE_CONFIG}`) {
+      if (hasGenerateConfig) {
+        statusbar.show();
+      } else {
+        statusbar.hide();
+      }
     }
   }
   const isRtthreadStudioProject = projectType === 'RT-Thread Studio';
   vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadEnvProject`, projectType === 'Env');
   vscode.commands.executeCommand('setContext', `${EXTENSION_ID}.isRtthreadStudioProject`, isRtthreadStudioProject);
-  MakefileProcessor.SetHasBuildConfig(isRtthreadStudioProject);
 }
 
 /**
@@ -119,7 +123,7 @@ async function changeFeature(wsFolder: vscode.Uri) {
  */
 async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   await checkAndOpenGenerateWebview(wsFolder);
-  await changeFeature(wsFolder);
+  await changeFeature(wsFolder, true);
   const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
   if (projectType === 'Env' && !(await existsAsync(vscode.Uri.joinPath(wsFolder, '.vscode/c_cpp_properties.json')))) {
     await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
@@ -264,7 +268,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // 创建状态栏按钮
-  createStatusbarCommand(
+  const pickAWorkspaceFolderStatusBar = createStatusbarCommand(
     context,
     COMMANDS.PICK_A_WORKSPACEFOLDER,
     '$(file-submodule)',
@@ -276,9 +280,12 @@ export async function activate(context: vscode.ExtensionContext) {
     },
     false,
   );
+  if ((vscode.workspace.workspaceFolders ?? []).length > 1) {
+    pickAWorkspaceFolderStatusBar.show();
+  }
   createStatusbarCommand(
     context,
-    'action.generateConfig',
+    COMMANDS.GENERATE_CONFIG,
     '$(sign-in)',
     vscode.l10n.t('Import'),
     vscode.l10n.t('Import the RT-Thread project and generate the vscode configuration file'),
@@ -411,11 +418,16 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
   context.subscriptions.push(
-    onDidEnvRootChange(() => {
+    onDidEnvRootChange(async () => {
       const terminals = vscode.window.terminals;
       terminals.forEach((terminal) => terminal.dispose());
       conEmuProcess?.kill();
       MenuConfig.Dispose();
+      const workspaceFolder = await getOrPickWorkspaceFolder();
+      const sconsignFilePath = vscode.Uri.joinPath(workspaceFolder.uri, '.sconsign.dblite');
+      if (await existsAsync(sconsignFilePath)) {
+        await vscode.workspace.fs.delete(sconsignFilePath, { useTrash: false });
+      }
     }),
   );
   context.subscriptions.push(
@@ -425,26 +437,33 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   // 监听makefile相关文件
-  const setMakefileProcessorBuildConfig = async (workspaceFolder: vscode.WorkspaceFolder) => {
-    const extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
-    if (extensionSpecifiedBuildTask) {
-      await changeFeature(workspaceFolder.uri);
-      await Promise.all([parseSelectedBuildConfigs(workspaceFolder.uri), parseProjcfgIni(workspaceFolder.uri)]).then(
-        ([buildConfig, projcfgIni]) => {
-          if (buildConfig) {
-            MakefileProcessor.SetProcessConfig(workspaceFolder.uri, projcfgIni, buildConfig);
-          }
-        },
-      );
+  const setFeature = async (workspaceFolder: vscode.WorkspaceFolder) => {
+    let extensionSpecifiedBuildTask;
+    try {
+      MakefileProcessor.SetHasBuildConfig(false);
+      extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
+      if (extensionSpecifiedBuildTask) {
+        await Promise.all([parseSelectedBuildConfigs(workspaceFolder.uri), parseProjcfgIni(workspaceFolder.uri)]).then(
+          ([buildConfig, projcfgIni]) => {
+            if (buildConfig) {
+              MakefileProcessor.SetProcessConfig(workspaceFolder.uri, projcfgIni, buildConfig);
+            }
+          },
+        );
+        MakefileProcessor.SetHasBuildConfig(true);
+      }
+    } catch {
+    } finally {
+      await changeFeature(workspaceFolder.uri, !!extensionSpecifiedBuildTask);
     }
   };
   getOrPickWorkspaceFolder().then((workspaceFolder) => {
     // 初始化时如果已经导入过项目，则立即设置makefile处理器的参数
-    setMakefileProcessorBuildConfig(workspaceFolder);
+    setFeature(workspaceFolder);
   });
   context.subscriptions.push(
     onWorkspaceFolderChange((workspaceFolder) => {
-      setMakefileProcessorBuildConfig(workspaceFolder);
+      setFeature(workspaceFolder);
       const terminals = vscode.window.terminals;
       terminals.forEach((terminal) => terminal.dispose());
     }),

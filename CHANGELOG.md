@@ -1,5 +1,17 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-03-16 - v0.3.6
+
+- 优化 切换工作区文件夹后状态栏按钮的显示条件。
+
+- 优化 从`rtconfig_preinc.h`提取宏定义到`.vscode/c_cpp_properties.json`。
+
+- 调整 打开移动的RT-Thread Studio项目时，根据`rt-thread/src/subdir.mk`文件推测原项目的根路径。
+
+- 调整 默认不启用诊断RT-Thread中断函数。
+
+- 修复 初始打开多根工作区状态栏不显示选择工作区文件夹按钮的问题。
+
 ## 2025-03-15 - v0.3.5
 
 - 修复 RT-Thread Stuio Makefile构建方式清除任务不正确的问题。
@@ -55,7 +67,7 @@
 - 新增 支持Env Windows（v1.x和v2.x）：
 
   - 支持菜单配置面板；
-
+从此村村村村村村村村
   - 支持scons方式编译；
 
   - 支持在终端执行scons、pkgs、menuconfig命令；
