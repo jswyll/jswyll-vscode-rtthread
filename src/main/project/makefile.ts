@@ -9,7 +9,7 @@ import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqu
 import { debounce, escapeRegExp } from 'lodash';
 import { Cproject } from './cproject';
 import { processCCppPropertiesConfig } from './cCppProperties';
-import { ProjcfgIni, BuildConfig } from '../../common/types/generate';
+import { BuildConfig } from '../../common/types/generate';
 
 /**
  * 源文件的相对路径
@@ -73,7 +73,7 @@ export class MakefileProcessor {
   /**
    * 项目配置
    */
-  private static ProjcfgIni: ProjcfgIni;
+  private static OriginProjectRoot: string;
 
   /**
    * 选择的构建配置，各项获取不到则为空字符串
@@ -88,14 +88,14 @@ export class MakefileProcessor {
   /**
    * 设置要处理的环境，应在初始时和切换配置时调用。
    * @param wsFolder 工作区文件夹
-   * @param projcfgIni 项目配置
    * @param buildConfig 选择的构建配置
    */
-  public static SetProcessConfig(wsFolder: vscode.Uri, projcfgIni: ProjcfgIni, buildConfig: BuildConfig) {
+  public static async SetProcessConfig(wsFolder: vscode.Uri, buildConfig: BuildConfig) {
     logger.info('SetBuildConfig for workspaceFolder:', wsFolder.fsPath);
     this.CurrentProjectRoot = wsFolder;
-    this.ProjcfgIni = projcfgIni;
     this.BuildConfig = buildConfig;
+    // TODO: 尝试分析projectRootDir，然后让用户其确认
+    this.OriginProjectRoot = await this.GuessOriginProjectRoot();
     this.IsWatchMakefile = getConfig(this.CurrentProjectRoot, 'makefileProcessor.watch', true);
   }
 
@@ -151,7 +151,7 @@ export class MakefileProcessor {
   /**
    * 猜测原本项目的根目录。
    */
-  public static async GuessOriginProjectRoot() {
+  private static async GuessOriginProjectRoot() {
     const uri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name, 'rt-thread/src/subdir.mk');
     let guessPath = '';
     try {
@@ -215,7 +215,6 @@ export class MakefileProcessor {
   private static async ProcessMakefile(uri: vscode.Uri): Promise<void> {
     try {
       const { toolchainPrefix } = this.BuildConfig;
-      const { projectRootDir } = this.ProjcfgIni;
       const linkRegex = new RegExp(`^(.*?\\.elf:.*\\r?\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'm');
       const compileRegex = new RegExp(`^(.*?\\.o:.*\\r?\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'gm');
       const oldContent = await readTextFile(uri);
@@ -233,12 +232,12 @@ export class MakefileProcessor {
             const from = convertPathToUnixLike(buildAbsolutePath);
             const to = convertPathToUnixLike(match[2]);
             return `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
-          } else if (projectRootDir) {
-            // TODO: 尝试分析projectRootDir，然后让用户其确认
-            const buildAbsolutePath = join(projectRootDir, this.BuildConfig.name);
+          } else if (this.OriginProjectRoot) {
+            const buildAbsolutePath = join(this.OriginProjectRoot, this.BuildConfig.name);
             const from = convertPathToUnixLike(buildAbsolutePath);
             const to = convertPathToUnixLike(match[2]);
-            return `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
+            const relativePath = `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
+            return relativePath;
           }
         }
         return match[0];

@@ -144,19 +144,10 @@ async function parseProjcfgIni(wsFolder: vscode.Uri) {
   logger.debug('parseProjcfgIni...');
   const projcfgIni: ProjcfgIni = {
     chipName: undefined,
-    projectRootDir: undefined,
     hardwareAdapter: undefined,
   };
   try {
-    projcfgIni.projectRootDir = await MakefileProcessor.GuessOriginProjectRoot();
     const projcfgIniText = await readTextFile(vscode.Uri.joinPath(wsFolder, '.settings/projcfg.ini'));
-    const matchOutputProjectPath = projcfgIniText.match(/^output_project_path=(.+)/im);
-    const matchProjectName = projcfgIniText.match(/^project_name=(.+)/im);
-    if (matchOutputProjectPath && matchProjectName && !projcfgIni.projectRootDir) {
-      const outputProjectPath = convertPathToUnixLike(matchOutputProjectPath[1].trim().replace(/\\:/g, ':'));
-      const projectName = convertPathToUnixLike(matchProjectName[1].trim());
-      projcfgIni.projectRootDir = convertPathToUnixLike(join(outputProjectPath, projectName));
-    }
     let match;
     if ((match = projcfgIniText.match(/^chip_name=(.+)/im))) {
       projcfgIni.chipName = match[1].trim();
@@ -426,8 +417,8 @@ async function updateFilesAssociationsAndExclude(params: GenerateParamsInternal)
  */
 async function processMakefiles(params: GenerateParamsInternal) {
   logger.info('processMakefiles...');
-  const { wsFolder, projcfgIni, buildConfig } = params;
-  MakefileProcessor.SetProcessConfig(wsFolder, projcfgIni, buildConfig!);
+  const { wsFolder, buildConfig } = params;
+  await MakefileProcessor.SetProcessConfig(wsFolder, buildConfig!);
   await MakefileProcessor.ProcessMakefiles();
 }
 
