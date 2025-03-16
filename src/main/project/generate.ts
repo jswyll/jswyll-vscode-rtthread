@@ -148,10 +148,11 @@ async function parseProjcfgIni(wsFolder: vscode.Uri) {
     hardwareAdapter: undefined,
   };
   try {
+    projcfgIni.projectRootDir = await MakefileProcessor.GuessOriginProjectRoot();
     const projcfgIniText = await readTextFile(vscode.Uri.joinPath(wsFolder, '.settings/projcfg.ini'));
     const matchOutputProjectPath = projcfgIniText.match(/^output_project_path=(.+)/im);
     const matchProjectName = projcfgIniText.match(/^project_name=(.+)/im);
-    if (matchOutputProjectPath && matchProjectName) {
+    if (matchOutputProjectPath && matchProjectName && !projcfgIni.projectRootDir) {
       const outputProjectPath = convertPathToUnixLike(matchOutputProjectPath[1].trim().replace(/\\:/g, ':'));
       const projectName = convertPathToUnixLike(matchProjectName[1].trim());
       projcfgIni.projectRootDir = convertPathToUnixLike(join(outputProjectPath, projectName));

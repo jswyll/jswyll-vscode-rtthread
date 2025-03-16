@@ -151,7 +151,7 @@ export class MakefileProcessor {
   /**
    * 猜测原本项目的根目录。
    */
-  private static async GuessOriginProjectRoot() {
+  public static async GuessOriginProjectRoot() {
     const uri = vscode.Uri.joinPath(this.CurrentProjectRoot, this.BuildConfig.name, 'rt-thread/src/subdir.mk');
     let guessPath = '';
     try {
@@ -215,6 +215,7 @@ export class MakefileProcessor {
   private static async ProcessMakefile(uri: vscode.Uri): Promise<void> {
     try {
       const { toolchainPrefix } = this.BuildConfig;
+      const { projectRootDir } = this.ProjcfgIni;
       const linkRegex = new RegExp(`^(.*?\\.elf:.*\\r?\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'm');
       const compileRegex = new RegExp(`^(.*?\\.o:.*\\r?\\n)\\t${toolchainPrefix}(gcc|g\\+\\+)`, 'gm');
       const oldContent = await readTextFile(uri);
@@ -224,7 +225,6 @@ export class MakefileProcessor {
       newContent = newContent.replace(compileRegex, (...match) => {
         return `${match[1]}\t-@echo compiling $<...\r\n\t@${toolchainPrefix}${match[2]}`;
       });
-      const projectRootDir = await MakefileProcessor.GuessOriginProjectRoot();
       newContent = newContent.replace(INCLUDE_PATH_REGEX, (...match) => {
         if (isAbsolutePath(match[2])) {
           if (isPathUnderOrEqual(this.CurrentProjectRoot.fsPath, match[2])) {
@@ -233,8 +233,7 @@ export class MakefileProcessor {
             const from = convertPathToUnixLike(buildAbsolutePath);
             const to = convertPathToUnixLike(match[2]);
             return `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
-          } else {
-            // 尝试转为新建项目的相对路径
+          } else if (projectRootDir) {
             // TODO: 尝试分析projectRootDir，然后让用户其确认
             const buildAbsolutePath = join(projectRootDir, this.BuildConfig.name);
             const from = convertPathToUnixLike(buildAbsolutePath);
