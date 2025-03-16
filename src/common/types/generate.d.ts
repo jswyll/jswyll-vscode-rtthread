@@ -8,11 +8,6 @@ interface ProjcfgIni {
   chipName: string | undefined;
 
   /**
-   * 规范化为Unix风格后的RT-Thread Studio原项目根目录
-   */
-  projectRootDir: string | undefined;
-
-  /**
    * 调试适配器，例如`ST-Link`、`J-Link`、`CMSIS-DAP`
    *
    * @attention 注意去除中划线并转为小写后再作进一步处理

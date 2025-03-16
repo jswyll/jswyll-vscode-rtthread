@@ -11,12 +11,7 @@ import {
   updateGlobalState,
   workspaceFolderChangeEmitter,
 } from './base/workspace';
-import {
-  checkAndOpenGenerateWebview,
-  onDidEnvRootChange,
-  parseProjcfgIni,
-  parseSelectedBuildConfigs,
-} from './project/generate';
+import { checkAndOpenGenerateWebview, onDidEnvRootChange, parseSelectedBuildConfigs } from './project/generate';
 import { ExecuteTaskError, TaskNotFoundError } from './base/error';
 import { TASKS, COMMANDS, CONFIG_GROUP } from './base/constants';
 import { EXTENSION_ID } from '../common/constants';
@@ -443,13 +438,10 @@ export async function activate(context: vscode.ExtensionContext) {
       MakefileProcessor.SetHasBuildConfig(false);
       extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
       if (extensionSpecifiedBuildTask) {
-        await Promise.all([parseSelectedBuildConfigs(workspaceFolder.uri), parseProjcfgIni(workspaceFolder.uri)]).then(
-          ([buildConfig, projcfgIni]) => {
-            if (buildConfig) {
-              MakefileProcessor.SetProcessConfig(workspaceFolder.uri, projcfgIni, buildConfig);
-            }
-          },
-        );
+        const buildConfig = await parseSelectedBuildConfigs(workspaceFolder.uri);
+        if (buildConfig) {
+          await MakefileProcessor.SetProcessConfig(workspaceFolder.uri, buildConfig);
+        }
         MakefileProcessor.SetHasBuildConfig(true);
       }
     } catch {
