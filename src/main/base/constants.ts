@@ -31,6 +31,11 @@ export const COMMANDS = {
   PICK_A_WORKSPACEFOLDER: 'pickAWorkspaceFolder',
 
   /**
+   * 生成配置文件
+   */
+  GENERATE_CONFIG: 'action.generateConfig',
+
+  /**
    * 打开或显示菜单配置
    */
   MENUCONFIG: 'action.menuconfig.open',

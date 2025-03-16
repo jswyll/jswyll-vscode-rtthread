@@ -152,8 +152,8 @@ async function parseProjcfgIni(wsFolder: vscode.Uri) {
     const matchOutputProjectPath = projcfgIniText.match(/^output_project_path=(.+)/im);
     const matchProjectName = projcfgIniText.match(/^project_name=(.+)/im);
     if (matchOutputProjectPath && matchProjectName) {
-      const outputProjectPath = matchOutputProjectPath[1].trim().replace(/\\:/g, ':');
-      const projectName = matchProjectName[1].trim();
+      const outputProjectPath = convertPathToUnixLike(matchOutputProjectPath[1].trim().replace(/\\:/g, ':'));
+      const projectName = convertPathToUnixLike(matchProjectName[1].trim());
       projcfgIni.projectRootDir = convertPathToUnixLike(join(outputProjectPath, projectName));
     }
     let match;
@@ -179,6 +179,23 @@ async function parseBuildConfigs(wsFolder: vscode.Uri) {
   const buildConfigs: BuildConfig[] = [];
   let cprojectFileContent = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
   try {
+    const preincDefineSet = new Set<string>();
+    const rtconfigPreincPath = vscode.Uri.file(join(wsFolder.fsPath, 'rtconfig_preinc.h'));
+    if (await existsAsync(rtconfigPreincPath)) {
+      const fileContent = await readTextFile(rtconfigPreincPath);
+      const defineRegex = /^#define[ \t]+(\w+)(?:[ \t]+(.*?))?$/gm;
+      let match;
+      while ((match = defineRegex.exec(fileContent)) !== null) {
+        const defineName = match[1];
+        const defineValue = match[2]?.trim();
+        if (defineValue) {
+          preincDefineSet.add(`${defineName}=${defineValue}`);
+        } else {
+          preincDefineSet.add(defineName);
+        }
+      }
+    }
+
     cprojectFileContent = await readTextFile(vscode.Uri.joinPath(wsFolder, '.cproject'));
     const $ = load(cprojectFileContent, { xml: true });
     /**
@@ -189,8 +206,8 @@ async function parseBuildConfigs(wsFolder: vscode.Uri) {
      * ```
      */
     const pathValueregex = /"?\$\{workspace_loc:\/+\$\{ProjName\}\/+(.*)\}"?$/;
-    $('storageModule>cconfiguration').each((i, element) => {
-      const cDefineValues = new Set<string>();
+    $('storageModule>cconfiguration').each((_, element) => {
+      const cDefineValues = new Set<string>(preincDefineSet);
       const cIncludePathValues = new Set<string>();
       const cIncludeFileValues = new Set<string>();
       const excludingPathValues = new Set<string>();
@@ -279,7 +296,7 @@ function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
     buildConfigName: getGenerateConfig(wsFolder, 'buildConfigName', 'Debug'),
     makeBaseDirectory: getGenerateConfig(wsFolder, 'makeBaseDirectory', '${workspaceFolder}/Debug'),
     makeToolPath: getGenerateConfig(wsFolder, 'makeToolPath', ''),
-    envPath: getGenerateConfig(wsFolder, 'envPath', 'c:/env-windows'),
+    envPath: getGenerateConfig(wsFolder, 'envPath', '${userHome}/.env'),
     artifactPath: getGenerateConfig(wsFolder, 'artifactPath', 'rt-thread.elf'),
     rttDir: getGenerateConfig(wsFolder, 'rttDir', 'rt-thread'),
     toolchainPath: getGenerateConfig(wsFolder, 'toolchainPath', ''),
@@ -1022,6 +1039,7 @@ async function startGenerate(params: GenerateParamsInternal) {
 
   await updateFilesAssociationsAndExclude(params);
 
+  MakefileProcessor.SetHasBuildConfig(settings.projectType === 'RT-Thread Studio');
   if (settings.projectType === 'RT-Thread Studio') {
     await processCCppPropertiesConfig(wsFolder, settings.compilerPath, params.buildConfig!);
     await processMakefiles(params);
@@ -1709,6 +1727,10 @@ async function checkAndOpenGenerateWebview(wsFolder: vscode.Uri) {
     const disposable = generateEmitter.event(() => {
       disposable.dispose();
       resolve();
+    });
+    const disposable2 = webviewPanel?.panel?.onDidDispose(() => {
+      disposable.dispose();
+      disposable2?.dispose();
     });
   });
 }

@@ -251,6 +251,7 @@ onMounted(() => {
   border-radius: 5px;
   color: var(--theme-inline-code--text);
   background-color: var(--theme-inline-code--background);
+  font-size: 1em;
 }
 
 .m-markdown-content a {

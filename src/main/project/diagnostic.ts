@@ -34,7 +34,7 @@ const logger = new Logger('main/project/diagnostic');
  * @param context 扩展的上下文
  */
 function createInterruptDiagnosticAndQuickfix(context: vscode.ExtensionContext) {
-  const isAuto = getConfig(null, 'autoDiagnosticInterrupt.enable', true);
+  const isAuto = getConfig(null, 'autoDiagnosticInterrupt.enable', false);
   diagnosticGlobPattern = getConfig(null, 'autoDiagnosticInterrupt.globPattern', '**/stm32*_it.c');
   sDiagnostics = vscode.languages.createDiagnosticCollection('RT-Thread');
   context.subscriptions.push(sDiagnostics);

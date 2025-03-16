@@ -48,6 +48,7 @@ async function fetchTask(workspaceFolder: vscode.WorkspaceFolder, name: string) 
  *
  * @param workspaceFolder 工作区文件夹
  * @param name 任务名称
+ * @throws `.vscode/tasks.json`文件不存在时抛出{@link Error}
  */
 async function findTaskInTasksJson(workspaceFolder: vscode.WorkspaceFolder, name: string) {
   const tasksJson = await parseJsonFile<TasksJson>(vscode.Uri.joinPath(workspaceFolder.uri, TASKS_JSON_RELATIVE_PATH));
