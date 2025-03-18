@@ -433,7 +433,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
 
   let buildCommand = 'make';
   let buildArgs = ['-j16', 'all'];
-  let buildCwd: string | undefined = `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeBaseDirectory}`;
+  let buildCwd: string | undefined = settings.makeBaseDirectory;
   let cleanArgs = ['-j16', 'clean'];
   if (makeMajorVersion && makeMajorVersion >= 4) {
     buildArgs.push('--output-sync=target');
@@ -445,12 +445,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
     buildCwd = undefined;
   }
 
-  const envPaths = [
-    ...exraPaths,
-    `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.makeToolPath}`,
-    `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath}`,
-    '${env:PATH}',
-  ];
+  const envPaths = [...exraPaths, settings.makeToolPath, settings.toolchainPath, '${env:PATH}'];
 
   const taskJson: TasksJson = {
     version: '2.0.0',
@@ -486,7 +481,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
         // FIXME: 链接的问题匹配器可能不能匹配到错误信息
         problemMatcher: [
           {
-            fileLocation: ['autoDetect', '${config:jswyll-vscode-rtthread.generate.makeBaseDirectory}'],
+            fileLocation: ['autoDetect', settings.makeBaseDirectory],
             source: 'gcc',
             pattern: {
               regexp: '^(.*?):(\\d+):(\\d*):?\\s+(?:fatal\\s+)?(warning|error):\\s+(.*)$',
@@ -498,7 +493,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
             },
           },
           {
-            fileLocation: ['autoDetect', '${config:jswyll-vscode-rtthread.generate.makeBaseDirectory}'],
+            fileLocation: ['autoDetect', settings.makeBaseDirectory],
             pattern: {
               regexp: '^.+\\/bin\\/ld[^:]+:\\s*(.+):(\\d+):(.+)$',
               file: 1,
@@ -656,16 +651,16 @@ async function processTasksJson(params: GenerateParamsInternal) {
       downloadArgs = ['flash', getElfFilePathForWorkspace(params)];
       if (cmsisPack) {
         downloadArgs.push('--pack');
-        downloadArgs.push(`\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.cmsisPack}`);
+        downloadArgs.push(cmsisPack);
       }
       downloadArgs.push('--target');
-      downloadArgs.push(`\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.chipName}`);
+      downloadArgs.push(chipName);
     }
     taskJson.tasks.push({
       label: TASKS.DOWNLOAD.label,
       detail: TASKS.DOWNLOAD.detail,
       type: 'shell',
-      command: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.debuggerServerPath}`,
+      command: debuggerServerPath,
       args: downloadArgs,
       problemMatcher: [],
     });
@@ -701,9 +696,9 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
     return;
   }
 
-  let serverpath = `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.debuggerServerPath}`;
+  let serverpath = debuggerServerPath;
   if (isJlinkDebugger(debuggerServerPath)) {
-    serverpath = normalizePathForWorkspace(wsFolder, getDebuggerServerPath(debuggerServerPath));
+    serverpath = getDebuggerServerPath(debuggerServerPath);
   } else if (debuggerServer === 'openocd') {
     const openocdConfigUri = vscode.Uri.joinPath(wsFolder, openocdConfigFilePath);
     let openocdConfigContent = await readTextFile(openocdConfigUri, '');
@@ -783,7 +778,7 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
   launchJson.configurations.push({
     name,
     cwd: '${workspaceFolder}',
-    armToolchainPath: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.toolchainPath}`,
+    armToolchainPath: settings.toolchainPath,
     toolchainPrefix: toolchainPrefix.replace(/-$/, ''),
     executable: getElfFilePathForWorkspace(params),
     request: 'launch',
@@ -796,7 +791,7 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
     deviceName: chipName,
     interface: debuggerInterface.toLowerCase(),
     targetId: chipName,
-    cmsisPack: `\${config:${EXTENSION_ID}.${CONFIG_GROUP.GENERATE}.cmsisPack}`,
+    cmsisPack: settings.cmsisPack,
     preLaunchTask: '${defaultBuildTask}',
   });
   writeJsonFile(launchJsonUri, launchJson);
@@ -1019,8 +1014,10 @@ async function startGenerate(params: GenerateParamsInternal) {
   settings.makeToolPath = convertPathToUnixLike(settings.makeToolPath);
   settings.studioInstallPath = convertPathToUnixLike(settings.studioInstallPath);
   settings.compilerPath = convertPathToUnixLike(settings.compilerPath);
+  settings.toolchainPath = dirnameOrEmpty(settings.compilerPath);
   settings.debuggerServerPath = convertPathToUnixLike(settings.debuggerServerPath);
   settings.cmsisPack = convertPathToUnixLike(settings.cmsisPack);
+  settings.makeBaseDirectory = `\${workspaceFolder}/${settings.buildConfigName}`;
   const vscodeFolder = vscode.Uri.joinPath(wsFolder, '.vscode');
   if (!(await existsAsync(vscodeFolder))) {
     await vscode.workspace.fs.createDirectory(vscodeFolder);
@@ -1044,10 +1041,6 @@ async function startGenerate(params: GenerateParamsInternal) {
   }
 
   // 保存配置
-  const { compilerPath } = settings;
-  const { buildConfigName } = settings;
-  settings.makeBaseDirectory = `\${workspaceFolder}/${buildConfigName}`;
-  settings.toolchainPath = dirnameOrEmpty(compilerPath);
   if (settings.cmsisPack && isAbsolutePath(settings.cmsisPack)) {
     settings.cmsisPack = normalizePathForWorkspace(wsFolder, settings.cmsisPack);
   }

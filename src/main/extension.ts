@@ -21,7 +21,7 @@ import { Logger } from './base/logger';
 import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './project/diagnostic';
 import { MenuConfig } from './project/menuconfig';
 import { dirname, join } from 'path';
-import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { existsAsync, getFileType } from './base/fs';
 import { platform } from 'os';
 import { debounce } from 'lodash';
@@ -37,11 +37,6 @@ const logger = new Logger('extension');
  * 构建相关的状态栏按钮
  */
 const buildStatusBarItems: vscode.StatusBarItem[] = [];
-
-/**
- * ConEmu进程
- */
-let conEmuProcess: ChildProcessWithoutNullStreams | null;
 
 /**
  * RT-Thread Env终端
@@ -406,17 +401,13 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!(await existsAsync(ConEmuExe))) {
         vscode.window.showErrorMessage(vscode.l10n.t('The path \"{0}\" does not exists', [ConEmuExe]));
       }
-      conEmuProcess = spawn(ConEmuExe, [], { cwd });
-      conEmuProcess.on('close', () => {
-        conEmuProcess = null;
-      });
+      spawn(ConEmuExe, [], { cwd });
     }),
   );
   context.subscriptions.push(
     onDidEnvRootChange(async () => {
       const terminals = vscode.window.terminals;
       terminals.forEach((terminal) => terminal.dispose());
-      conEmuProcess?.kill();
       MenuConfig.Dispose();
       const workspaceFolder = await getOrPickWorkspaceFolder();
       const sconsignFilePath = vscode.Uri.joinPath(workspaceFolder.uri, '.sconsign.dblite');
@@ -456,6 +447,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     onWorkspaceFolderChange((workspaceFolder) => {
       setFeature(workspaceFolder);
+      MenuConfig.Dispose();
       const terminals = vscode.window.terminals;
       terminals.forEach((terminal) => terminal.dispose());
     }),
@@ -486,7 +478,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // 监听配置变化
+  // 监听vscode设置变化
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration(EXTENSION_ID)) {
@@ -555,7 +547,6 @@ export async function activate(context: vscode.ExtensionContext) {
  * 处理扩展被禁用或关闭
  */
 export function deactivate() {
-  conEmuProcess?.kill();
   rtthreadEnvTerminal?.dispose();
   MenuConfig.Dispose();
 }

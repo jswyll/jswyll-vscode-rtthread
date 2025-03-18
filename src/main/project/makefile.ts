@@ -94,8 +94,25 @@ export class MakefileProcessor {
     logger.info('SetBuildConfig for workspaceFolder:', wsFolder.fsPath);
     this.CurrentProjectRoot = wsFolder;
     this.BuildConfig = buildConfig;
-    // TODO: 尝试分析projectRootDir，然后让用户其确认
-    this.OriginProjectRoot = await this.GuessOriginProjectRoot();
+    // 尝试分析原项目的根路径，然后让用户其确认
+    const wsFolderPath = convertPathToUnixLike(wsFolder.fsPath);
+    const originProjectRoot = await this.GuessOriginProjectRoot();
+    if (originProjectRoot) {
+      if (isAbsolutePath(originProjectRoot)) {
+        if (!isPathUnderOrEqual(originProjectRoot, wsFolderPath)) {
+          const result = await vscode.window.showInputBox({
+            prompt: vscode.l10n.t('Please enter the absolute path to the root directory of the original project'),
+            value: originProjectRoot,
+            ignoreFocusOut: true,
+          });
+          if (result) {
+            this.OriginProjectRoot = convertPathToUnixLike(result);
+          }
+        }
+      } else {
+        this.OriginProjectRoot = convertPathToUnixLike(join(wsFolderPath, originProjectRoot));
+      }
+    }
     this.IsWatchMakefile = getConfig(this.CurrentProjectRoot, 'makefileProcessor.watch', true);
   }
 
