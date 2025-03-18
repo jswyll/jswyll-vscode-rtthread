@@ -26,6 +26,7 @@
   "Not found task {0} in {1}": "在{1}中未找到{0}任务",
   "Task {0} has no execution and no dependencies": "任务{0}没有执行或依赖项",
   "Release Notes": "更新日志",
+  "Please enter the absolute path to the root directory of the original project": "你的项目似乎已经移动过，请输入原项目的文件夹绝对路径",
   "The format of \"{0}\" is invalid": "\"{0}\"的格式无效",
   "This chip is not supported at present, please manually configure .vsocde/xxx.cfg file to support download or debug.": "暂不支持该芯片，请手动配置.vsocde/xxx.cfg文件以支持下载或调试。",
   "Not selected": "未选择",

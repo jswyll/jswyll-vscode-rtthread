@@ -450,6 +450,11 @@ export interface ExtensionToWebviewDataMap {
        * 是否有修改
        */
       hasChanged: boolean;
+
+      /**
+       * menuconfig解析产生的警告
+       */
+      warnings: string[];
     };
   };
 

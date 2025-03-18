@@ -421,7 +421,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
     ![images/1735660800040.png](images/1735660800040.png)
 
-    menuconfig有[使用限制](#使用限制)：
+    在Win10的vscode终端执行menuconfig有[已知问题](#已知问题)：
 
     ![images/1735660800041.png](images/1735660800041.png)
 
@@ -1043,6 +1043,8 @@ make (e=2): 系统找不到指定的文件。
 
 - 暂不支持在资源管理器中右键添加新增编译的源文件文件夹，目前需要使用RT-Thread Studio构建一次后才会管理新增的源文件文件夹。
 
+## 已知问题
+
 - 如果在工作区启用Python扩展激活了虚拟环境且虚拟环境的python版本和选择的RT-Thread Env中的大版本不一致（v1.x是Python2，v2.x是Python3），很可能导致终端出错，因为Python扩展激活的Python的优先级更高。出现错误请修改Python扩展的设置关闭激活虚拟环境，或（在工作区）禁用Python扩展。
 
 - 终端集成：
@@ -1057,23 +1059,9 @@ make (e=2): 系统找不到指定的文件。
 
   - 下载[新版本的Segger Jlink](https://www.segger.com/downloads/jlink)并在生成配置时选择。
 
-## 已知问题
-
-- 扩展会在以下情况自动关闭ComEmu：
-
-  - 先后两次导入项目（生成配置）如果选择的RT-Thread Env的路径不一样，且之前打开的ComEmu没有关闭；
-
-  - 关闭扩展时之前打开的ComEmu没有关闭。
-
-  但其中的cmd没有被关闭：
-
-  ![images/1735660800045.png](images/1735660800045.png)
-
-  手动关闭即可。
-
 - 导入项目（生成配置）时，如果选择的调试服务器是Segger Jlink，由于Jlink不直接支持`--version`参数，校验表单时需要多等待约3秒的时间。
 
-- 如果之前的构建任务启动失败（例如Makefile构建目录不存在），下次运行会一直弹出等待进度。
+- 如果之前的构建任务启动失败（例如Makefile构建目录不存在），下次运行会一直弹出等待进度（请重启vscode）。
 
 - 快速连续多次点击状态栏按钮启动构建任务时，如果之前的任务启动失败，任务报告统计可能错乱。
 

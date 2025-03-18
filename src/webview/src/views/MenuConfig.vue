@@ -326,12 +326,13 @@ function tralateMenuconfig() {
 async function loadData() {
   try {
     startLoading();
-    const { menus, hasChanged } = await requestExtension({
+    const { menus, hasChanged, warnings } = await requestExtension({
       command: 'getMenuconfigData',
       params: {},
     });
     treeItems.value = menus;
     tralateMenuconfig();
+    bottomTip.value = warnings.join('\r\n');
     isHasChanged = hasChanged;
   } finally {
     stopLoading();

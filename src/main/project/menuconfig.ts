@@ -257,6 +257,7 @@ export class MenuConfig {
             verbose: false,
           });
           this.kconfig.load_config();
+          logger.warn('this.kconfig.warnings:', this.kconfig.warnings);
           this.hasChanged = isNeedsSave(this.kconfig);
           this.menuTreeBuilder = new MenuTreeBuilder(this.kconfig);
           const menus: TMenuItem[] = this.menuTreeBuilder.build();
@@ -265,6 +266,7 @@ export class MenuConfig {
             params: {
               menus,
               hasChanged: this.hasChanged,
+              warnings: this.kconfig.warnings,
             },
           });
           break;
