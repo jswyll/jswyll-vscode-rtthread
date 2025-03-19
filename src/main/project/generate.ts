@@ -299,6 +299,7 @@ function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
     chipName: getGenerateConfig(wsFolder, 'chipName', ''),
     debuggerServerPath: getGenerateConfig(wsFolder, 'debuggerServerPath', ''),
     cmsisPack: getGenerateConfig(wsFolder, 'cmsisPack', ''),
+    svdFile: getGenerateConfig(wsFolder, 'svdFile', ''),
     defaultBuildTask: getGenerateConfig(wsFolder, 'defaultBuildTask', TASKS.BUILD.name),
     customExtraPathVar: getGenerateConfig(wsFolder, 'customExtraPathVar', []),
     customExtraVars: getGenerateConfig(wsFolder, 'customExtraVars', {}),
@@ -690,7 +691,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
 async function processLaunchConfig(params: GenerateParamsInternal) {
   logger.info('processLaunchConfig...');
   const { wsFolder, settings, toolchainPrefix } = params;
-  const { debuggerAdapter, debuggerInterface, debuggerServerPath, chipName } = settings;
+  const { debuggerAdapter, debuggerInterface, debuggerServerPath, chipName, svdFile } = settings;
   const debuggerServer = getDebugServer(debuggerServerPath);
   if (!debuggerServer) {
     return;
@@ -788,9 +789,10 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
     servertype: debuggerServer,
     serverpath,
     configFiles: [normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, openocdConfigFilePath))],
-    deviceName: chipName,
+    deviceName: svdFile ? undefined : chipName,
     interface: debuggerInterface.toLowerCase(),
     targetId: chipName,
+    svdFile: svdFile ? normalizePathForWorkspace(wsFolder, svdFile) : undefined,
     cmsisPack: settings.cmsisPack,
     preLaunchTask: '${defaultBuildTask}',
   });

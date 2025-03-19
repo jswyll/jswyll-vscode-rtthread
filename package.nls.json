@@ -40,5 +40,6 @@
   "jswyll-vscode-rtthread.build": "jswyll-vscode-rtthread: Build",
   "jswyll-vscode-rtthread.download": "jswyll-vscode-rtthread: Download",
   "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: Build and Download",
-  "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: Open Release Notes"
+  "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: Open Release Notes",
+  "jswyll-vscode-rtthread.svdFile.markdownDescription": "The Cortex-Debug Extension uses System View Description (SVD) files to display information about the selected part, including the Cortex Peripherals view."
 }

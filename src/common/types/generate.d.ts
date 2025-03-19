@@ -152,6 +152,11 @@ export interface GenerateSettings {
    * 自定义额外的环境变量键值对
    */
   customExtraVars: Record<string, string | undefined>;
+
+  /**
+   * cortex-debug扩展的SVD文件路径，为空字符串时表示不指定
+   */
+  svdFile?: string;
 }
 
 /**
