@@ -1,5 +1,9 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-03-19 - v0.3.10
+
+- 新增 设置项`jswyll-vscode-rtthread.generate.svdFile`指定svd的文件路径（用于查看外设寄存器）。
+
 ## 2025-03-18 - v0.3.9
 
 - 优化 加载菜单配置时显示kconfiglib解析警告。

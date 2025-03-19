@@ -40,5 +40,6 @@
   "jswyll-vscode-rtthread.build": "jswyll-vscode-rtthread: 构建",
   "jswyll-vscode-rtthread.download": "jswyll-vscode-rtthread: 下载",
   "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: 构建并下载",
-  "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: 查看扩展更新日志"
+  "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: 查看扩展更新日志",
+  "jswyll-vscode-rtthread.svdFile.markdownDescription": "指定Cortex-Debug扩展使用系统视图描述（SVD）的文件路径来显示所选部件的信息，包括Cortex外设视图。"
 }
