@@ -1,5 +1,9 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-03-20 - v0.3.11
+
+优化 仅构建方式为RT-Thread Studio Makefile时弹出原项目文件夹输入确认。
+
 ## 2025-03-19 - v0.3.10
 
 - 新增 设置项`jswyll-vscode-rtthread.generate.svdFile`指定svd的文件路径（用于查看外设寄存器）。

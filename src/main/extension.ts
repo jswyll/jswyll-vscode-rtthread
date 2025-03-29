@@ -27,6 +27,7 @@ import { platform } from 'os';
 import { debounce } from 'lodash';
 import { openChangeLog } from './project/markdown';
 import { AppVersion } from '../common/version';
+import { getErrorMessage } from '../common/error';
 
 /**
  * 日志记录器
@@ -422,52 +423,55 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // 监听makefile相关文件
-  const setFeature = async (workspaceFolder: vscode.WorkspaceFolder) => {
+  // 处理选择的工作区发生变更
+  const handleWorkspaceFolderChanged = async (workspaceFolder: vscode.WorkspaceFolder) => {
     let extensionSpecifiedBuildTask;
+    const projectType = getConfig(workspaceFolder.uri, 'generate.projectType', 'RT-Thread Studio');
     try {
-      MakefileProcessor.SetHasBuildConfig(false);
-      extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
-      if (extensionSpecifiedBuildTask) {
-        const buildConfig = await parseSelectedBuildConfigs(workspaceFolder.uri);
-        if (buildConfig) {
-          await MakefileProcessor.SetProcessConfig(workspaceFolder.uri, buildConfig);
+      if (projectType === 'RT-Thread Studio') {
+        MakefileProcessor.SetHasBuildConfig(false);
+        extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
+        if (extensionSpecifiedBuildTask) {
+          const buildConfig = await parseSelectedBuildConfigs(workspaceFolder.uri);
+          if (buildConfig) {
+            await MakefileProcessor.SetProcessConfig(workspaceFolder.uri, buildConfig);
+          }
+          MakefileProcessor.SetHasBuildConfig(true);
         }
-        MakefileProcessor.SetHasBuildConfig(true);
       }
-    } catch {
+    } catch (error: unknown) {
+      logger.debug('set MakefileProcessor config error:', getErrorMessage(error));
     } finally {
       await changeFeature(workspaceFolder.uri, !!extensionSpecifiedBuildTask);
     }
   };
   getOrPickWorkspaceFolder().then((workspaceFolder) => {
     // 初始化时如果已经导入过项目，则立即设置makefile处理器的参数
-    setFeature(workspaceFolder);
+    handleWorkspaceFolderChanged(workspaceFolder);
   });
   context.subscriptions.push(
     onWorkspaceFolderChange((workspaceFolder) => {
-      setFeature(workspaceFolder);
+      handleWorkspaceFolderChanged(workspaceFolder);
       MenuConfig.Dispose();
       const terminals = vscode.window.terminals;
       terminals.forEach((terminal) => terminal.dispose());
     }),
   );
+
+  // 监听文件变化
   const watcher = vscode.workspace.createFileSystemWatcher('**/*');
   context.subscriptions.push(watcher);
   context.subscriptions.push(
     watcher.onDidCreate((e) => {
-      // 处理源文件对应的makefile
       MakefileProcessor.HandleFileChange(e);
     }),
   );
   context.subscriptions.push(
     watcher.onDidChange((e) => {
-      // 处理外部（例如RT-Thread Studio）修改makefile
       MakefileProcessor.HandleFileChange(e);
     }),
   );
   context.subscriptions.push(
-    // 处理源文件对应的makefile
     watcher.onDidDelete((e) => {
       MakefileProcessor.HandleFileChange(e);
     }),
