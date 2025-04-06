@@ -56,6 +56,7 @@ let coverageWriter: any;
 const debouncedPkgsUpdate = debounce(
   async () => {
     await runTaskAndHandle(TASKS.PKGS_UPDATE.name);
+    await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
   },
   3000,
   { leading: true, trailing: true },
@@ -552,9 +553,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 开发者操作
   if (process.env.NODE_ENV !== 'production') {
     context.subscriptions.push(
-      vscode.commands.registerCommand(`${EXTENSION_ID}.command.developmentTest`, async () => {
-        getCoverage();
-      }),
+      vscode.commands.registerCommand(`${EXTENSION_ID}.command.developmentTest`, async () => {}),
     );
 
     let extensionPath = resolve(__dirname, '../..');
