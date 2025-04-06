@@ -18,7 +18,7 @@ import { EXTENSION_ID } from '../../common/constants';
 import { assertParam } from '../../common/assert';
 import {
   calculateEnvPathString,
-  convertPathToUnixLike,
+  toUnixPath,
   dirnameOrEmpty,
   isAbsolutePath,
   removeExeSuffix,
@@ -241,7 +241,7 @@ async function parseBuildConfigs(wsFolder: vscode.Uri) {
       sourceEntries.each((_, element) => {
         const sourcePath = $(element).attr('excluding') || '';
         for (const p of sourcePath.split('|')) {
-          excludingPathValues.add(convertPathToUnixLike(p.replace(/^\/\//, '')));
+          excludingPathValues.add(toUnixPath(p.replace(/^\/\//, '')));
         }
       });
       buildConfigs.push({
@@ -813,9 +813,9 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
   const terminalIntegratedEnv = getConfig(wsFolder, `terminal.integrated.env.${envOs}`, {}, true);
 
   function normalizeEnvSubPath(p: string) {
-    p = convertPathToUnixLike(p);
+    p = toUnixPath(p);
     // 防止环境变量被解析、影响团队协作
-    if (envPath.match(/\$\{env:([^}]+)\}/) && p.startsWith(convertPathToUnixLike(envPathParsed))) {
+    if (envPath.match(/\$\{env:([^}]+)\}/) && p.startsWith(toUnixPath(envPathParsed))) {
       p = envPath + p.slice(envPathParsed.length);
     }
     return p;
@@ -1013,12 +1013,12 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
  */
 async function startGenerate(params: GenerateParamsInternal) {
   const { wsFolder, settings, toolchainPrefix } = params;
-  settings.makeToolPath = convertPathToUnixLike(settings.makeToolPath);
-  settings.studioInstallPath = convertPathToUnixLike(settings.studioInstallPath);
-  settings.compilerPath = convertPathToUnixLike(settings.compilerPath);
+  settings.makeToolPath = toUnixPath(settings.makeToolPath);
+  settings.studioInstallPath = toUnixPath(settings.studioInstallPath);
+  settings.compilerPath = toUnixPath(settings.compilerPath);
   settings.toolchainPath = dirnameOrEmpty(settings.compilerPath);
-  settings.debuggerServerPath = convertPathToUnixLike(settings.debuggerServerPath);
-  settings.cmsisPack = convertPathToUnixLike(settings.cmsisPack);
+  settings.debuggerServerPath = toUnixPath(settings.debuggerServerPath);
+  settings.cmsisPack = toUnixPath(settings.cmsisPack);
   settings.makeBaseDirectory = `\${workspaceFolder}/${settings.buildConfigName}`;
   const vscodeFolder = vscode.Uri.joinPath(wsFolder, '.vscode');
   if (!(await existsAsync(vscodeFolder))) {
@@ -1236,7 +1236,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       for (const p of ['c:/env-windows', '${userHome}/.env']) {
         const parsedPath = parsePath(p);
         if (await existsAsync(parsedPath)) {
-          envPaths.add(convertPathToUnixLike(parsedPath));
+          envPaths.add(toUnixPath(parsedPath));
         }
       }
       postMessageToWebview({
@@ -1262,7 +1262,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       postMessageToWebview({
         command: msg.command,
         params: {
-          filePath: convertPathToUnixLike(fsPath),
+          filePath: toUnixPath(fsPath),
         },
       });
       break;
@@ -1341,16 +1341,16 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           cmsisPacksUriPromise,
         ]);
         for (const uri of sortUris(compilerPathsUri, true)) {
-          compilerPaths.push(removeExeSuffix(convertPathToUnixLike(uri.fsPath)));
+          compilerPaths.push(removeExeSuffix(toUnixPath(uri.fsPath)));
         }
         for (const uri of sortUris(makePathUris, false)) {
-          makeToolPath = convertPathToUnixLike(dirnameOrEmpty(uri.fsPath));
+          makeToolPath = toUnixPath(dirnameOrEmpty(uri.fsPath));
         }
         for (const uri of sortUris(cmsisPacksUri, false)) {
-          cmsisPackPaths.push(convertPathToUnixLike(uri.fsPath));
+          cmsisPackPaths.push(toUnixPath(uri.fsPath));
         }
         for (const uri of sortUris(debuggerServersUri, false)) {
-          debuggerServerPaths.push(removeExeSuffix(convertPathToUnixLike(uri.fsPath)));
+          debuggerServerPaths.push(removeExeSuffix(toUnixPath(uri.fsPath)));
         }
         validateResult.result = true;
       }
@@ -1498,7 +1498,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             'tools/gnu_gcc/arm_gcc/mingw/bin/{arm-none-eabi-gcc.exe,arm-none-eabi-gcc}',
           ),
         );
-        const compilerPaths = uris.map((uri) => removeExeSuffix(convertPathToUnixLike(uri.fsPath)));
+        const compilerPaths = uris.map((uri) => removeExeSuffix(toUnixPath(uri.fsPath)));
 
         uris = await vscode.workspace.findFiles(
           new vscode.RelativePattern(vscode.Uri.file(envPathParsed), '{.venv/Scripts/pyocd.exe,.venv/bin/pyocd}'),
@@ -1632,8 +1632,8 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             message = vscode.l10n.t(
               'You should select the version >= V7.90 of the JLink server, otherwise you will not be able to download elf files',
             );
-            const jlinkVersion = new AppVersion(`${versionString}.0`);
-            assertParam(jlinkVersion.isGreaterOrEqualsThan(new AppVersion(7, 90, 0)));
+            const jlinkVersion = new AppVersion(versionString);
+            assertParam(jlinkVersion.gte(new AppVersion('7.90')));
           } else if (debuggerServer === 'pyocd') {
             assertParam(/^(\d+)\.(\d+)\.(\d+)/m.test(std), '');
           }

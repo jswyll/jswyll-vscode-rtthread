@@ -217,7 +217,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 ![images/1735660800019.png](images/1735660800019.png)
 
-> **说明**
+> **提示**
 >
 > 构建失败时你可以在终端或问题面板跳转到对应的文件位置：
 >
@@ -385,13 +385,13 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
     - 翻译后的帮助，例如`每个内核对象，如线程、定时器、信号量等，都有一个名称。 RT_NAME_MAX是该对象名称的最大大小。`
 
-4. 如果修改了Kconfig文件，可以点“重新加载”按钮来刷新菜单配置。
-
-    > **说明**
+    > **提示**
     >
-    > 参考[linux内核Kconfig文档](https://www.kernel.org/doc/html/latest/kbuild/kconfig-language.html)了解Kconfig语法。
+    > 如果修改了Kconfig文件，可以点“重新加载”按钮来刷新菜单配置。
+    >
+    > 可参考[linux内核Kconfig文档](https://www.kernel.org/doc/html/latest/kbuild/kconfig-language.html)了解Kconfig语法。
 
-5. 点击“保存”按钮保存配置，默认自动更新软件包：
+4. 点击“保存”按钮保存配置，默认自动更新软件包：
 
     ![images/1735660800037.gif](images/1735660800037.gif)
 

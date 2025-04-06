@@ -5,7 +5,7 @@ import { findLastMatch } from '../../common/utils';
 import { basename, extname, join, relative } from 'path';
 import { getConfig, normalizePathForWorkspace } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
-import { convertPathToUnixLike, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqual } from '../../common/platform';
+import { toUnixPath, dirnameOrEmpty, isAbsolutePath, isPathUnderOrEqual } from '../../common/platform';
 import { debounce, escapeRegExp } from 'lodash';
 import { Cproject } from './cproject';
 import { processCCppPropertiesConfig } from './cCppProperties';
@@ -95,7 +95,7 @@ export class MakefileProcessor {
     this.CurrentProjectRoot = wsFolder;
     this.BuildConfig = buildConfig;
     // 尝试分析原项目的根路径，然后让用户其确认
-    const wsFolderPath = convertPathToUnixLike(wsFolder.fsPath);
+    const wsFolderPath = toUnixPath(wsFolder.fsPath);
     const originProjectRoot = await this.GuessOriginProjectRoot();
     if (originProjectRoot) {
       if (isAbsolutePath(originProjectRoot)) {
@@ -106,11 +106,11 @@ export class MakefileProcessor {
             ignoreFocusOut: true,
           });
           if (result) {
-            this.OriginProjectRoot = convertPathToUnixLike(result);
+            this.OriginProjectRoot = toUnixPath(result);
           }
         }
       } else {
-        this.OriginProjectRoot = convertPathToUnixLike(join(wsFolderPath, originProjectRoot));
+        this.OriginProjectRoot = toUnixPath(join(wsFolderPath, originProjectRoot));
       }
     }
     this.IsWatchMakefile = getConfig(this.CurrentProjectRoot, 'makefileProcessor.watch', true);
@@ -175,7 +175,7 @@ export class MakefileProcessor {
       const fileContent = await readTextFile(uri);
       const matches = fileContent.matchAll(INCLUDE_PATH_REGEX);
       for (const match of matches) {
-        const p = convertPathToUnixLike(match[2]);
+        const p = toUnixPath(match[2]);
         logger.debug('p:', p);
         if (p.endsWith('rt-thread/include')) {
           guessPath = p.slice(0, p.length - 'rt-thread/include'.length);
@@ -246,14 +246,14 @@ export class MakefileProcessor {
           if (isPathUnderOrEqual(this.CurrentProjectRoot.fsPath, match[2])) {
             // 可能已经移动，先尝试转为工作区文件夹的相对路径
             const buildAbsolutePath = join(this.CurrentProjectRoot.fsPath, this.BuildConfig.name);
-            const from = convertPathToUnixLike(buildAbsolutePath);
-            const to = convertPathToUnixLike(match[2]);
-            return `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
+            const from = toUnixPath(buildAbsolutePath);
+            const to = toUnixPath(match[2]);
+            return `${match[1]}"${toUnixPath(relative(from, to))}"`;
           } else if (this.OriginProjectRoot) {
             const buildAbsolutePath = join(this.OriginProjectRoot, this.BuildConfig.name);
-            const from = convertPathToUnixLike(buildAbsolutePath);
-            const to = convertPathToUnixLike(match[2]);
-            const relativePath = `${match[1]}"${convertPathToUnixLike(relative(from, to))}"`;
+            const from = toUnixPath(buildAbsolutePath);
+            const to = toUnixPath(match[2]);
+            const relativePath = `${match[1]}"${toUnixPath(relative(from, to))}"`;
             return relativePath;
           }
         }
@@ -304,7 +304,7 @@ export class MakefileProcessor {
         let compileLine = match[0];
         const includeRegex = /( -I\s*)"([^"]*)"/g;
         compileLine = compileLine.replaceAll(includeRegex, (...includeMatch) => {
-          const includePath = convertPathToUnixLike(includeMatch[2]);
+          const includePath = toUnixPath(includeMatch[2]);
           includeSet.add(includePath);
           return '';
         });

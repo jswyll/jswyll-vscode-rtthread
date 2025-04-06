@@ -6,6 +6,6 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import router from './router';
 
-const app = createApp(App);
+export const app = createApp(App);
 app.config.throwUnhandledErrorInProduction = true;
 app.use(i18n).use(createPinia()).use(router).mount('#app');

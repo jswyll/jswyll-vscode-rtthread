@@ -20,7 +20,7 @@ import { buildTaskManager, findTaskInTasksJson, runBuildTask } from './task/buil
 import { Logger } from './base/logger';
 import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './project/diagnostic';
 import { MenuConfig } from './project/menuconfig';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { spawn } from 'child_process';
 import { existsAsync, getFileType } from './base/fs';
 import { platform } from 'os';
@@ -43,6 +43,12 @@ const buildStatusBarItems: vscode.StatusBarItem[] = [];
  * RT-Thread Env终端
  */
 let rtthreadEnvTerminal: vscode.Terminal | null;
+
+/**
+ * 覆盖率写入器
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let coverageWriter: any;
 
 /**
  * 更新软件包消抖
@@ -234,17 +240,29 @@ function createStatusbarCommand(
 }
 
 /**
+ * 获取代码覆盖率（如果有插桩）
+ */
+function getCoverage() {
+  const __coverage__ = (global as unknown as { __coverage__?: unknown }).__coverage__;
+  logger.debug('__coverage__:', __coverage__);
+  if (!__coverage__) {
+    return;
+  }
+  coverageWriter.writeCoverageFile();
+}
+
+/**
  * 处理扩展被激活。
  * @param context 扩展的上下文
  */
 export async function activate(context: vscode.ExtensionContext) {
   setExtensionContext(context);
-  const lastVersion = new AppVersion(getGlobalState('lastVersion', undefined) || '');
+  const lastVersion = new AppVersion(getGlobalState('lastVersion', '') || '');
   const thisVersion = new AppVersion(context.extension.packageJSON.version);
   logger.info('################################################################################');
   logger.info(`# activate extension, version: ${thisVersion}`);
   logger.info('################################################################################');
-  if (thisVersion.isGreaterThan(lastVersion)) {
+  if (thisVersion.gt(lastVersion)) {
     logger.info(`extension upgraded from version ${lastVersion}`);
     updateGlobalState('lastVersion', thisVersion.toString());
     if (thisVersion.isUpgradeMajor(lastVersion) || thisVersion.isUpgradeMinor(lastVersion)) {
@@ -428,9 +446,9 @@ export async function activate(context: vscode.ExtensionContext) {
     let extensionSpecifiedBuildTask;
     const projectType = getConfig(workspaceFolder.uri, 'generate.projectType', 'RT-Thread Studio');
     try {
+      extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
       if (projectType === 'RT-Thread Studio') {
         MakefileProcessor.SetHasBuildConfig(false);
-        extensionSpecifiedBuildTask = await findTaskInTasksJson(workspaceFolder, TASKS.BUILD.label);
         if (extensionSpecifiedBuildTask) {
           const buildConfig = await parseSelectedBuildConfigs(workspaceFolder.uri);
           if (buildConfig) {
@@ -531,15 +549,27 @@ export async function activate(context: vscode.ExtensionContext) {
       doDiagnosticInterrupt(doc);
     }),
   );
-
-  // 开发者命令
+  // 开发者操作
   if (process.env.NODE_ENV !== 'production') {
     context.subscriptions.push(
       vscode.commands.registerCommand(`${EXTENSION_ID}.command.developmentTest`, async () => {
-        const workspaceFolder = await getOrPickWorkspaceFolder();
-        logger.debug('workspaceFolder:', workspaceFolder);
+        getCoverage();
       }),
     );
+
+    let extensionPath = resolve(__dirname, '../..');
+    if (/^[a-zA-Z]:[\\/]/.test(extensionPath)) {
+      extensionPath = extensionPath[0].toUpperCase() + extensionPath.slice(1);
+    }
+    const nyc = await import('nyc');
+    logger.debug('nyc:', nyc);
+    coverageWriter = new nyc({
+      all: true,
+      cwd: extensionPath,
+      reporter: ['lcov', 'text-summary'],
+      reportDir: resolve(extensionPath, 'coverage/main/coverage'),
+      tempDirectory: resolve(extensionPath, 'coverage/main/.nyc_output'),
+    });
   }
 
   // 添加要自动清理的对象
@@ -553,4 +583,7 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   rtthreadEnvTerminal?.dispose();
   MenuConfig.Dispose();
+  if (process.env.NODE_ENV !== 'production') {
+    getCoverage();
+  }
 }

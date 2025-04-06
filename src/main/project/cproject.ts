@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Logger } from '../base/logger';
 import { readTextFile, writeTextFile } from '../base/fs';
 import { load } from 'cheerio';
-import { convertPathToUnixLike } from '../../common/platform';
+import { toUnixPath } from '../../common/platform';
 
 /**
  * 日志记录器
@@ -22,7 +22,7 @@ export class Cproject {
           const includePathsNode = $(tools).find('option[id*=c.compiler.include.paths]').first();
           const oldIncludePaths = includePathsNode
             .find('listOptionValue')
-            .map((_, element) => convertPathToUnixLike(element.attribs.value))
+            .map((_, element) => toUnixPath(element.attribs.value))
             .get();
           for (const dir of relativeDirs) {
             if (!oldIncludePaths.includes(`"\${workspace_loc:/\${ProjName}/${dir}}"`)) {

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { delimiter, join, relative, sep } from 'path';
 import { ExtensionConfiguration } from './type';
 import { EXTENSION_ID } from '../../common/constants';
-import { convertPathToUnixLike, isAbsolutePath, windowsAbsolutePathPattern } from '../../common/platform';
+import { toUnixPath, isAbsolutePath, windowsAbsolutePathPattern } from '../../common/platform';
 import { Logger } from './logger';
 import { disposeWebviewPanel } from '../project/generate';
 import { debounce } from 'lodash';
@@ -231,7 +231,7 @@ export function updateWorkspaceState<K extends keyof WorkspaceState>(key: K, val
  *
  * 如果指定的路径是工作区文件夹，则返回空字符串。
  *
- * 转换结果使用{@link convertPathToUnixLike}规范化。
+ * 转换结果使用{@link toUnixPath}规范化。
  *
  * @param wsFolder 工作区文件夹
  * @param fsPath 文件或文件夹的绝对路径
@@ -239,7 +239,7 @@ export function updateWorkspaceState<K extends keyof WorkspaceState>(key: K, val
  */
 export function normalizePathForWorkspace(wsFolder: vscode.Uri, fsPath: string) {
   if (!isAbsolutePath(fsPath)) {
-    return convertPathToUnixLike(fsPath);
+    return toUnixPath(fsPath);
   }
 
   let absolutePathFrom = wsFolder.fsPath + sep;
@@ -251,7 +251,7 @@ export function normalizePathForWorkspace(wsFolder: vscode.Uri, fsPath: string) 
     return match0.toLowerCase();
   });
   const relativePath = relative(absolutePathFrom, absolutePathto);
-  return convertPathToUnixLike(relativePath);
+  return toUnixPath(relativePath);
 }
 
 /**
@@ -332,7 +332,7 @@ export async function getAllFullPathsInEnvironmentPath(p: string) {
       promises.push(
         existsAsync(fsPath).then((b) => {
           if (b) {
-            paths.push(convertPathToUnixLike(fsPath));
+            paths.push(toUnixPath(fsPath));
           }
         }),
       );
@@ -341,7 +341,7 @@ export async function getAllFullPathsInEnvironmentPath(p: string) {
     promises.push(
       existsAsync(fsPath).then((b) => {
         if (b) {
-          paths.push(convertPathToUnixLike(fsPath));
+          paths.push(toUnixPath(fsPath));
         }
       }),
     );

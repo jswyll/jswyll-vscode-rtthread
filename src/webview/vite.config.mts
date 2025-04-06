@@ -15,11 +15,12 @@ export default defineConfig({
         assetFileNames: '[name].[ext]',
       },
     },
+    sourcemap: true,
   },
+  plugins: [vue()],
   resolve: {
     alias: {
       '@webview': resolve(__dirname, 'src'),
     },
   },
-  plugins: [vue()],
 });

@@ -1,49 +1,45 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "watch",
-			"dependsOn": [
-				"npm: watch:tsc",
-				"npm: watch:esbuild"
-			],
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
-		},
-		{
-			"type": "npm",
-			"script": "watch:esbuild",
-			"group": "build",
-			"problemMatcher": "$esbuild-watch",
-			"isBackground": true,
-			"label": "npm: watch:esbuild",
-			"presentation": {
-				"group": "watch",
-				"reveal": "never"
-			}
-		},
-		{
-			"type": "npm",
-			"script": "watch:tsc",
-			"group": "build",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"label": "npm: watch:tsc",
-			"presentation": {
-				"group": "watch",
-				"reveal": "never"
-			}
-		},
-		{
-			"type": "npm",
-			"script": "build:temp",
-			"problemMatcher": "$tsc",
-			"label": "tsc: build - temp/tsconfig.json",
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "dependsOn": [
+                "npm: build:clean"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "isBackground": true,
+            "label": "npm: watch:test",
+            "problemMatcher": "$tsc-watch",
+            "script": "watch:test",
+            "type": "npm"
+        },
+        {
+            "label": "npm: build:clean",
+            "problemMatcher": [],
+            "script": "build:clean",
+            "type": "npm"
+        },
+        {
+            "dependsOn": [
+                "npm: build:clean",
+                "npm: watch:test"
+            ],
+            "dependsOrder": "sequence",
+            "isBackground": true,
+            "label": "npm: watch:webview",
+            "problemMatcher": [],
+            "script": "watch:webview",
+            "type": "npm"
+        },
+        {
+            "dependsOn": [
+                "npm: watch:webview"
+            ],
+            "detail": "启动所有测试任务并监听源码变化",
+            "label": "watch:all",
+            "problemMatcher": []
+        }
+    ]
 }

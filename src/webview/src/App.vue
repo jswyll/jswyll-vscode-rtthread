@@ -5,15 +5,16 @@ import { MessagePlugin } from 'tdesign-vue-next';
 import { onMounted, onUnmounted, watch } from 'vue';
 import { RouterView } from 'vue-router';
 import router from './router';
+import { MyLogger, MyLoggerLevel } from '../../common/logger';
 
 const { theme } = storeToRefs(useThemeStore());
+const logger = new MyLogger('App.vue', MyLoggerLevel.Info);
 
 /**
  * 处理全局未捕获的Promise错误
  */
 const onUnhandledrejection = (event: PromiseRejectionEvent) => {
-  // eslint-disable-next-line no-console
-  console.error('app onUnhandledrejection:', event.reason);
+  logger.error('onUnhandledrejection:', event.reason);
   MessagePlugin.error(event.reason.message || event.reason, 3000);
   event.preventDefault();
 };
@@ -22,8 +23,7 @@ const onUnhandledrejection = (event: PromiseRejectionEvent) => {
  * 监听全局未捕获的同步错误
  */
 const onError = (event: ErrorEvent) => {
-  // eslint-disable-next-line no-console
-  console.error('app onError:', event.error);
+  logger.error('onError:', event.error);
   MessagePlugin.error(event.message, 3000);
   event.preventDefault();
 };

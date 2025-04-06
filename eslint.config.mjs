@@ -6,12 +6,12 @@ import jswyllPlugin from './src/dev/must-use-await-for-function.js';
 export default [
   {
     name: 'app/files-to-lint',
-    files: ['**/*.{ts,mts,tsx,vue}'],
+    files: ['./**/*.{ts,mts,tsx,vue}'],
   },
 
   {
     name: 'app/files-to-ignore',
-    ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**'],
+    ignores: ['**/*.js', '**/coverage/**'],
   },
 
   ...pluginVue.configs['flat/recommended'],

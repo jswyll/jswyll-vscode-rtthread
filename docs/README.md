@@ -123,13 +123,9 @@ jswyll-vscode-rtthread/
 
 ### 开发步骤
 
-1. 快捷键`F5`启动扩展开发，可以切换开发人员工具（`Ctrl+Shift+I`）或查看输出面板的日志；
+1. 运行vscode任务`watch:all`
 
-2. vscode扩展模式开发webview（监听源码变化并构建webview）；
-
-    ```sh
-    npm run watch:webview
-    ```
+2. 快捷键`F5`启动扩展开发，可以切换开发人员工具（`Ctrl+Shift+I`）或查看输出面板的日志；
 
 3. 修改源码，运行，验证；
 
@@ -142,6 +138,35 @@ jswyll-vscode-rtthread/
     ```sh
     npm run publish
     ```
+
+### 测试步骤
+
+首次测试：创建一个仅用于测试的RT-Thread项目，使用RT-Thread Studio构建过一次，删除.gitignore文件中的`Debug`行然后提交到git。
+
+0. 运行vscode任务`watch:all`
+
+1. 在此扩展源码主目录的.env.local文件填写配置，例如：
+
+    ```sh
+    # 指定要测试的文件
+    MY_WDIO_SPEC="./**/*.test.js"
+    # RT-Thread项目的根目录
+    MY_RTTHREAD_PROJECT_ROOT=D:/RT-ThreadStudio/workspace/stm32f407-atk-explorer-v4.1.1
+    ```
+
+    > **注意**
+    >
+    > 指定的`MY_RTTHREAD_PROJECT_ROOT`目录会被执行`git reset --hard HEAD && git clean -fdx`，请确保该目录是用来测试的且无需要提交的改动。
+
+2. 执行命令`npm run test-report`（可能配置代理来下载chromedriver）
+
+3. 等待测试完成，在终端中查看测试结果及代码覆盖率。
+
+> **说明**
+>
+> - 执行命令`npm run report:open`可在浏览器查看测试结果报告（测试需要JAVA8以上环境）。
+>
+> - 使用浏览器打开`coverage/combined/coverage/lcov-report/index.html`查看代码覆盖率详情。
 
 ## 参考文档
 

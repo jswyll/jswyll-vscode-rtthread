@@ -22,7 +22,7 @@ import { useWebview } from '@webview/components/vscode';
 import type { ExtensionToWebviewDatas } from '../../../common/types/type';
 import { BUILD_TASKS_LABEL_PREFIX, EXTENSION_ID } from '../../../common/constants';
 import { assertParam } from '../../../common/assert';
-import { convertPathToUnixLike } from '../../../common/platform';
+import { toUnixPath } from '../../../common/platform';
 import { addToSet } from '../../../common/utils';
 import MSelectInput from '@webview/components/MSelectInput.vue';
 import type { InputGenerateParams, DoGenerateParams, GenerateSettings } from '../../../common/types/generate';
@@ -489,16 +489,16 @@ async function onSelectStudioInstallPath() {
     command: 'selectFolder',
     params: {},
   });
-  data.value.settings.studioInstallPath = convertPathToUnixLike(folderPath);
+  data.value.settings.studioInstallPath = toUnixPath(folderPath);
   await validateStudioInstallPath(folderPath);
   if (data.value.compilerPaths.length && !data.value.settings.compilerPath) {
     data.value.settings.compilerPath = data.value.compilerPaths[0];
   }
   if (data.value.makeToolPaths.length && !data.value.settings.makeToolPath) {
-    data.value.settings.makeToolPath = convertPathToUnixLike(data.value.makeToolPaths[0]);
+    data.value.settings.makeToolPath = toUnixPath(data.value.makeToolPaths[0]);
   }
   if (data.value.debuggerServerPaths.length && !data.value.settings.debuggerServerPath) {
-    data.value.settings.debuggerServerPath = convertPathToUnixLike(data.value.debuggerServerPaths[0]);
+    data.value.settings.debuggerServerPath = toUnixPath(data.value.debuggerServerPaths[0]);
   }
 }
 
@@ -540,7 +540,7 @@ async function onSelectFilePath<T extends keyof GenerateSettings = keyof Generat
     command: 'selectFile',
     params: {},
   });
-  data.value.settings[key] = convertPathToUnixLike(filePath) as GenerateSettings[T];
+  data.value.settings[key] = toUnixPath(filePath) as GenerateSettings[T];
 }
 
 /**
@@ -551,7 +551,7 @@ async function onSelectMakeToolPath() {
     command: 'selectFolder',
     params: {},
   });
-  data.value.settings.makeToolPath = convertPathToUnixLike(folderPath);
+  data.value.settings.makeToolPath = toUnixPath(folderPath);
 }
 
 /**
@@ -562,7 +562,7 @@ async function onSelectEnvPath() {
     command: 'selectFolder',
     params: {},
   });
-  data.value.settings.envPath = convertPathToUnixLike(folderPath);
+  data.value.settings.envPath = toUnixPath(folderPath);
 }
 
 /**
@@ -573,7 +573,7 @@ async function onSelectRttDir() {
     command: 'selectFolder',
     params: {},
   });
-  data.value.settings.rttDir = convertPathToUnixLike(folderPath);
+  data.value.settings.rttDir = toUnixPath(folderPath);
 }
 
 /**
@@ -735,7 +735,7 @@ onUnmounted(() => {
 
 <template>
   <div class="m-config-project">
-    <div v-if="data.workspaceFolderPicked" class="m-row--center m-workspace-folder">
+    <div v-if="data.workspaceFolderPicked" class="m-row--center m-workspace-folder" data-test="m-workspace-folder">
       {{ t('Current workspace folder') + ': ' }}
       <code>{{ data.workspaceFolderPicked }}</code>
     </div>
@@ -760,7 +760,7 @@ onUnmounted(() => {
             :filterable="false"
             m-show-all-options
             :options="data.envPaths"
-            @blur="data.settings.envPath = convertPathToUnixLike(data.settings.envPath)"
+            @blur="data.settings.envPath = toUnixPath(data.settings.envPath)"
           ></MSelectInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectEnvPath" />
           <template #help>
@@ -779,7 +779,7 @@ onUnmounted(() => {
             v-model="data.settings.rttDir"
             clearable
             :placeholder="t('Input or select a folder')"
-            @blur="data.settings.rttDir = convertPathToUnixLike($event as string)"
+            @blur="data.settings.rttDir = toUnixPath($event as string)"
           >
           </TInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectRttDir" />
@@ -826,7 +826,7 @@ onUnmounted(() => {
           v-model="data.settings.studioInstallPath"
           clearable
           :placeholder="t('Input or select a folder')"
-          @blur="data.settings.studioInstallPath = convertPathToUnixLike($event as string)"
+          @blur="data.settings.studioInstallPath = toUnixPath($event as string)"
         >
         </TInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectStudioInstallPath" />
@@ -845,7 +845,7 @@ onUnmounted(() => {
           :filterable="false"
           m-show-all-options
           :options="data.compilerPaths"
-          @blur="data.settings.compilerPath = convertPathToUnixLike(data.settings.compilerPath)"
+          @blur="data.settings.compilerPath = toUnixPath(data.settings.compilerPath)"
         >
         </MSelectInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('compilerPath')" />
@@ -868,7 +868,7 @@ onUnmounted(() => {
             v-model="data.settings.makeToolPath"
             clearable
             :placeholder="t('Input or select a folder')"
-            @blur="data.settings.makeToolPath = convertPathToUnixLike($event as string)"
+            @blur="data.settings.makeToolPath = toUnixPath($event as string)"
           >
           </TInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectMakeToolPath" />
@@ -892,7 +892,7 @@ onUnmounted(() => {
           :filterable="false"
           m-show-all-options
           :options="data.debuggerServerPaths"
-          @blur="data.settings.debuggerServerPath = convertPathToUnixLike(data.settings.debuggerServerPath)"
+          @blur="data.settings.debuggerServerPath = toUnixPath(data.settings.debuggerServerPath)"
         >
         </MSelectInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('debuggerServerPath')" />
@@ -962,7 +962,7 @@ onUnmounted(() => {
           <MSelectInput
             v-model="data.settings.cmsisPack"
             :options="data.cmsisPackPaths"
-            @blur="data.settings.cmsisPack = convertPathToUnixLike(data.settings.cmsisPack)"
+            @blur="data.settings.cmsisPack = toUnixPath(data.settings.cmsisPack)"
           >
           </MSelectInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('cmsisPack')" />

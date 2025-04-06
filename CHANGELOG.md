@@ -1,8 +1,12 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-04-06 - v0.3.12
+
+- 修复 重新启动vscode需要重新导入才显示状态栏的问题。
+
 ## 2025-03-20 - v0.3.11
 
-优化 仅构建方式为RT-Thread Studio Makefile时弹出原项目文件夹输入确认。
+- 优化 仅构建方式为RT-Thread Studio Makefile时弹出原项目文件夹输入确认。
 
 ## 2025-03-19 - v0.3.10
 
@@ -93,7 +97,7 @@
 - 新增 支持Env Windows（v1.x和v2.x）：
 
   - 支持菜单配置面板；
-从此村村村村村村村村
+
   - 支持scons方式编译；
 
   - 支持在终端执行scons、pkgs、menuconfig命令；

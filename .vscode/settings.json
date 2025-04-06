@@ -1,17 +1,21 @@
 {
-	"markdownlint.config": {
-		"MD025": false
-	},
-	"search.exclude": {
-		"out": true
-	},
-	"typescript.tsc.autoDetect": "off",
-	"[vue]": {
-		"editor.formatOnSave": true,
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	},
-	"[typescript]": {
-		"editor.formatOnSave": true,
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	}
+    "files.exclude": {
+        ".wdio-vscode-service/storage/extensions": true,
+        ".wdio-vscode-service/*/resources/app/extensions": true
+    },
+    "markdownlint.config": {
+        "MD025": false
+    },
+    "search.exclude": {
+        "out": true
+    },
+    "typescript.tsc.autoDetect": "off",
+    "[vue]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

@@ -1,24 +1,34 @@
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Run Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			],
-			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
-			],
-			"preLaunchTask": "${defaultBuildTask}"
-		},
-		{
-			"type": "node",
-			"request": "launch",
-			"name": "temp.ts debug",
-			"program": "${workspaceFolder}/temp/temp.ts",
-			"preLaunchTask": "tsc: build - temp/tsconfig.json"
-		}
-	]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // 调试扩展
+            "name": "Debug Extension",
+            "request": "launch",
+            "type": "extensionHost",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            // 调试测试用例，可在.env.local中指定要调试的文件
+            "name": "Debug Test",
+            "request": "launch",
+            "type": "node",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceRoot}/node_modules/@wdio/cli/bin/wdio.js",
+            "args": [
+                "out/test/wdio-conf.js"
+            ],
+            "autoAttachChildProcesses": true,
+            "skipFiles": [
+                "${workspaceFolder}/node_modules/**/*.js",
+                "<node_internals>/**/*.js"
+            ]
+        }
+    ]
 }

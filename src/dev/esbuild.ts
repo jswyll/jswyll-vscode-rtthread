@@ -1,6 +1,7 @@
-/* eslint-disable no-console */
 import esbuild from 'esbuild';
+import { MyLogger, MyLoggerLevel } from '../common/logger';
 
+const logger = new MyLogger('tsc-watch', MyLoggerLevel.Info);
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
@@ -15,9 +16,13 @@ async function main() {
     sourcesContent: false,
     platform: 'node',
     outfile: 'out/main/extension.js',
-    external: ['vscode', 'serialport'],
+    external: ['vscode'],
     logLevel: 'silent',
     plugins: [esbuildProblemMatcherPlugin],
+    treeShaking: true,
+    define: {
+      'process.env.NODE_ENV': production ? '"production"' : '"development"',
+    },
   });
   if (watch) {
     await ctx.watch();
@@ -31,21 +36,21 @@ const esbuildProblemMatcherPlugin: import('esbuild').Plugin = {
   name: 'esbuild-problem-matcher',
   setup(build) {
     build.onStart(() => {
-      console.log('[watch] build started');
+      logger.info('build started');
     });
     build.onEnd((result) => {
       result.errors.forEach(({ text, location }) => {
-        console.error(`✘ [ERROR] ${text}`);
+        logger.error(`✘ [ERROR] ${text}`);
         if (location) {
-          console.error(`    ${location.file}:${location.line}:${location.column}:`);
+          logger.error(`    ${location.file}:${location.line}:${location.column}:`);
         }
       });
-      console.log('[watch] build finished');
+      logger.info('build finished');
     });
   },
 };
 
 main().catch((e) => {
-  console.error(e);
+  logger.error(e);
   process.exit(1);
 });

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as CryptoJS from 'crypto-js';
+import * as crypto from 'crypto';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { stringify } from 'qs';
@@ -105,7 +105,7 @@ export async function translate(options: {
   const salt = new Date().getTime();
   const curtime = Math.round(new Date().getTime() / 1000);
   const str1 = appKey + truncate(query.join('')) + salt + curtime + key;
-  const sign = CryptoJS.SHA256(str1).toString(CryptoJS.enc.Hex);
+  const sign = crypto.createHash('sha256').update(str1).digest('hex');
   const res = await axios.post(
     'https://openapi.youdao.com/v2/api',
     stringify(

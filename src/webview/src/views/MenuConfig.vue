@@ -28,7 +28,7 @@ import type { MenuItemHex, MenuItemInt, TMenuItem } from '../../../common/types/
 import type { ExtensionToWebviewDatas } from '../../../common/types/type';
 import { useI18n } from 'vue-i18n';
 import { toHexString, vueI18nEscape, vueI18nUnescape } from '../../../common/utils.ts';
-import menuconfigZhCn from '@webview/locales/menuconfig.zh-CN.json';
+import menuconfigZhCn from '@webview/locales/menuconfig.zh-cn.json';
 import { i18n } from '@webview/locales/i18n.ts';
 import { useFullscreenLoading } from '@webview/components/loading.ts';
 

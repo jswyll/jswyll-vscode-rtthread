@@ -11,9 +11,6 @@ export function formatTime(fmt: string, timestamp?: number) {
   } else {
     date = new Date();
   }
-  // if (process?.env?.NODE_ENV !== 'production') {
-  //   date = new Date('2025-01-01 08:00:00');
-  // }
   const o: Record<string, number> = {
     'M+': date.getMonth() + 1,
     'D+': date.getDate(),

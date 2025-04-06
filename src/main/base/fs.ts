@@ -91,10 +91,13 @@ export async function writeJsonFile(uri: vscode.Uri, data: object) {
 /**
  * 解析JSON文件。
  * @note 支持包含注释、尾随逗号的JSON
- * @param uri 文件uri
+ * @param pathOrUri 文件的绝对路径路径或uri
  * @returns JSON数组或对象
  */
-export async function parseJsonFile<T = Record<string, unknown>>(uri: vscode.Uri) {
-  const text = await readTextFile(uri);
+export async function parseJsonFile<T = Record<string, unknown>>(pathOrUri: string | vscode.Uri) {
+  if (typeof pathOrUri === 'string') {
+    pathOrUri = vscode.Uri.file(pathOrUri);
+  }
+  const text = await readTextFile(pathOrUri);
   return parse(text) as T;
 }

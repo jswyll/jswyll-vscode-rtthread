@@ -1,5 +1,5 @@
-import { EXTENSION_ID } from '../../../common/constants';
-import { formatTime } from '../../../common/utils';
+import { EXTENSION_ID } from './constants';
+import { formatTime } from './utils';
 
 /**
  * 默认的console对象
@@ -51,38 +51,28 @@ export enum MyLoggerLevel {
  */
 export class MyLogger {
   /**
-   * 日志标签
-   */
-  protected readonly tag: string;
-  /**
-   * 日志打印等级
-   */
-  protected level: MyLoggerLevel;
-
-  /**
    * 实例化MyLogger类
    * @param tag 日志标签
-   * @param level 日志打印等级。如果不提供此参数，则开发环境默认为Debug，生产环境默认为Info
+   * @param level 日志打印等级
    */
-  constructor(tag: string, level?: MyLoggerLevel) {
+  constructor(
+    protected readonly tag: string,
+    protected level: MyLoggerLevel,
+  ) {
     this.tag = `${EXTENSION_ID} - ${tag}`;
-    if (level) {
-      this.level = level;
-    } else {
-      this.level = import.meta.env.DEV ? MyLoggerLevel.Debug : MyLoggerLevel.Info;
-    }
+    this.level = level;
   }
 
   /**
    * 获取格式化时间
-   * @returns 格式化时间, 形如`2020-01-01 00:00:00`
+   * @returns 格式化时间, 形如`00:00:00`
    */
   protected getFormatTime() {
     return formatTime('HH:mm:ss');
   }
 
   /**
-   * 根据指定等级决定是否输出日志或执行指定的动作
+   * 根据指定等级决定是否输出日志
    * @param level 日志打印等级
    * @param args 可变参数
    */
@@ -91,18 +81,15 @@ export class MyLogger {
       return;
     }
 
-    const applyArgs = [`${formatTime('HH:mm:ss')} [${this.tag}]`, ...args];
+    const applyArgs = [`${this.getFormatTime()} [${this.tag}]`, ...args];
     if (level === MyLoggerLevel.Error) {
       consoleLogger.error.apply(this, applyArgs);
-    }
-    if (level === MyLoggerLevel.Warning) {
+    } else if (level === MyLoggerLevel.Warning) {
       consoleLogger.warn.apply(this, applyArgs);
-    } else if (level === MyLoggerLevel.Info) {
-      consoleLogger.info.apply(this, applyArgs);
-    } else if (level === MyLoggerLevel.Verbose) {
+    } else if (level === MyLoggerLevel.Verbose || level === MyLoggerLevel.Debug) {
       consoleLogger.debug.apply(this, applyArgs);
     } else {
-      consoleLogger.log.apply(this, applyArgs);
+      consoleLogger.info.apply(this, applyArgs);
     }
   }
 

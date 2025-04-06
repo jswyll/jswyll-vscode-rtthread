@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "lib": [
+      "DOM",
+      "ES2022"
+    ],
+    "types": [
+      "@wdio/globals/types",
+      "@wdio/mocha-framework",
+      "expect-webdriverio",
+      "node",
+      "vscode",
+      "wdio-vscode-service"
+    ],
+    "outDir": "../../out",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2022"
+  },
+  "include": [
+    "./**/*.ts",
+    "../common/**/*",
+    "../main/**/*"
+  ]
+}

@@ -29,7 +29,7 @@ export class AppVersion {
 
   /**
    * 构造一个AppVersion对象。
-   * @param version 版本号字符串，例如`1.2.3`。
+   * @param version 两位或三位版本号字符串，例如`1.2.3`。
    */
   constructor(version: string);
   /**
@@ -61,7 +61,7 @@ export class AppVersion {
   );
   constructor(arg1: string | IAppVersion | number, minor?: number, patch?: number) {
     if (typeof arg1 === 'string') {
-      this.version = this.ParseVersion(arg1);
+      this.version = AppVersion.ParseVersion(arg1);
     } else if (typeof arg1 === 'object') {
       this.version = arg1;
     } else {
@@ -70,17 +70,17 @@ export class AppVersion {
   }
 
   /**
-   * 解析形如`x.y.z`的3位数字版本号字符串，可包含`v`或`V`前缀，可包含非数字后缀。
+   * 解析形如`x.y.z`的两位或3位数字版本号字符串，可包含`v`或`V`前缀，可包含非数字后缀。
    * @param version 版本号字符串，例如`1.2.3`。
-   * @returns 包含主版本号、次版本号和补丁版本号的对象，如果解析失败则返回`{major: -1, minor: -1, patch: -1}`。
+   * @returns 包含主版本号、次版本号和补丁版本号的对象，如果解析失败则返回`{major: NaN, minor: NaN, patch: NaN}`。
    */
-  ParseVersion(version: string): IAppVersion {
-    const invalidVersion = { major: -1, minor: -1, patch: -1 };
+  static ParseVersion(version: string): IAppVersion {
+    const invalidVersion = { major: NaN, minor: NaN, patch: NaN };
     if (typeof version !== 'string') {
       return invalidVersion;
     }
 
-    const versionRegex = /^[vV]?(\d+)\.(\d+)\.(\d+)/;
+    const versionRegex = /^[vV]?(\d+)\.(\d{1,2})(?:\.(\d{1,2}))?/;
     const match = version.match(versionRegex);
     if (!match) {
       return invalidVersion;
@@ -88,11 +88,7 @@ export class AppVersion {
 
     const major = parseInt(match[1], 10);
     const minor = parseInt(match[2], 10);
-    const patch = parseInt(match[3], 10);
-    if (isNaN(major) || isNaN(minor) || isNaN(patch)) {
-      return invalidVersion;
-    }
-
+    const patch = parseInt(match[3] || '0', 10);
     return { major, minor, patch };
   }
 
@@ -102,7 +98,7 @@ export class AppVersion {
    * @param versionB 版本号B
    * @returns 如果版本号A大于版本号B，则返回1；如果版本号A小于版本号B，则返回-1；如果版本号相等，则返回0。
    */
-  Compare(versionA: IAppVersion, versionB: IAppVersion): number {
+  static Compare(versionA: IAppVersion, versionB: IAppVersion): number {
     if (versionA.major > versionB.major) {
       return 1;
     } else if (versionA.major < versionB.major) {
@@ -129,8 +125,8 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否相等
    */
-  isEqualsThan(v: AppVersion) {
-    return this.Compare(this.version, v.version) === 0;
+  eq(v: AppVersion) {
+    return AppVersion.Compare(this.version, v.version) === 0;
   }
 
   /**
@@ -138,8 +134,8 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否大于
    */
-  isGreaterThan(v: AppVersion) {
-    return this.Compare(this.version, v.version) > 0;
+  gt(v: AppVersion) {
+    return AppVersion.Compare(this.version, v.version) > 0;
   }
 
   /**
@@ -147,8 +143,8 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否小于
    */
-  isLessThan(v: AppVersion) {
-    return this.Compare(this.version, v.version) < 0;
+  lt(v: AppVersion) {
+    return AppVersion.Compare(this.version, v.version) < 0;
   }
 
   /**
@@ -156,8 +152,8 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否大于等于
    */
-  isGreaterOrEqualsThan(v: AppVersion) {
-    return this.Compare(this.version, v.version) >= 0;
+  gte(v: AppVersion) {
+    return AppVersion.Compare(this.version, v.version) >= 0;
   }
 
   /**
@@ -165,8 +161,8 @@ export class AppVersion {
    * @param v 要比较的版本
    * @returns 是否小于等于
    */
-  isLessOrEqualsThan(v: AppVersion) {
-    return this.Compare(this.version, v.version) <= 0;
+  lte(v: AppVersion) {
+    return AppVersion.Compare(this.version, v.version) <= 0;
   }
 
   /**
@@ -194,7 +190,7 @@ export class AppVersion {
 
   /**
    * 转为字符串
-   * @returns 版本号字符串
+   * @returns 无v前缀的版本号字符串
    */
   toString() {
     return `${this.version.major}.${this.version.minor}.${this.version.patch}`;
