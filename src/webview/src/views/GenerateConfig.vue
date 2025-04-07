@@ -28,6 +28,7 @@ import MSelectInput from '@webview/components/MSelectInput.vue';
 import type { InputGenerateParams, DoGenerateParams, GenerateSettings } from '../../../common/types/generate';
 import type { TdesignCustomValidateResult } from '../../../common/types/vscode';
 import { useFullscreenLoading } from '@webview/components/loading';
+import { getDebugServerType } from '../../../common/debugger';
 
 /**
  * 翻译
@@ -88,8 +89,8 @@ const { t } = useI18n({
       Ignore: '忽略',
       Reselect: '重新选择',
       'Debugger Server': '调试服务器',
-      'Path to the server to download or debug. Supports `pyocd`, `openocd`, and `jlink`. You can just fill in the base filename (e.g., `openocd`) if you have added the folder to the `PATH` environment variable.':
-        '用于下载或调试的服务器的路径。支持`pyocd`、`openocd`、`jlink`。如果你已经将它的所在文件夹添加到环境变量`PATH`则可只填基本文件名（例如`openocd`）。',
+      'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`. If you have added its folder to the environment variable `PATH`, you can only fill in the base file name (e.g. `openocd`).':
+        '用于下载或调试的服务器的路径。支持`openocd`、`pyocd`、`JLink`和`ST-LINK_gdbserver`。如果你已经将它的所在文件夹添加到环境变量`PATH`则可只填基本文件名（例如`openocd`）。',
       'Cmsis Pack': 'Cmsis包',
       'File path of the Cmsis package corresponding to the chip. **If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.** Built-in packages can be added via the `pyocd pack` related commands.':
         '芯片对应的Cmsis包的文件路径。**如果芯片名称不是[pyocd内置目标](https://pyocd.io/docs/builtin-targets.html)则应指定。** 可以通过`pyocd pack`相关命令添加内置包。',
@@ -345,17 +346,24 @@ const debuggerInterfaceOptions = [
 ];
 
 /**
+ * 是否为stlink服务器
+ */
+const isStlinkServer = computed(() => {
+  return getDebugServerType(data.value.settings.debuggerServerPath) === 'stlink';
+});
+
+/**
  * 是否为jlink服务器
  */
 const isJlinkServer = computed(() => {
-  return /[\/\\]?JLink((Exe)|(\.exe))?$/i.test(data.value.settings.debuggerServerPath);
+  return getDebugServerType(data.value.settings.debuggerServerPath) === 'jlink';
 });
 
 /**
  * 是否需要提供cmsis pack的文件路径
  */
 const isPyocdServer = computed(() => {
-  return /[\/\\]?pyocd(\.exe)?$/i.test(data.value.settings.debuggerServerPath);
+  return getDebugServerType(data.value.settings.debuggerServerPath) === 'pyocd';
 });
 
 /**
@@ -708,9 +716,12 @@ onMounted(async () => {
   }
   watch(
     () => data.value.settings.debuggerServerPath,
-    () => {
-      if (isJlinkServer.value) {
+    (v) => {
+      const serverType = getDebugServerType(v);
+      if (serverType === 'jlink') {
         data.value.settings.debuggerAdapter = 'JLink';
+      } else if (serverType === 'stlink') {
+        data.value.settings.debuggerAdapter = 'STLink';
       }
     },
   );
@@ -901,7 +912,7 @@ onUnmounted(() => {
             inline
             :markdown-text="
               t(
-                'Path to the server to download or debug. Supports `pyocd`, `openocd`, and `jlink`. You can just fill in the base filename (e.g., `openocd`) if you have added the folder to the `PATH` environment variable.',
+                'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`. If you have added its folder to the environment variable `PATH`, you can only fill in the base file name (e.g. `openocd`).',
               )
             "
           ></MMarkdown>
@@ -914,7 +925,7 @@ onUnmounted(() => {
           <TFormItem :label="t('Debugger type')" name="settings.debuggerAdapter">
             <TSelect
               v-model="data.settings.debuggerAdapter"
-              :disabled="isJlinkServer"
+              :disabled="isJlinkServer || isStlinkServer"
               :options="debuggerAdapterOptions"
               :popup-props="{ overlayInnerStyle: getSelectPopupWidth }"
             >

@@ -2,7 +2,7 @@
 import { marked } from 'marked';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { BackTop as TBackTop } from 'tdesign-vue-next';
-import { BacktopIcon } from 'tdesign-icons-vue-next';
+import BacktopIcon from 'tdesign-icons-vue-next/esm/components/backtop';
 import { nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import xss from 'xss';

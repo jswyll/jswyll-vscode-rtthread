@@ -1,12 +1,11 @@
 import type { Options } from '@wdio/types';
-import { join, resolve } from 'path';
-import * as nyc from 'nyc';
-import { existsSync, readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { MyLogger, MyLoggerLevel } from '../common/logger';
-import * as dotenv from 'dotenv';
+import { resolve } from 'path';
 import { WebDriverLogTypes } from '@wdio/types/build/Options';
-import * as assert from 'assert';
+import { assertParam } from '../common/assert';
+import { fileURLToPath } from 'url';
+import * as nyc from 'nyc';
+import * as dotenv from 'dotenv';
+import { readFileSync } from 'fs';
 
 /**
  * 需要用到的环境变量
@@ -29,13 +28,12 @@ interface MyEnv extends NodeJS.ProcessEnv {
   MY_WDIO_LOG_LEVEL?: WebDriverLogTypes;
 }
 
-const logger = new MyLogger('wdio.conf', MyLoggerLevel.Info);
 const dotenvConfigOutput = dotenv.config({ path: resolve('.env.local') });
 if (dotenvConfigOutput.error) {
   throw dotenvConfigOutput.error;
 }
 export const menv = process.env as MyEnv;
-assert(menv.MY_RTTHREAD_PROJECT_ROOT, '应提供MY_RTTHREAD_PROJECT_ROOT环境变量');
+assertParam(menv.MY_RTTHREAD_PROJECT_ROOT, '应提供MY_RTTHREAD_PROJECT_ROOT环境变量');
 menv.MY_RTTHREAD_PROJECT_ROOT = resolve(menv.MY_RTTHREAD_PROJECT_ROOT);
 const extensionPath = resolve('.');
 const grep = [];
@@ -110,32 +108,15 @@ export const config: Options.Testrunner = {
   specs: menv.MY_WDIO_SPEC ? [menv.MY_WDIO_SPEC] : ['./**/*.test.js'],
   waitforTimeout: 600000,
 
-  beforeSession: async function () {
-    // 安装依赖的扩展
-    const packageJSON = JSON.parse(readFileSync(resolve(extensionPath, 'package.json'), 'utf-8'));
-    let extJSON: Array<{
-      identifier: {
-        id: string;
-      };
-    }> = [];
-    const extJsonPath = join(storagePath, 'extensions/extensions.json');
-    if (existsSync(extJsonPath)) {
-      extJSON = JSON.parse(readFileSync(extJsonPath, 'utf-8'));
-    }
-    logger.debug('extJSON:', extJSON);
-    for (const extId of packageJSON.extensionDependencies) {
-      if (!extJSON.some((ext) => ext.identifier.id === extId)) {
-        logger.info(`install ${extId}...`);
-        const vscodeCmdPath = resolve(
-          `.wdio-vscode-service/vscode-${process.platform}-${process.arch}-archive-${vscodeVersion}/bin/code`,
-        );
-        execSync(
-          `${vscodeCmdPath} --force --install-extension ${extId} --extensions-dir=${join(storagePath, 'extensions')} --user-data-dir=${join(storagePath, 'settings')}`,
-          {
-            stdio: 'inherit',
-          },
-        );
-      }
+  beforeSession(_config, capabilities: WebdriverIO.Capabilities, specs) {
+    const [testFile] = specs;
+    const testFilePath = fileURLToPath(new URL(testFile));
+    const fileContent = readFileSync(testFilePath, 'utf8');
+    const match = fileContent.match(/^const MY_WDIO_WORKSPACE_FOLDER = '([^']+)';/m);
+    if (match) {
+      capabilities['wdio:vscodeOptions']!.workspacePath = resolve(match[1]);
+    } else {
+      capabilities['wdio:vscodeOptions']!.workspacePath = menv.MY_RTTHREAD_PROJECT_ROOT;
     }
   },
 

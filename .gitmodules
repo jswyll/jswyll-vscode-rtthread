@@ -1,3 +1,6 @@
 [submodule "test/projects/stm32f407-atk-explorer-v4.1.1"]
 	path = test/projects/stm32f407-atk-explorer-v4.1.1
 	url = https://github.com/jswyll/stm32f407-atk-explorer-v4.1.1.git
+[submodule "test/projects/stm32f407-atk-explorer-v3.1.5"]
+	path = test/projects/stm32f407-atk-explorer-v3.1.5
+	url = https://github.com/jswyll/stm32f407-atk-explorer-v3.1.5.git

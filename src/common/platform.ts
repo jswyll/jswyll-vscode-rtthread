@@ -45,6 +45,23 @@ export function dirnameOrEmpty(p: string) {
 }
 
 /**
+ * 获取路径的不含扩展名的文件名。
+ * @param p 路径
+ */
+export function basenameWithoutExt(p: string) {
+  p = toUnixPath(p);
+  if (!p) {
+    return '';
+  }
+  p = toUnixPath(p);
+  let filename = p.split('/');
+  if (filename.length > 1) {
+    filename = filename.slice(-1);
+  }
+  return filename[0].replace(/\.[^.]+$/, '');
+}
+
+/**
  * 判断路径是否为（任何平台的）绝对路径。
  * @param p 要判断的路径
  */

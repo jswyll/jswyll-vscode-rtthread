@@ -9,7 +9,7 @@
 <script lang="ts" setup>
 import { escapeRegExp } from 'lodash';
 import { AutoComplete as TAutoComplete, type AutoCompleteOption, type AutoCompleteProps } from 'tdesign-vue-next';
-import { ChevronDownIcon } from 'tdesign-icons-vue-next';
+import ChevronDownIcon from 'tdesign-icons-vue-next/esm/components/chevron-down';
 import { computed, ref } from 'vue';
 
 /**

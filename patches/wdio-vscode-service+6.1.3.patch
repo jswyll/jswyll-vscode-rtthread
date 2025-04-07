@@ -1,8 +1,56 @@
 diff --git a/node_modules/wdio-vscode-service/dist/launcher.js b/node_modules/wdio-vscode-service/dist/launcher.js
-index 9bf9936..7e6cfaa 100644
+index 9bf9936..6294ba2 100644
 --- a/node_modules/wdio-vscode-service/dist/launcher.js
 +++ b/node_modules/wdio-vscode-service/dist/launcher.js
-@@ -102,10 +102,12 @@ export default class VSCodeServiceLauncher {
+@@ -1,6 +1,7 @@
+ import fs from 'node:fs/promises';
+ import path from 'node:path';
+ import { format } from 'node:util';
++import { execSync } from 'node:child_process';
+ import downloadBundle from '@xhmikosr/downloader';
+ import logger from '@wdio/logger';
+ import { setGlobalDispatcher, request, ProxyAgent } from 'undici';
+@@ -57,6 +58,7 @@ export default class VSCodeServiceLauncher {
+              */
+             if (cap.browserName === 'vscode') {
+                 await this._setupVSCodeDesktop(versionsFileExist, versionsFilePath, version, cap);
++                await this._installExtensionDependencies(cap[VSCODE_CAPABILITY_KEY].extensionPath, cap[VSCODE_CAPABILITY_KEY].storagePath, cap[VSCODE_CAPABILITY_KEY].version)
+                 continue;
+             }
+             /**
+@@ -65,6 +67,31 @@ export default class VSCodeServiceLauncher {
+             await this._setupVSCodeWeb(version, cap);
+         }
+     }
++    async _installExtensionDependencies(extensionPath, storagePath, vscodeVersion) {
++      const packageJSON = JSON.parse(await fs.readFile(path.resolve(extensionPath, 'package.json'), 'utf-8'));
++      let extJSON = [];
++      const extJsonPath = path.join(storagePath, 'extensions/extensions.json');
++      try {
++        await fs.access(extJsonPath);
++        extJSON = JSON.parse(await fs.readFile(extJsonPath, 'utf-8'));
++      } catch {
++      }
++      for (const extId of packageJSON.extensionDependencies) {
++        if (!extJSON.some((ext) => ext.identifier.id === extId)) {
++          log.info(`install ${extId}...`);
++          const vscodeCmdPath = path.join(storagePath,
++            `../vscode-${process.platform}-${process.arch}-archive-${vscodeVersion}/bin/code`,
++          );
++          log.info('vscodeCmdPath:', vscodeCmdPath);
++          execSync(
++            `${vscodeCmdPath} --force --install-extension ${extId} --extensions-dir=${path.join(storagePath, 'extensions')} --user-data-dir=${path.join(storagePath, 'settings')}`,
++            {
++              stdio: 'inherit',
++            },
++          );
++        }
++      }
++    }
+     /**
+      * Set up VSCode for web testing
+      * @param versionsFileExist true if we already have information stored about cached VSCode bundles
+@@ -102,10 +129,12 @@ export default class VSCodeServiceLauncher {
          if (!cap[VSCODE_CAPABILITY_KEY]) {
              throw new Error(`No key "${VSCODE_CAPABILITY_KEY}" found in caps`);
          }
@@ -17,7 +65,7 @@ index 9bf9936..7e6cfaa 100644
              const vscodePath = cap[VSCODE_CAPABILITY_KEY]?.binary
                  || path.join(this._cachePath, `vscode-${process.platform}-${process.arch}-${vscodeVersion}`);
              if (vscodeVersion && chromedriverVersion && await fileExist(vscodePath)) {
-@@ -115,8 +117,12 @@ export default class VSCodeServiceLauncher {
+@@ -115,8 +144,12 @@ export default class VSCodeServiceLauncher {
                  return;
              }
          }

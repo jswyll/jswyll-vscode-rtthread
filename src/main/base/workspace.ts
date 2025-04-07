@@ -316,7 +316,7 @@ export async function inEnvironmentPath(p: string) {
 }
 
 /**
- * 获取环境变量中指定的路径的所有全路径。
+ * 获取环境变量中指定的路径的全路径。
  *
  * @param p 路径，可以省略`.exe`后缀，例如`openocd`
  * @returns 指定的路径的所有全路径
@@ -324,16 +324,16 @@ export async function inEnvironmentPath(p: string) {
 export async function getAllFullPathsInEnvironmentPath(p: string) {
   const platformType = getPlatformType();
   const envPaths = (process.env.PATH || '').split(delimiter);
-  const paths: string[] = [];
-  const promises = [];
+  const promises: Promise<string>[] = [];
   for (const envPath of envPaths) {
     if (platformType === 'windows') {
       const fsPath = join(envPath, `${p}.exe`);
       promises.push(
         existsAsync(fsPath).then((b) => {
           if (b) {
-            paths.push(toUnixPath(fsPath));
+            return toUnixPath(fsPath);
           }
+          return '';
         }),
       );
     }
@@ -341,11 +341,12 @@ export async function getAllFullPathsInEnvironmentPath(p: string) {
     promises.push(
       existsAsync(fsPath).then((b) => {
         if (b) {
-          paths.push(toUnixPath(fsPath));
+          return toUnixPath(fsPath);
         }
+        return '';
       }),
     );
   }
-  await Promise.all(promises);
-  return paths;
+  const paths = await Promise.all(promises);
+  return paths.filter((p) => !!p);
 }

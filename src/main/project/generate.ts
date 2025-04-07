@@ -35,6 +35,7 @@ import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../
 import { TdesignCustomValidateResult } from '../../common/types/vscode';
 import { isEqual } from 'lodash';
 import { AppVersion } from '../../common/version';
+import { getDebugServerType } from '../../common/debugger';
 
 /**
  * 生成的参数
@@ -65,11 +66,6 @@ interface GenerateParamsInternal extends DoGenerateParams {
    */
   extraVar: Record<string, string | undefined>;
 }
-
-/**
- * 支持的调试服务器类型
- */
-type SupportedDebugServer = (typeof supportedDebugServer)[number];
 
 /**
  * 生成完成事件的发射器
@@ -107,11 +103,6 @@ const compilerFileNames = [
  * openocd配置文件的路径
  */
 const openocdConfigFilePath = `.vscode/openocd.cfg`;
-
-/**
- * 支持的调试服务器
- */
-const supportedDebugServer = ['openocd', 'pyocd', 'jlink'] as const;
 
 /**
  * webview配置面板
@@ -307,46 +298,65 @@ function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
 }
 
 /**
- * 获取调试服务器的路径。
+ * 获取调试服务器对应的下载工具的路径。
+ *
+ * 如果是stlink调试服务器，搜索其对应的`STM32_Programmer_CLI`的路径。
+ *
+ * @param debuggerServerPath 调试服务器路径或文件名
+ * @returns 处理后的调试服务器路径
+ */
+async function getDebuggerDownloadToolPath(debuggerServerPath: string) {
+  const debugServerType = getDebugServerType(debuggerServerPath);
+  if (debugServerType !== 'stlink') {
+    return debuggerServerPath;
+  }
+
+  // TODO: STM32_Programmer_CLI v1.6.0以上才支持调试，提示警告？
+  const debuggerServerPathParsed = parsePath(debuggerServerPath);
+  const errmsg = vscode.l10n.t('The path "{0}" does not exists', ['STM32_Programmer_CLI']);
+  if (dirnameOrEmpty(debuggerServerPathParsed) === '') {
+    assertParam(pathExists('STM32_Programmer_CLI'), errmsg);
+    return 'STM32_Programmer_CLI';
+  } else {
+    // 通过RT-Thread Studio安装的
+    let stm32ProgrammerCliExePath = join(
+      dirnameOrEmpty(debuggerServerPathParsed),
+      'tools/bin/STM32_Programmer_CLI.exe',
+    );
+    let stm32ProgrammerCliPath = join(dirnameOrEmpty(debuggerServerPathParsed), 'tools/bin/STM32_Programmer_CLI');
+    if ((await existsAsync(stm32ProgrammerCliExePath)) || (await existsAsync(stm32ProgrammerCliPath))) {
+      return stm32ProgrammerCliExePath;
+    }
+
+    // 通过官网安装的（https://www.st.com/en/development-tools/stm32cubeclt.html）
+    stm32ProgrammerCliExePath = join(
+      dirnameOrEmpty(debuggerServerPathParsed),
+      '../../STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe',
+    );
+    stm32ProgrammerCliPath = join(
+      dirnameOrEmpty(debuggerServerPathParsed),
+      '../../STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe',
+    );
+    if ((await existsAsync(stm32ProgrammerCliExePath)) || (await existsAsync(stm32ProgrammerCliPath))) {
+      return stm32ProgrammerCliExePath;
+    }
+  }
+  throw new Error(errmsg);
+}
+
+/**
+ * 获取调试服务器对应的GDB调试工具的路径。
  *
  * 如果是JLink调试服务器，把基本名中的jlink替换成`JLinkGDBServerCL`。
  *
  * @param debuggerServerPath 调试服务器路径或文件名
  * @returns 处理后的调试服务器路径
  */
-function getDebuggerServerPath(debuggerServerPath: string) {
+function getDebuggerGdbPath(debuggerServerPath: string) {
   const baseName = basename(debuggerServerPath, extname(debuggerServerPath));
   let dir = dirnameOrEmpty(debuggerServerPath);
   dir = dir ? `${dir}/` : '';
   return dir + baseName.replace(/^jlink/i, 'JLinkGDBServerCL');
-}
-
-/**
- * 获取用于cortex-debug的调试服务器的类型名称
- * @param debuggerServerPath 绝对路径或基本名
- * @returns 已支持的{@link supportedDebugServer}，或返回`undefined`
- */
-function getDebugServer(debuggerServerPath: string): SupportedDebugServer | undefined {
-  const baseName = basename(debuggerServerPath, extname(debuggerServerPath)).toLowerCase();
-  if (baseName === 'jlinkexe') {
-    return 'jlink';
-  }
-  if (!supportedDebugServer.includes(baseName as SupportedDebugServer)) {
-    return undefined;
-  }
-  return baseName as SupportedDebugServer;
-}
-
-/**
- * 判断调试服务器是否是JLink。
- *
- * @note linux下安装的segger，文件名是`jlinkExe`。
- *
- * @param debuggerServerPath 调试服务器路径或文件名
- * @returns 是否是JLink
- */
-function isJlinkDebugger(debuggerServerPath: string) {
-  return getDebugServer(debuggerServerPath) === 'jlink';
 }
 
 /**
@@ -621,17 +631,17 @@ async function processTasksJson(params: GenerateParamsInternal) {
     );
   }
 
-  const debuggerServer = getDebugServer(debuggerServerPath);
-  if (debuggerServer) {
-    let downloadArgs;
-    if (debuggerServer === 'openocd') {
+  const debuggerServerType = getDebugServerType(debuggerServerPath);
+  if (debuggerServerType) {
+    let downloadArgs: string[];
+    if (debuggerServerType === 'openocd') {
       downloadArgs = [
         '-f',
         openocdConfigFilePath,
         '-c',
         `program ${getElfFilePathForWorkspace(params)} verify reset exit`,
       ];
-    } else if (isJlinkDebugger(debuggerServerPath)) {
+    } else if (debuggerServerType === 'jlink') {
       const targetHexFilePath = getElfFilePathForWorkspace(params);
       const jlinkScriptPath = '.vscode/download.jlink';
       downloadArgs = ['-CommandFile', jlinkScriptPath];
@@ -648,7 +658,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
           'R\r\n' +
           'Qc\r\n',
       );
-    } else if (debuggerServer === 'pyocd') {
+    } else if (debuggerServerType === 'pyocd') {
       downloadArgs = ['flash', getElfFilePathForWorkspace(params)];
       if (cmsisPack) {
         downloadArgs.push('--pack');
@@ -656,12 +666,16 @@ async function processTasksJson(params: GenerateParamsInternal) {
       }
       downloadArgs.push('--target');
       downloadArgs.push(chipName);
+    } else {
+      downloadArgs = ['-c', `port=${debuggerInterface}`, '-d', getElfFilePathForWorkspace(params), '-s'];
     }
+    const downloadToolPath = await getDebuggerDownloadToolPath(debuggerServerPath);
+    const downloadCommand = removeExeSuffix(toUnixPath(downloadToolPath));
     taskJson.tasks.push({
       label: TASKS.DOWNLOAD.label,
       detail: TASKS.DOWNLOAD.detail,
       type: 'shell',
-      command: debuggerServerPath,
+      command: downloadCommand,
       args: downloadArgs,
       problemMatcher: [],
     });
@@ -692,15 +706,13 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
   logger.info('processLaunchConfig...');
   const { wsFolder, settings, toolchainPrefix } = params;
   const { debuggerAdapter, debuggerInterface, debuggerServerPath, chipName, svdFile } = settings;
-  const debuggerServer = getDebugServer(debuggerServerPath);
-  if (!debuggerServer) {
+  const debuggerServerType = getDebugServerType(debuggerServerPath);
+  if (!debuggerServerType) {
     return;
   }
 
-  let serverpath = debuggerServerPath;
-  if (isJlinkDebugger(debuggerServerPath)) {
-    serverpath = getDebuggerServerPath(debuggerServerPath);
-  } else if (debuggerServer === 'openocd') {
+  const gdbServerPath = removeExeSuffix(toUnixPath(getDebuggerGdbPath(debuggerServerPath)));
+  if (debuggerServerType === 'openocd') {
     const openocdConfigUri = vscode.Uri.joinPath(wsFolder, openocdConfigFilePath);
     let openocdConfigContent = await readTextFile(openocdConfigUri, '');
     const debuggerLine = `source [find interface/${debuggerAdapter.toLowerCase()}.cfg]\r\n`;
@@ -746,13 +758,7 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
     writeTextFile(openocdConfigUri, openocdConfigContent);
   }
 
-  let name;
-  if (settings.projectType === 'RT-Thread Studio') {
-    name = params.buildConfig!.name;
-  } else {
-    const artifactPath = getConfig(wsFolder, 'generate.artifactPath', 'rt-thread.elf');
-    name = basename(artifactPath, extname(artifactPath));
-  }
+  const name = 'Debug';
   const launchJsonUri = vscode.Uri.joinPath(wsFolder, '.vscode/launch.json');
   let launchJson: {
     version: string;
@@ -776,25 +782,40 @@ async function processLaunchConfig(params: GenerateParamsInternal) {
     vscode.l10n.t('The format of "{0}" is invalid', [launchJsonUri.fsPath]),
   );
   launchJson.configurations = launchJson.configurations.filter((v) => v.name !== name);
+  let stm32cubeprogrammer: string | undefined = undefined;
+  if (debuggerServerType === 'stlink') {
+    if (dirnameOrEmpty(debuggerServerPath) === '') {
+      // Cortex-Deubg要求必须指定stm32cubeprogrammer
+      const downloadToolPaths = await getAllFullPathsInEnvironmentPath('STM32_Programmer_CLI');
+      const downloadToolPath = downloadToolPaths[0];
+      stm32cubeprogrammer = toUnixPath(dirnameOrEmpty(downloadToolPath));
+    } else {
+      const downloadToolPath = await getDebuggerDownloadToolPath(debuggerServerPath);
+      stm32cubeprogrammer = toUnixPath(dirnameOrEmpty(downloadToolPath));
+    }
+  }
+  const configFiles = [normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, openocdConfigFilePath))];
   launchJson.configurations.push({
-    name,
-    cwd: '${workspaceFolder}',
     armToolchainPath: settings.toolchainPath,
-    toolchainPrefix: toolchainPrefix.replace(/-$/, ''),
-    executable: getElfFilePathForWorkspace(params),
-    request: 'launch',
-    type: 'cortex-debug',
+    cmsisPack: settings.cmsisPack || undefined,
+    configFiles: debuggerServerType === 'openocd' ? configFiles : undefined,
+    cwd: '${workspaceFolder}',
     device: chipName,
-    runToEntryPoint: 'main',
-    servertype: debuggerServer,
-    serverpath,
-    configFiles: [normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, openocdConfigFilePath))],
     deviceName: svdFile ? undefined : chipName,
+    executable: getElfFilePathForWorkspace(params),
     interface: debuggerInterface.toLowerCase(),
-    targetId: chipName,
-    svdFile: svdFile ? normalizePathForWorkspace(wsFolder, svdFile) : undefined,
-    cmsisPack: settings.cmsisPack,
+    name,
     preLaunchTask: '${defaultBuildTask}',
+    request: 'launch',
+    runToEntryPoint: 'main',
+    serverpath: gdbServerPath,
+    servertype: debuggerServerType,
+    stlinkPath: debuggerServerType === 'stlink' ? gdbServerPath : undefined,
+    stm32cubeprogrammer,
+    svdFile: svdFile ? normalizePathForWorkspace(wsFolder, svdFile) : undefined,
+    targetId: chipName,
+    toolchainPrefix: toolchainPrefix.replace(/-$/, ''),
+    type: 'cortex-debug',
   });
   writeJsonFile(launchJsonUri, launchJson);
 }
@@ -1119,10 +1140,10 @@ async function withFormitemValidate(msg: WebviewToExtensionData, fn: () => Promi
  * - 可以省略`.exe`后缀名
  *
  * @param p 路径
- * @param wsFolder 工作区文件夹
+ * @param wsFolder 指定工作区文件夹
  * @returns 指定的路径是否有效
  */
-async function pathExists(p: string, wsFolder: vscode.Uri) {
+async function pathExists(p: string, wsFolder?: vscode.Uri) {
   p = parsePath(p);
 
   const platformType = getPlatformType();
@@ -1130,11 +1151,13 @@ async function pathExists(p: string, wsFolder: vscode.Uri) {
     return (await existsAsync(p)) || (platformType === 'windows' && (await existsAsync(`${p}.exe`)));
   }
 
-  if (await existsAsync(join(wsFolder.fsPath, p))) {
-    return true;
-  }
-  if (platformType === 'windows' && (await existsAsync(join(wsFolder.fsPath, `${p}.exe`)))) {
-    return true;
+  if (wsFolder) {
+    if (await existsAsync(join(wsFolder.fsPath, p))) {
+      return true;
+    }
+    if (platformType === 'windows' && (await existsAsync(join(wsFolder.fsPath, `${p}.exe`)))) {
+      return true;
+    }
   }
 
   return await inEnvironmentPath(p);
@@ -1222,7 +1245,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         }
       }
       const debuggerServerPaths = new Set<string>();
-      const debuggerServerBasenames = ['openocd', 'JLink', 'JLinkExe', 'pyocd'];
+      const debuggerServerBasenames = ['openocd', 'JLink', 'JLinkExe', 'pyocd', 'ST-LINK_gdbserver'];
       for (const p of debuggerServerBasenames) {
         const fsPaths = await getAllFullPathsInEnvironmentPath(p);
         for (const fsPath of fsPaths) {
@@ -1300,7 +1323,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
 
     case 'validateStudioInstallPath': {
       const { folder } = msg.params;
-      let makeToolPath;
+      let makeToolPath: string | undefined = undefined;
       const compilerPaths: string[] = [];
       const debuggerServerPaths: string[] = [];
       const cmsisPackPaths: string[] = [];
@@ -1319,7 +1342,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         const debuggerServersPromise = vscode.workspace.findFiles(
           new vscode.RelativePattern(
             vscode.Uri.joinPath(folderUri, 'repo/Extract/Debugger_Support_Packages'),
-            '**/{pyocd.exe,JLink.exe,openocd.exe}',
+            '**/{pyocd.exe,JLink.exe,openocd.exe,ST-LINK_gdbserver.exe}',
           ),
         );
         const makePathUriPromise = vscode.workspace.findFiles(
@@ -1600,23 +1623,23 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           vscode.l10n.t('The path "{0}" does not exists', [debuggerServerPath]),
         );
         const filePath = parsePath(debuggerServerPath);
-        const debuggerServer = getDebugServer(filePath);
-        if (!debuggerServer) {
+        const debuggerServerType = getDebugServerType(filePath);
+        if (!debuggerServerType) {
           throw new TdesignValidateError(
             vscode.l10n.t('Unsupported Debugger Server: {0}', [basename(debuggerServerPath)]),
             'error',
           );
         }
-        let message = vscode.l10n.t('Failed to get the version of "{0}"', [debuggerServer]);
+        let message = vscode.l10n.t('Failed to get the version of "{0}"', [debuggerServerType]);
         try {
           const { stdout, stderr } = await spawnPromise(filePath, ['--version'], {
             resolveWhenExitCodeNotZero: true,
           });
           const std = stdout + stderr;
           logger.debug('std:', std);
-          if (debuggerServer === 'openocd') {
+          if (debuggerServerType === 'openocd') {
             assertParam(/^Open On-Chip Debugger (\d+)\.(\d+)/m.test(std), '');
-          } else if (debuggerServer === 'jlink') {
+          } else if (debuggerServerType === 'jlink') {
             /*
              * jlink took about 3.1s and std is:
              * ```sh
@@ -1634,13 +1657,16 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             );
             const jlinkVersion = new AppVersion(versionString);
             assertParam(jlinkVersion.gte(new AppVersion('7.90')));
-          } else if (debuggerServer === 'pyocd') {
+          } else if (debuggerServerType === 'pyocd') {
             assertParam(/^(\d+)\.(\d+)\.(\d+)/m.test(std), '');
+          } else if (debuggerServerType === 'stlink') {
+            assertParam(/(\d+)\.(\d+)\.(\d+)/.test(std), '');
+            await getDebuggerDownloadToolPath(debuggerServerPath);
           }
           return true;
         } catch (error) {
           logger.error(error);
-          if (debuggerServer === 'jlink') {
+          if (debuggerServerType === 'jlink') {
             message += vscode.l10n.t('. You can go to {0} to download the latest version', [
               'https://www.segger.com/downloads/jlink',
             ]);

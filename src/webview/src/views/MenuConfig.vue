@@ -20,7 +20,7 @@ import {
   type SelectValue,
   type TreeProps,
 } from 'tdesign-vue-next';
-import { BacktopIcon } from 'tdesign-icons-vue-next';
+import BacktopIcon from 'tdesign-icons-vue-next/esm/components/backtop';
 import InputHex from '@webview/components/InputHex.vue';
 import { treeData } from '@webview/mocks/menuconfig';
 import { useWebview } from '@webview/components/vscode';
