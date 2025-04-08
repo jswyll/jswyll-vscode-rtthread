@@ -29,6 +29,7 @@ import type { InputGenerateParams, DoGenerateParams, GenerateSettings } from '..
 import type { TdesignCustomValidateResult } from '../../../common/types/vscode';
 import { useFullscreenLoading } from '@webview/components/loading';
 import { getDebugServerType } from '../../../common/debugger';
+import chipNames from '@webview/assets/chips.json';
 
 /**
  * 翻译
@@ -768,7 +769,6 @@ onUnmounted(() => {
         <TFormItem :label="t('Env Tool Path')" name="settings.envPath">
           <MSelectInput
             v-model="data.settings.envPath"
-            :filterable="false"
             m-show-all-options
             :options="data.envPaths"
             @blur="data.settings.envPath = toUnixPath(data.settings.envPath)"
@@ -853,7 +853,6 @@ onUnmounted(() => {
       <TFormItem :label="t('GCC Compiler Path')" name="settings.compilerPath" required-mark>
         <MSelectInput
           v-model="data.settings.compilerPath"
-          :filterable="false"
           m-show-all-options
           :options="data.compilerPaths"
           @blur="data.settings.compilerPath = toUnixPath(data.settings.compilerPath)"
@@ -900,7 +899,6 @@ onUnmounted(() => {
       <TFormItem :label="t('Debugger Server')" name="settings.debuggerServerPath">
         <MSelectInput
           v-model="data.settings.debuggerServerPath"
-          :filterable="false"
           m-show-all-options
           :options="data.debuggerServerPaths"
           @blur="data.settings.debuggerServerPath = toUnixPath(data.settings.debuggerServerPath)"
@@ -958,7 +956,7 @@ onUnmounted(() => {
 
       <div class="mt2"></div>
       <TFormItem :label="t('Chip Name')" name="settings.chipName">
-        <TInput v-model="data.settings.chipName" clearable placeholder=""> </TInput>
+        <MSelectInput v-model="data.settings.chipName" :m-show-all-options="false" :options="chipNames"> </MSelectInput>
         <template #help>
           <MMarkdown
             inline
@@ -972,6 +970,7 @@ onUnmounted(() => {
         <TFormItem :label="t('Cmsis Pack')" name="settings.cmsisPack">
           <MSelectInput
             v-model="data.settings.cmsisPack"
+            :m-show-all-options="false"
             :options="data.cmsisPackPaths"
             @blur="data.settings.cmsisPack = toUnixPath(data.settings.cmsisPack)"
           >

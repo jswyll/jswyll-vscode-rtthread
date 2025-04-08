@@ -18,12 +18,9 @@ jswyll-vscode-rtthread/
 ├── src/                           # 源码
 │   ├── common/                        # 扩展进程与webview的公共代码
 │   │   ├── types/                         # 类型声明
-│   │   │   ├── generate.d.ts              # 生成配置
-│   │   │   ├── menuconfig.d.ts            # 菜单配置
-│   │   │   ├── type.d.ts                  # 类型定义
-│   │   │   └── vscode.d.ts                # 扩展进程与webview通信
 │   │   ├── assert.ts                      # 断言
 │   │   ├── constants.ts                   # 常量
+│   │   ├── debugger.ts                    # 调试器
 │   │   ├── error.ts                       # 错误
 │   │   ├── event.ts                       # 事件
 │   │   ├── platform.ts                    # 跨平台处理
@@ -60,8 +57,12 @@ jswyll-vscode-rtthread/
 │   │   │   └── serial.ts                      # 串行任务管理器
 │   │   ├── terminal/                      # 终端
 │   │   │   └── echo.ts                        # 模拟echo终端
-│   │   ├── extension.ts                   # 扩展进程的入口
-│   │   └── tsconfig.json                  # typescript配置
+│   │   └── extension.ts                   # 扩展进程的入口
+│   ├── test/                          # 测试
+│   │   ├── e2e/                           # 端到端测试
+│   │   ├── unit/                          # 单元测试
+│   │   ├── tsconfig.json                  # 测试的typescript配置
+│   │   └── wdio-conf.ts                   # wdio配置
 │   └── webview/                       # webview vite-vue项目
 │       ├── src/                           # 源码
 │       │   ├── assets/                        # 静态资源
@@ -78,7 +79,7 @@ jswyll-vscode-rtthread/
 │       │   │   └── vscode.ts                  # 与主进程的通信
 │       │   ├── locales/                   # 多语言
 │       │   │   ├── i18n.ts                    # 全局配置
-│       │   │   └── menuconfig.zh-CN.json      # 菜单配置 - 简体中文
+│       │   │   └── menuconfig.zh-cn.json      # 菜单配置 - 简体中文
 │       │   ├── mocks/                     # 模拟数据
 │       │   │   ├── menuconfig.ts              # RT-Thread菜单配置
 │       │   │   └── preview.ts                 # markdown预览
@@ -98,6 +99,8 @@ jswyll-vscode-rtthread/
 │       ├── tsconfig.json              # typescript配置
 │       ├── tsconfig.node.json         # typescript配置 - vite.config.mts
 │       └── vite.config.mts            # vite配置
+├── test/                          # 测试资源
+│   └── projects/                      # 被测试的RT-Thread项目
 ├── CHANGELOG.md                   # 更新日志
 ├── LICENSE                        # 许可证
 ├── README.md                      # 主说明文档

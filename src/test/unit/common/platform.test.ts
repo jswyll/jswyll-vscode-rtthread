@@ -5,6 +5,7 @@ import {
   isPathUnderOrEqual,
   removeExeSuffix,
   calculateEnvPathString,
+  basenameWithoutExt,
 } from '../../../common/platform';
 
 describe('跨平台处理', () => {
@@ -56,6 +57,21 @@ describe('跨平台处理', () => {
 
     it('空字符串应返回空字符串', async () => {
       expect(dirnameOrEmpty('')).toBe('');
+    });
+  });
+
+  describe('获取路径的不含扩展名的文件名', () => {
+    it('应返回不含扩展名的文件名', async () => {
+      expect(basenameWithoutExt('openocd.exe')).toBe('openocd');
+      expect(basenameWithoutExt('openocd')).toBe('openocd');
+      expect(basenameWithoutExt('file.tar.gz')).toBe('file.tar');
+      expect(basenameWithoutExt('C:/ST/STM32CubeCLT_1.18.0/STLink-gdb-server/bin/ST-LINK_gdbserver.exe')).toBe(
+        'ST-LINK_gdbserver',
+      );
+    });
+
+    it('空字符串应返回空字符串', async () => {
+      expect(basenameWithoutExt('')).toBe('');
     });
   });
 

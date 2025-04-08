@@ -38,7 +38,7 @@ const popupVisible = ref(false);
  * 过滤选项
  */
 function filterWords(keyword: string, option: AutoCompleteOption) {
-  if (props.mShowAllOptions !== undefined) {
+  if (props.mShowAllOptions) {
     return true;
   }
   const regExp = new RegExp(escapeRegExp(keyword), 'i');
@@ -77,7 +77,7 @@ function countMatch(keyword: string, onFirstMatch?: (value: string) => void) {
 const computedProps = computed<AutoCompleteProps>(() => ({
   ...props,
   clearable: !props.options?.length,
-  filter: props.filterable ? filterWords : undefined,
+  filter: filterWords,
   highlightKeyword: true,
   onBlur(e) {
     popupVisible.value = false;

@@ -1,6 +1,6 @@
 # RT-Thread项目助手
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/jswyll.jswyll-vscode-rtthread?color=blue)](https://marketplace.visualstudio.com/items?itemName=jswyll.jswyll-vscode-rtthread)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Version](https://img.shields.io/visual-studio-marketplace/v/jswyll.jswyll-vscode-rtthread?color=blue)](https://marketplace.visualstudio.com/items?itemName=jswyll.jswyll-vscode-rtthread)
 
 > 本扩展适用于使用RT-Thread Studio新建或导入的项目（或使用`scons --dist-ide --target=eclipse`生成然后使用RT-Thread Studio导入的），也适用于支持scons构建的RT-Thread项目，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。
 
@@ -128,7 +128,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 - **芯片名称**：用于下载程序时让调试器识别出对应的FLASH大小。对于STM32，应至少精确到11位字符，例如`STM32L431CC`。
 
-- **调试服务器**：支持OpenOCD、JLink或PyOCD。非必要项（如果你不需要在vscode下载、调试程序）。
+- **调试服务器**：支持OpenOCD、JLink、ST-LINK_gdbserver、PyOCD。非必要项（如果你不需要在vscode下载、调试程序）。
 
     ![images/1735660800007.png](images/1735660800007.png)
 
@@ -151,6 +151,8 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
     > 修改驱动后在MDK IDE就不能使用JLink下载了，可以使用<https://gnutoolchains.com/arm-eabi/openocd/>里的`UsbDriverTool.exe`把驱动恢复为JLlink驱动：
     >
     > ![images/1735660800013.gif](images/1735660800013.gif)
+
+  - ST-LINK_gdbserver：支持在RT-Thread Studio的SDK Manager安装的或通过官网 [STM32CubeCLT页面](https://www.st.com.cn/zh/development-tools/stm32cubeclt.html)下载安装的。经测试，通过RT-Thread Studio安装的 **1.4.0 和 1.2.0 版本只能下载，启动调试失败。** 默认内置的1.6.0版本及更高的版本可用。
 
   - PyOCD：可以选择RT-Thread Studio内置的v0.1.3。但经测试它不支持我的JLink，可以参考<https://pyocd.io/docs/installing>安装最新的新版本（Windows平台pip安装的pyocd可能需要拷贝libusb.dll到python根目录才可用），新版本对ST-Link、JLink和CMSIS-DAP调试器都支持。
 
@@ -199,7 +201,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 > **注意**
 >
-> 切换编译器版本后（在本扩展的配置面板选择的GCC版本和RT-Thread Studio的不一样，或前后两次在本扩展的配置面板选择GCC版本不一样，先后编译），应重新编译，以消除编译器版本差异引发不可预料的结果。
+> **切换编译器版本后，应重新编译，以消除编译器版本差异引发不可预料的结果。比如，RT-Thread Studio默认使用的是GCC 5.4.1，在vscode选择RT-Thread Studio内置的env_released/env/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc.exe是GCC 10.3.1，在RT-Thread Studio构建或再次构建过然后又转到vscode构建。在比如，在vscode前后两次生成配置时选择的GCC的版本不一样。**
 
 ### 构建项目
 
@@ -225,7 +227,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 >
 > ![images/1735660800021.png](images/1735660800021.png)
 >
-> 修改代码后不会立刻移除错误标记，需要再次执行构建任务。
+> 修改代码后vscode不会立刻移除错误标记，需要再次执行构建任务。
 
 ### 下载运行
 
@@ -249,7 +251,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 可以在vscode扩展搜索`Cortex Debug Device Support Pack`安装对应芯片系列的片上外设支持包。
 
-> **说明**
+> **提示**
 >
 > 调试任务启动前会调用默认构建任务，调试任务启动时会下载程序，所以启动或重启调试任务无需先点击构建或下载。
 
@@ -345,6 +347,10 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 ![images/1735660800033.png](images/1735660800033.png)
 
+> **说明**
+>
+> RT-Thread Env构建方式的默认产物路径是`rt-thread.elf`，如果名称不同或路径不同可以在扩展设置`jswyll-vscode-rtthread.generate.artifactPath`修改下载和调试时所用的产物路径。
+
 ### 菜单配置
 
 > **说明**
@@ -415,7 +421,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 ![images/1735660800039.png](images/1735660800039.png)
 
-### 终端集成
+### 集成终端
 
 - 点击状态栏的“终端”图标按钮，弹出终端面板。可以使用scons、pkgs、sdk、menuconfig命令。
 
@@ -451,7 +457,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
     在<https://developer.arm.com/downloads/-/gnu-rm>下载预构建的linux的，例如x86/64架构可以下载[gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2](https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2?rev=78196d3461ba4c9089a67b5f33edf82a&hash=5631ACEF1F8F237389F14B41566964EC)并解压。
 
-    > **说明**
+    > **提示**
     >
     > 旧版本的`gcc-arm-none-eabi-gdb`依赖于`libncurses.so.5`库，而Ubuntu18以后已经移除，可以链接到`libncurses.so.6`库：
     >
@@ -1091,10 +1097,10 @@ make (e=2): 系统找不到指定的文件。
 
 ## 隐私保护指引
 
-本扩展的开发者仅处理实现扩展功能所必要的信息，例如读取Env安装目录的Kconfig文件以生成菜单配置界面、查找选择的RT-Thread Studio目录中的GCC编译器以供选择。
+本扩展仅处理实现扩展功能所必要的信息，例如读取Env安装目录的Kconfig文件以生成菜单配置界面、查找选择的RT-Thread Studio目录中的GCC编译器以供选择。
 
 为了便于问题定位与排查，本扩展可能会记录相关日志，vscode可能会将最近的一小段日志存储在电脑本地。本扩展的日志等级与输出面板中`jswyll-vscode-rtthread`设置的等级一致（详细程度：“跟踪”>“调试”>“信息”>“警告”>“错误”>“关”，默认为“信息”），请仅在需要向开发者反馈问题时临时提高输出等级。
 
 本扩展不会将你的信息上传到开发者服务器或任何第三方平台。若未来新版本变更了信息的使用目的或范围，将先以弹窗的方式告知并征得你的明示同意。
 
-你可以在生成配置文件后禁用此扩展。
+你可以在生成配置文件后禁用此扩展。如果禁用，将使用不了需要扩展运行的功能（例如状态栏按钮、菜单配置界面、右键菜单）。
