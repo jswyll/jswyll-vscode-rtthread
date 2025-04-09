@@ -20,7 +20,7 @@ import { buildTaskManager, findTaskInTasksJson, runBuildTask } from './task/buil
 import { Logger } from './base/logger';
 import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './project/diagnostic';
 import { MenuConfig } from './project/menuconfig';
-import { dirname, join, resolve } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import { spawn } from 'child_process';
 import { existsAsync, getFileType } from './base/fs';
 import { platform } from 'os';
@@ -60,6 +60,17 @@ const debouncedPkgsUpdate = debounce(
   },
   3000,
   { leading: true, trailing: true },
+);
+
+/**
+ * 更新vscode配置
+ */
+const debouncedUpdateVsc = debounce(
+  async () => {
+    await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
+  },
+  1500,
+  { leading: false, trailing: true },
 );
 
 /**
@@ -123,7 +134,7 @@ async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   await checkAndOpenGenerateWebview(wsFolder);
   await changeFeature(wsFolder, true);
   const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
-  if (projectType === 'Env' && !(await existsAsync(vscode.Uri.joinPath(wsFolder, '.vscode/c_cpp_properties.json')))) {
+  if (projectType === 'Env') {
     await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
   }
 }
@@ -487,7 +498,18 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(
     watcher.onDidChange((e) => {
-      MakefileProcessor.HandleFileChange(e);
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(e);
+      if (!workspaceFolder) {
+        return;
+      }
+      const projectType = getConfig(workspaceFolder, 'generate.projectType', 'RT-Thread Studio');
+      if (projectType === 'RT-Thread Studio') {
+        MakefileProcessor.HandleFileChange(e);
+      } else {
+        if (['SConscript', 'SConstruct'].includes(basename(e.fsPath))) {
+          debouncedUpdateVsc();
+        }
+      }
     }),
   );
   context.subscriptions.push(

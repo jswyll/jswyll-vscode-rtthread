@@ -29,7 +29,7 @@ import { TdesignValidateError } from '../base/error';
 import { MakefileProcessor } from './makefile';
 import { ExtensionGenerateSettings, TasksJson } from '../base/type';
 import { spawnPromise } from '../base/process';
-import { processCCppPropertiesConfig } from './cCppProperties';
+import { CCppProperties, processCCppPropertiesConfig } from './cCppProperties';
 import { WebviewPanel } from '../base/webview';
 import { BuildConfig, DoGenerateParams, GenerateSettings, ProjcfgIni } from '../../common/types/generate';
 import { TdesignCustomValidateResult } from '../../common/types/vscode';
@@ -1055,6 +1055,18 @@ async function startGenerate(params: GenerateParamsInternal) {
   if (settings.projectType === 'RT-Thread Studio') {
     await processCCppPropertiesConfig(wsFolder, settings.compilerPath, params.buildConfig!);
     await processMakefiles(params);
+  } else {
+    // RT-Thread Env方式移除RT-Thread Studio方式的C/C++配置
+    const fileUri = vscode.Uri.joinPath(wsFolder, '.vscode/c_cpp_properties.json');
+    if (await existsAsync(fileUri)) {
+      const configJson = await parseJsonFile<CCppProperties>(fileUri);
+      assertParam(
+        isJsonObject(configJson) && Array.isArray(configJson.configurations),
+        vscode.l10n.t('The format of "{0}" is invalid', [fileUri.fsPath]),
+      );
+      configJson.configurations = configJson.configurations.filter((v) => v.name !== EXTENSION_ID);
+      await writeJsonFile(fileUri, configJson);
+    }
   }
 
   await processTasksJson(params);

@@ -113,13 +113,9 @@ export async function pickWorkspaceFolder() {
 }
 
 /**
- * 获取或选择使用的工作区文件夹。
- *
- * 如果是多根工作区且未选择过工作区文件夹，否则自动选择第一个。
- *
- * @returns 选择的工作区文件夹
+ * 获取使用的工作区文件夹。
  */
-export async function getOrPickAWorkspaceFolder() {
+export async function getCurrentWorkspaceFolder() {
   const { workspaceFolders } = vscode.workspace;
   if (!workspaceFolders) {
     throw new Error(vscode.l10n.t('There is no workspace folder open for the current window'));
@@ -134,6 +130,21 @@ export async function getOrPickAWorkspaceFolder() {
       return workspaceFolder;
     }
   }
+}
+
+/**
+ * 获取或选择使用的工作区文件夹。
+ *
+ * 如果是多根工作区且未选择过工作区文件夹则弹出选择器，否则自动选择第一个。
+ *
+ * @returns 选择的工作区文件夹
+ */
+export async function getOrPickAWorkspaceFolder() {
+  const workspaceFolder = await getCurrentWorkspaceFolder();
+  if (workspaceFolder) {
+    return workspaceFolder;
+  }
+
   return pickWorkspaceFolder();
 }
 

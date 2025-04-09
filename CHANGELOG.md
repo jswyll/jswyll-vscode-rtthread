@@ -1,5 +1,11 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-04-09 - v0.3.16
+
+- 优化 检测到SConscript或SConstruct文件变化时自动运行`scons --target=vsc`。
+
+- 优化 生成配置选择RT-Thread Env方式则移除RT-Thread Studio方式的C/C++配置。
+
 ## 2025-04-08 - v0.3.15
 
 - 优化 生成配置时目标芯片提供STM32系列的名称。

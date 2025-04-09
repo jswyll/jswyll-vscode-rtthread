@@ -78,7 +78,7 @@ export async function runBuildTask(workspaceFolder: vscode.WorkspaceFolder, task
   );
 
   if (taskJson.dependsOn?.length) {
-    const promises = [];
+    const promises: Promise<void>[] = [];
     for (const dependency of taskJson.dependsOn) {
       const promise = runBuildTask(workspaceFolder, dependency);
       if (taskJson.dependsOrder === 'sequence') {
@@ -95,7 +95,7 @@ export async function runBuildTask(workspaceFolder: vscode.WorkspaceFolder, task
 
   if (task.execution) {
     task.presentationOptions.showReuseMessage = false;
-    let problemMatchers = undefined;
+    let problemMatchers: string | string[] | undefined = undefined;
     if (typeof taskJson.problemMatcher === 'string') {
       problemMatchers = [taskJson.problemMatcher];
     } else if (Array.isArray(taskJson.problemMatcher)) {
