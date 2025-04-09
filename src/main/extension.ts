@@ -69,9 +69,29 @@ const debouncedUpdateVsc = debounce(
   async () => {
     await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
   },
-  1500,
+  2000,
   { leading: false, trailing: true },
 );
+
+/**
+ * 处理工作区文件增加、变化、删除。
+ *
+ * @param e 文件Uri
+ */
+function handleWorkspaceFileChange(e: vscode.Uri) {
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(e);
+  if (!workspaceFolder) {
+    return;
+  }
+  const projectType = getConfig(workspaceFolder, 'generate.projectType', 'RT-Thread Studio');
+  if (projectType === 'RT-Thread Studio') {
+    MakefileProcessor.HandleFileChange(e);
+  } else {
+    if (['SConscript', 'SConstruct'].includes(basename(e.fsPath))) {
+      debouncedUpdateVsc();
+    }
+  }
+}
 
 /**
  * 设置扩展的when语句上下文
@@ -493,28 +513,17 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(watcher);
   context.subscriptions.push(
     watcher.onDidCreate((e) => {
-      MakefileProcessor.HandleFileChange(e);
+      handleWorkspaceFileChange(e);
     }),
   );
   context.subscriptions.push(
     watcher.onDidChange((e) => {
-      const workspaceFolder = vscode.workspace.getWorkspaceFolder(e);
-      if (!workspaceFolder) {
-        return;
-      }
-      const projectType = getConfig(workspaceFolder, 'generate.projectType', 'RT-Thread Studio');
-      if (projectType === 'RT-Thread Studio') {
-        MakefileProcessor.HandleFileChange(e);
-      } else {
-        if (['SConscript', 'SConstruct'].includes(basename(e.fsPath))) {
-          debouncedUpdateVsc();
-        }
-      }
+      handleWorkspaceFileChange(e);
     }),
   );
   context.subscriptions.push(
     watcher.onDidDelete((e) => {
-      MakefileProcessor.HandleFileChange(e);
+      handleWorkspaceFileChange(e);
     }),
   );
   context.subscriptions.push(

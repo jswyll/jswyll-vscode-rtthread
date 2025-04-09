@@ -12,7 +12,6 @@
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
             ],
-            "preLaunchTask": "${defaultBuildTask}"
         },
         {
             // 调试测试用例，可在.env.local中指定要调试的文件

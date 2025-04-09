@@ -608,7 +608,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
         detail: TASKS.SCONS_TARGET_VSC.detail,
         type: 'shell',
         command: 'scons',
-        args: ['--target=vsc'],
+        args: ['--target=vsc', '--silent'],
         options: {
           cwd: buildCwd,
           env: {
@@ -618,7 +618,7 @@ async function processTasksJson(params: GenerateParamsInternal) {
         },
         windows: {
           command: 'cmd.exe',
-          args: ['/c', ['chcp', '437', '&&', 'scons', '--target=vsc'].join(' ')],
+          args: ['/c', 'chcp 437 && scons --target=vsc --silent'],
           options: {
             env: {
               PATH: calculateEnvPathString(envPaths, ';'),
@@ -944,7 +944,6 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
             env: {
               ...terminalIntegratedEnv,
               ...params.extraVar,
-              ...params.extraVar,
               PATH: calculateEnvPathString(
                 [
                   ...params.exraPaths,
@@ -991,7 +990,6 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
       {
         ...terminalIntegratedEnv,
         ...params.extraVar,
-        ...params.extraVar,
         PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}', ...exraPathsOfGit], ';'),
       },
       true,
@@ -1002,7 +1000,6 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
       `terminal.integrated.env.${envOs}`,
       {
         ...terminalIntegratedEnv,
-        ...params.extraVar,
         ...params.extraVar,
         PATH: calculateEnvPathString([...params.exraPaths, '/usr/local/bin', '${env:PATH}', ...exraPathsOfGit], ':'),
       },

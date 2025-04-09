@@ -1,5 +1,11 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-04-09 - v0.3.17
+
+- 优化 调用`scons --target=vsc`时添加`--silent`参数。
+
+- 优化 新增或删除SConscript或SConstruct文件时也自动运行`scons --target=vsc`。
+
 ## 2025-04-09 - v0.3.16
 
 - 优化 检测到SConscript或SConstruct文件变化时自动运行`scons --target=vsc`。
