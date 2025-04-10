@@ -88,17 +88,26 @@ export function isJsonObject(value: unknown) {
  * 将一个值添加到数组中，如果数组中已经存在该值，则不添加。
  * @param array 数组
  * @param value 要添加的值
+ * @param prepend 是否在数组开头添加，默认为否
  */
-export function addToSet<T>(array: T[], value: T | T[]) {
+export function addToSet<T>(array: T[], value: T | T[], prepend: boolean = false) {
   if (Array.isArray(value)) {
     value.forEach((value) => {
       if (array.indexOf(value) === -1) {
-        array.push(value);
+        if (prepend) {
+          array.unshift(value);
+        } else {
+          array.push(value);
+        }
       }
     });
   } else {
     if (array.indexOf(value) === -1) {
-      array.push(value);
+      if (prepend) {
+        array.unshift(value);
+      } else {
+        array.push(value);
+      }
     }
   }
 }

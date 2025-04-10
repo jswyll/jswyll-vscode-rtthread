@@ -12,7 +12,7 @@ if (require.main === module) {
   if (args[0] === '--start') {
     const newVersion = `${v.version.major}.${v.version.minor}.${v.version.patch + 1}`;
     execSync(`git flow release start --showcommands v${newVersion}`);
-    logger.info('请更新 CHANGELOG.md，然后运行npm脚本release:finish');
+    logger.info('请更新 CHANGELOG.md ，然后运行npm脚本release:finish');
   } else if (args[0] === '--finish') {
     execSync('git add .');
     execSync(`git commit -m "release v${v.toString()}"`);

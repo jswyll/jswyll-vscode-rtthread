@@ -3,7 +3,6 @@ import {
   Button as TButton,
   Col as TCol,
   DialogPlugin,
-  Divider as TDivider,
   Form as TForm,
   FormItem as TFormItem,
   Input as TInput,
@@ -15,12 +14,13 @@ import {
   type FormRules,
 } from 'tdesign-vue-next';
 import FolderOpenIcon from 'tdesign-icons-vue-next/esm/components/folder-open';
+import HelpCircleIcon from 'tdesign-icons-vue-next/esm/components/help-circle';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MMarkdown from '@webview/components/MMarkdown.vue';
 import { useWebview } from '@webview/components/vscode';
 import type { ExtensionToWebviewDatas } from '../../../common/types/type';
-import { BUILD_TASKS_LABEL_PREFIX, EXTENSION_ID } from '../../../common/constants';
+import { EXTENSION_ID } from '../../../common/constants';
 import { assertParam } from '../../../common/assert';
 import { toUnixPath } from '../../../common/platform';
 import { addToSet } from '../../../common/utils';
@@ -54,13 +54,13 @@ const { t } = useI18n({
       'RT-Thread Studio installation folder for finding the following tools.':
         'RT-Thread Studio的安装文件夹，用于寻找以下的工具。',
       'GCC Compiler Path': 'GCC编译器路径',
-      "The GCC compiler file path, can omit the suffix name. Select or manually enter the path, you can also [reference environment variables](https://code.visualstudio.com/docs/editor/variables-reference#_environment-variables), such as `{'$'}{'{'}env:ARM_NONE_EABI_GCC_V10_HOME{'}'}/bin/arm-none-eabi-gcc` . If you have added the gcc compiler directory to the environment variable 'PATH', you can include the base filename (e.g. `arm-none-ebi-gcc` ).":
-        "GCC编译器的文件路径，可以省略后缀名。选择或手动输入路径，可以[引用环境变量](https://code.visualstudio.com/docs/editor/variables-reference#_environment-variables)，例如`{'$'}{'{'}env:ARM_NONE_EABI_GCC_V10_HOME{'}'}/bin/arm-none-eabi-gcc`。如果你已经将GCC编译器的所在文件夹添加到环境变量`PATH`则可填入基本文件名（例如`arm-none-eabi-gcc`）。",
+      'The file path to the GCC compiler (for example, `arm-none-eabi-gcc.exe`).':
+        'GCC编译器（例如`arm-none-eabi-gcc.exe`）文件的路径。',
       'Please enter or manually select GCC compiler path (eg. arm-none-ebi-gcc)':
         '请输入或手动选择GCC编译器的路径（例如：arm-none-ebi-gcc）',
       'Make Tool Path': 'Make工具路径',
-      "The **folder** of make tool. Environment variables can be referenced, such as `{'$'}{'{'}env:MAKE_HOME{'}'}` . If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.":
-        "make的**所在文件夹**。可以引用环境变量，例如`{'$'}{'{'}env:MAKE_HOME{'}'}`。如果你的make工具路径已经添加到环境变量`PATH`则可不填此项。",
+      'The **folder** of make tool. If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.':
+        'make的**所在文件夹**。如果你的make工具路径已经添加到环境变量`PATH`则可不填此项。',
       'Debugger type': '调试器类型',
       'The type of debugger to download or debug.': '用于下载或调试的调试器类型。',
       'pyocd can be automatically detected, optional.': 'pyocd可以自动检测，无需选择。',
@@ -87,11 +87,12 @@ const { t } = useI18n({
       'The project root directory specified when the system is not windows.': '当系统不为windows时，指定的项目根目录。',
       Rebuild: '重新构建',
       Generate: '生成',
+      Docs: '帮助文档',
       Ignore: '忽略',
       Reselect: '重新选择',
       'Debugger Server': '调试服务器',
-      'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`. If you have added its folder to the environment variable `PATH`, you can only fill in the base file name (e.g. `openocd`).':
-        '用于下载或调试的服务器的路径。支持`openocd`、`pyocd`、`JLink`和`ST-LINK_gdbserver`。如果你已经将它的所在文件夹添加到环境变量`PATH`则可只填基本文件名（例如`openocd`）。',
+      'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`.':
+        '用于下载或调试的服务器的路径。支持`openocd`、`pyocd`、`JLink`和`ST-LINK_gdbserver`。',
       'Cmsis Pack': 'Cmsis包',
       'File path of the Cmsis package corresponding to the chip. **If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.** Built-in packages can be added via the `pyocd pack` related commands.':
         '芯片对应的Cmsis包的文件路径。**如果芯片名称不是[pyocd内置目标](https://pyocd.io/docs/builtin-targets.html)则应指定。** 可以通过`pyocd pack`相关命令添加内置包。',
@@ -294,13 +295,6 @@ const formRules = computed<FormRules>(() => {
         },
       },
     ],
-    defaultBuildTask: [
-      {
-        validator: (value: string) => {
-          return validateSelectValue(value, buildTaskOptions, t('Default Build Task'));
-        },
-      },
-    ],
   };
 });
 
@@ -366,28 +360,6 @@ const isJlinkServer = computed(() => {
 const isPyocdServer = computed(() => {
   return getDebugServerType(data.value.settings.debuggerServerPath) === 'pyocd';
 });
-
-/**
- * 可供选择的构建任务
- */
-const buildTaskOptions = [
-  {
-    label: t('Not set'),
-    value: '',
-  },
-  {
-    label: t('Build'),
-    value: BUILD_TASKS_LABEL_PREFIX + 'build',
-  },
-  {
-    label: t('Build and Download'),
-    value: BUILD_TASKS_LABEL_PREFIX + 'build and download',
-  },
-  {
-    label: t('Rebuild'),
-    value: BUILD_TASKS_LABEL_PREFIX + 'rebuild',
-  },
-];
 
 /**
  * 获取选中的构建配置
@@ -484,6 +456,19 @@ async function validateStudioInstallPath(value: string) {
     addToSet(data.value.debuggerServerPaths, result.debuggerServerPaths);
     addToSet(data.value.makeToolPaths, [result.makeToolPath]);
     addToSet(data.value.cmsisPackPaths, result.cmsisPackPaths);
+    addToSet(data.value.envPaths, result.envPaths, true);
+  }
+  if (data.value.compilerPaths.length && !data.value.settings.compilerPath) {
+    data.value.settings.compilerPath = data.value.compilerPaths[0];
+  }
+  if (data.value.makeToolPaths.length && !data.value.settings.makeToolPath) {
+    data.value.settings.makeToolPath = toUnixPath(data.value.makeToolPaths[0]);
+  }
+  if (data.value.debuggerServerPaths.length && !data.value.settings.debuggerServerPath) {
+    data.value.settings.debuggerServerPath = toUnixPath(data.value.debuggerServerPaths[0]);
+  }
+  if (data.value.settings.projectType === 'Env' && data.value.envPaths.length && !data.value.settings.envPath) {
+    data.value.settings.envPath = toUnixPath(data.value.envPaths[0]);
   }
   return result.validateResult;
 }
@@ -500,15 +485,6 @@ async function onSelectStudioInstallPath() {
   });
   data.value.settings.studioInstallPath = toUnixPath(folderPath);
   await validateStudioInstallPath(folderPath);
-  if (data.value.compilerPaths.length && !data.value.settings.compilerPath) {
-    data.value.settings.compilerPath = data.value.compilerPaths[0];
-  }
-  if (data.value.makeToolPaths.length && !data.value.settings.makeToolPath) {
-    data.value.settings.makeToolPath = toUnixPath(data.value.makeToolPaths[0]);
-  }
-  if (data.value.debuggerServerPaths.length && !data.value.settings.debuggerServerPath) {
-    data.value.settings.debuggerServerPath = toUnixPath(data.value.debuggerServerPaths[0]);
-  }
 }
 
 /**
@@ -730,9 +706,8 @@ onMounted(async () => {
     () => data.value.settings.projectType,
     async () => {
       try {
-        if (data.value.settings.projectType === 'RT-Thread Studio') {
-          await validateStudioInstallPath(data.value.settings.studioInstallPath);
-        } else {
+        await validateStudioInstallPath(data.value.settings.studioInstallPath);
+        if (data.value.settings.envPath) {
           await validateEnvPath(data.value.settings.envPath);
         }
       } catch {}
@@ -752,8 +727,8 @@ onUnmounted(() => {
       <code>{{ data.workspaceFolderPicked }}</code>
     </div>
 
-    <div class="mt2"></div>
     <TForm ref="form" :data="data" label-align="right" label-width="14em" :rules="formRules">
+      <div class="mt2"></div>
       <TFormItem :label="t('Project Type')" name="settings.projectType">
         <TRadioGroup v-model="data.settings.projectType" variant="default-filled">
           <TRadioButton value="RT-Thread Studio">RT-Thread Studio Makefile</TRadioButton>
@@ -764,6 +739,26 @@ onUnmounted(() => {
         </template>
       </TFormItem>
 
+      <template v-if="platform === 'win32'">
+        <div class="mt2"></div>
+        <TFormItem :label="t('RT-Thread Studio Path')" name="settings.studioInstallPath">
+          <TInput
+            v-model="data.settings.studioInstallPath"
+            clearable
+            :placeholder="t('Input or select a folder')"
+            @blur="data.settings.studioInstallPath = toUnixPath($event as string)"
+          >
+          </TInput>
+          <FolderOpenIcon class="m-folderopen-icon" @click="onSelectStudioInstallPath" />
+          <template #help>
+            <MMarkdown
+              inline
+              :markdown-text="t('RT-Thread Studio installation folder for finding the following tools.')"
+            ></MMarkdown>
+          </template>
+        </TFormItem>
+      </template>
+
       <template v-if="data.settings.projectType === 'Env'">
         <div class="mt2"></div>
         <TFormItem :label="t('Env Tool Path')" name="settings.envPath">
@@ -771,7 +766,7 @@ onUnmounted(() => {
             v-model="data.settings.envPath"
             m-show-all-options
             :options="data.envPaths"
-            @blur="data.settings.envPath = toUnixPath(data.settings.envPath)"
+            @blur="data.settings.envPath = toUnixPath($event)"
           ></MSelectInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectEnvPath" />
           <template #help>
@@ -832,41 +827,19 @@ onUnmounted(() => {
       </template>
 
       <div class="mt2"></div>
-      <TFormItem v-if="platform === 'win32'" :label="t('RT-Thread Studio Path')" name="settings.studioInstallPath">
-        <TInput
-          v-model="data.settings.studioInstallPath"
-          clearable
-          :placeholder="t('Input or select a folder')"
-          @blur="data.settings.studioInstallPath = toUnixPath($event as string)"
-        >
-        </TInput>
-        <FolderOpenIcon class="m-folderopen-icon" @click="onSelectStudioInstallPath" />
-        <template #help>
-          <MMarkdown
-            inline
-            :markdown-text="t('RT-Thread Studio installation folder for finding the following tools.')"
-          ></MMarkdown>
-        </template>
-      </TFormItem>
-
-      <div class="mt2"></div>
       <TFormItem :label="t('GCC Compiler Path')" name="settings.compilerPath" required-mark>
         <MSelectInput
           v-model="data.settings.compilerPath"
           m-show-all-options
           :options="data.compilerPaths"
-          @blur="data.settings.compilerPath = toUnixPath(data.settings.compilerPath)"
+          @blur="data.settings.compilerPath = toUnixPath($event)"
         >
         </MSelectInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('compilerPath')" />
         <template #help>
           <MMarkdown
             inline
-            :markdown-text="
-              t(
-                'The GCC compiler file path, can omit the suffix name. Select or manually enter the path, you can also [reference environment variables](https://code.visualstudio.com/docs/editor/variables-reference#_environment-variables), such as `{\'$\'}{\'{\'}env:ARM_NONE_EABI_GCC_V10_HOME{\'}\'}/bin/arm-none-eabi-gcc` . If you have added the gcc compiler directory to the environment variable \'PATH\', you can include the base filename (e.g. `arm-none-ebi-gcc` ).',
-              )
-            "
+            :markdown-text="t('The file path to the GCC compiler (for example, `arm-none-eabi-gcc.exe`).')"
           ></MMarkdown>
         </template>
       </TFormItem>
@@ -887,7 +860,7 @@ onUnmounted(() => {
               inline
               :markdown-text="
                 t(
-                  'The **folder** of make tool. Environment variables can be referenced, such as `{\'$\'}{\'{\'}env:MAKE_HOME{\'}\'}` . If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.',
+                  'The **folder** of make tool. If your make tool PATH has been added to the `PATH` environment variable, you can leave it out.',
                 )
               "
             ></MMarkdown>
@@ -901,7 +874,7 @@ onUnmounted(() => {
           v-model="data.settings.debuggerServerPath"
           m-show-all-options
           :options="data.debuggerServerPaths"
-          @blur="data.settings.debuggerServerPath = toUnixPath(data.settings.debuggerServerPath)"
+          @blur="data.settings.debuggerServerPath = toUnixPath($event)"
         >
         </MSelectInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('debuggerServerPath')" />
@@ -910,7 +883,7 @@ onUnmounted(() => {
             inline
             :markdown-text="
               t(
-                'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`. If you have added its folder to the environment variable `PATH`, you can only fill in the base file name (e.g. `openocd`).',
+                'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`.',
               )
             "
           ></MMarkdown>
@@ -972,7 +945,7 @@ onUnmounted(() => {
             v-model="data.settings.cmsisPack"
             :m-show-all-options="false"
             :options="data.cmsisPackPaths"
-            @blur="data.settings.cmsisPack = toUnixPath(data.settings.cmsisPack)"
+            @blur="data.settings.cmsisPack = toUnixPath($event)"
           >
           </MSelectInput>
           <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('cmsisPack')" />
@@ -989,26 +962,21 @@ onUnmounted(() => {
         </TFormItem>
       </template>
 
-      <TDivider dashed></TDivider>
-      <TFormItem :label="t('Default Build Task')" name="settings.defaultBuildTask">
-        <TSelect
-          v-model="data.settings.defaultBuildTask"
-          :options="buildTaskOptions"
-          placeholder=""
-          :popup-props="{ overlayInnerStyle: getSelectPopupWidth }"
-        >
-        </TSelect>
-        <template #help>
-          <MMarkdown
-            inline
-            :markdown-text="t('The default build task to execute when you press the key shortcut (`Ctrl+Shift+B`).')"
-          ></MMarkdown>
-        </template>
-      </TFormItem>
-
       <div class="mt3"></div>
       <TFormItem>
-        <TButton :disabled="isLoading" theme="primary" @click="onFormSubmit">{{ t('Generate') }}</TButton>
+        <div class="m-row--spacebetween" style="width: 100%">
+          <TButton :disabled="isLoading" theme="primary" @click="onFormSubmit">{{ t('Generate') }}</TButton>
+          <TButton
+            variant="text"
+            href="https://club.rt-thread.org/ask/article/ce74ef49bc11e858.html#%E5%AF%BC%E5%85%A5%E9%A1%B9%E7%9B%AE"
+            theme="default"
+          >
+            {{ t('Docs') }}
+            <template #suffix>
+              <HelpCircleIcon />
+            </template>
+          </TButton>
+        </div>
       </TFormItem>
     </TForm>
   </div>

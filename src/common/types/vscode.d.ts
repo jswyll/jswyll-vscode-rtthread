@@ -317,6 +317,11 @@ export interface ExtensionToWebviewDataMap {
       cmsisPackPaths: string[];
 
       /**
+       * 可供选择的Env文件夹路径
+       */
+      envPaths: string[];
+
+      /**
        * 检测到的make工具的文件夹路径
        */
       makeToolPath?: string;

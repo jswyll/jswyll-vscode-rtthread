@@ -279,7 +279,7 @@ function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
     buildConfigName: getGenerateConfig(wsFolder, 'buildConfigName', 'Debug'),
     makeBaseDirectory: getGenerateConfig(wsFolder, 'makeBaseDirectory', '${workspaceFolder}/Debug'),
     makeToolPath: getGenerateConfig(wsFolder, 'makeToolPath', ''),
-    envPath: getGenerateConfig(wsFolder, 'envPath', '${userHome}/.env'),
+    envPath: getGenerateConfig(wsFolder, 'envPath', ''),
     artifactPath: getGenerateConfig(wsFolder, 'artifactPath', 'rt-thread.elf'),
     rttDir: getGenerateConfig(wsFolder, 'rttDir', 'rt-thread'),
     toolchainPath: getGenerateConfig(wsFolder, 'toolchainPath', ''),
@@ -1220,6 +1220,10 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         }
       }
       const workspaceFolders = vscode.workspace.workspaceFolders || [];
+      const rttStudioInstallPath = 'D:/RT-ThreadStudio';
+      if (!lastGenerateConfig.studioInstallPath && (await existsAsync(rttStudioInstallPath))) {
+        lastGenerateConfig.studioInstallPath = toUnixPath(rttStudioInstallPath);
+      }
 
       postMessageToWebview({
         command: msg.command,
@@ -1336,6 +1340,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
       const compilerPaths: string[] = [];
       const debuggerServerPaths: string[] = [];
       const cmsisPackPaths: string[] = [];
+      const envPaths: string[] = [];
       const validateResult: TdesignCustomValidateResult = {
         result: false,
         message: '',
@@ -1345,6 +1350,10 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
         validateResult.message = vscode.l10n.t('The path "{0}" does not exists', [folder]);
         validateResult.type = 'error';
       } else {
+        const envPath = vscode.Uri.joinPath(folderUri, 'platform/env_released/env');
+        if (await existsAsync(envPath)) {
+          envPaths.push(toUnixPath(envPath.fsPath));
+        }
         const compilerPathsPromise = vscode.workspace.findFiles(
           new vscode.RelativePattern(folderUri, '{platform,repo}/**/*-gcc.exe'),
         );
@@ -1373,7 +1382,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           cmsisPacksUriPromise,
         ]);
         for (const uri of sortUris(compilerPathsUri, true)) {
-          compilerPaths.push(removeExeSuffix(toUnixPath(uri.fsPath)));
+          compilerPaths.push(toUnixPath(uri.fsPath));
         }
         for (const uri of sortUris(makePathUris, false)) {
           makeToolPath = toUnixPath(dirnameOrEmpty(uri.fsPath));
@@ -1382,7 +1391,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           cmsisPackPaths.push(toUnixPath(uri.fsPath));
         }
         for (const uri of sortUris(debuggerServersUri, false)) {
-          debuggerServerPaths.push(removeExeSuffix(toUnixPath(uri.fsPath)));
+          debuggerServerPaths.push(toUnixPath(uri.fsPath));
         }
         validateResult.result = true;
       }
@@ -1394,6 +1403,7 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           compilerPaths,
           debuggerServerPaths,
           cmsisPackPaths,
+          envPaths,
         },
       });
       break;
@@ -1523,14 +1533,13 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           await pathExists(envToolPathParsed, wsFolder),
           vscode.l10n.t('The path "{0}" does not exists', [envToolPathParsed]),
         );
-        let uris;
-        uris = await vscode.workspace.findFiles(
+        let uris = await vscode.workspace.findFiles(
           new vscode.RelativePattern(
             vscode.Uri.file(envPathParsed),
             'tools/gnu_gcc/arm_gcc/mingw/bin/{arm-none-eabi-gcc.exe,arm-none-eabi-gcc}',
           ),
         );
-        const compilerPaths = uris.map((uri) => removeExeSuffix(toUnixPath(uri.fsPath)));
+        const compilerPaths = uris.map((uri) => toUnixPath(uri.fsPath));
 
         uris = await vscode.workspace.findFiles(
           new vscode.RelativePattern(vscode.Uri.file(envPathParsed), '{.venv/Scripts/pyocd.exe,.venv/bin/pyocd}'),

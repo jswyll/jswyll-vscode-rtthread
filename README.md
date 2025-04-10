@@ -116,7 +116,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 - **GCC编译器路径**：用于C/C++扩展分析代码、编译程序。必要项。
 
-  可以直接选择RT-Thread Studio内置的5.4.1和10.3.1的arm-none-eabi两个版本：
+  可以直接选择RT-Thread Studio内置的arm-none-eabi-gcc：
 
   ![images/1735660800006.png](images/1735660800006.png)
 
@@ -271,13 +271,11 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 ### 先决条件
 
-1. 已安装好Env。
+1. 可以直接选择使用RT-Thread Studio内置的Env（应该是Env Windows v1.3.5），或者转到[《ENV-Windows v2.0.0版本发布》](https://club.rt-thread.org/ask/article/af8952fcf0ca464b.html)安装特点版本的Env。
 
     > **提示**
     >
-    > - 对于Env Windows v2.x联网环境方式，需要先运行一次env.exe或env.ps1以下载相关依赖和虚拟环境。
-    >
-    > - Ubuntu或MacOS的Env安装方式可参考[其它平台](#其它平台)。
+    > Ubuntu或MacOS的Env安装方式可参考[其它平台](#其它平台)。
 
 2. 支持scons方式编译的项目。本扩展支持Env v1.x和v2.x，但取决于BSP能使用的Env版本。
 
@@ -288,7 +286,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
     ```sh
     stm32f407-atk-explorer/ # BSP_DIR
     ├── applications/
-    ├── packages/  # PKGS_DIR (PKGS_ROOT)
+    ├── packages/
     ├── rt-thread/ # RTT_DIR
     ├── ...
     ├── Kconfig
@@ -308,7 +306,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
     │       ├── ...
     │       └── stm32f407-atk-explorer # BSP_DIR
     │          ├── applications/
-    │          ├── packages/ # PKGS_DIR (PKGS_ROOT)
+    │          ├── packages/
     │          ├── ...
     │          ├── Kconfig
     │          ├── SConscript

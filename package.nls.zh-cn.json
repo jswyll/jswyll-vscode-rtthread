@@ -24,7 +24,7 @@
   "jswyll-vscode-rtthread.customExtraPathVar.markdownDescription": "自定义额外追加到环境变量`PATH`的路径",
   "jswyll-vscode-rtthread.customExtraVars.markdownDescription": "自定义额外的环境变量键值对",
   "jswyll-vscode-rtthread.projectType.markdownDescription": "项目类型，默认为`RT-Thread Studio`。",
-  "jswyll-vscode-rtthread.envPath.markdownDescription": "env工具的文件夹路径，默认为`${userHome}/.env`。",
+  "jswyll-vscode-rtthread.envPath.markdownDescription": "env工具的文件夹路径。",
   "jswyll-vscode-rtthread.rttDir.markdownDescription": "RT-Thread源码的根目录（RTT_DIR）。",
   "jswyll-vscode-rtthread.RttEnv.title": "RT-Thread Env",
   "jswyll-vscode-rtthread.RttEnv.autoUpdatePackages.markdownDescription": "是否在保存菜单配置成功后自动更新软件包。",
@@ -41,5 +41,9 @@
   "jswyll-vscode-rtthread.download": "jswyll-vscode-rtthread: 下载",
   "jswyll-vscode-rtthread.build and download": "jswyll-vscode-rtthread: 构建并下载",
   "jswyll-vscode-rtthread.action.changelog.open": "jswyll-vscode-rtthread: 查看扩展更新日志",
-  "jswyll-vscode-rtthread.svdFile.markdownDescription": "指定Cortex-Debug扩展使用系统视图描述（SVD）的文件路径来显示所选部件的信息，包括Cortex外设视图。"
+  "jswyll-vscode-rtthread.svdFile.markdownDescription": "指定Cortex-Debug扩展使用系统视图描述（SVD）的文件路径来显示所选部件的信息，包括Cortex外设视图。",
+  "jswyll-vscode-rtthread.defaultBuildTask.notSet": "不设置",
+  "jswyll-vscode-rtthread.defaultBuildTask.build": "构建",
+  "jswyll-vscode-rtthread.defaultBuildTask.buildAndDownload": "构建并下载",
+  "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "重新构建"
 }

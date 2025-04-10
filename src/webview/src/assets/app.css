@@ -116,6 +116,14 @@ body {
   justify-content: center;
 }
 
+.m-row--spacebetween {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* 前景色、背景色 */
 .m-text-link {
     color: #5473b4;

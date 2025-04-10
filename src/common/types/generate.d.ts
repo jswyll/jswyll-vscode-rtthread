@@ -79,7 +79,7 @@ export interface GenerateSettings {
   makeToolPath: string;
 
   /**
-   * env的根目录路径，默认为`${userHome}/.env`
+   * env的根目录路径，默认为空字符串
    */
   envPath: string;
 

@@ -15,19 +15,33 @@ import { computed, ref } from 'vue';
 /**
  * 组件属性
  */
-const props = defineProps<
-  AutoCompleteProps & {
-    /**
-     * 是否总是显示所有选项，如果为ture则不管输入是否匹配选项都显示，默认为false
-     */
-    mShowAllOptions?: boolean;
-  }
->();
+const props = defineProps<{
+  /**
+   * 下拉选项
+   */
+  options: Array<string | { label: string; value: string }>;
+
+  /**
+   * 是否总是显示所有选项，如果为ture则不管输入是否匹配选项都显示，默认为false
+   */
+  mShowAllOptions?: boolean;
+}>();
+
+/**
+ * 组件事件
+ */
+const emit = defineEmits<{
+  /**
+   * 失去焦点
+   * @param value 绑定值
+   */
+  blur: [value: string];
+}>();
 
 /**
  * 绑定值
  */
-const modelValue = defineModel<string>();
+const modelValue = defineModel<string>({ required: true });
 
 /**
  * 是否显示弹出层
@@ -62,8 +76,8 @@ function countMatch(keyword: string, onFirstMatch?: (value: string) => void) {
       if (count === 1 && onFirstMatch) {
         if (typeof option === 'string') {
           onFirstMatch(option);
-        } else if (option.text !== undefined) {
-          onFirstMatch(option.text);
+        } else {
+          onFirstMatch(option.value);
         }
       }
     }
@@ -79,9 +93,9 @@ const computedProps = computed<AutoCompleteProps>(() => ({
   clearable: !props.options?.length,
   filter: filterWords,
   highlightKeyword: true,
-  onBlur(e) {
+  onBlur() {
     popupVisible.value = false;
-    props.onBlur?.(e);
+    emit('blur', modelValue.value);
   },
   onChange(value: string) {
     if (value && countMatch(value) === 0) {
@@ -96,12 +110,11 @@ const computedProps = computed<AutoCompleteProps>(() => ({
   onEnter() {
     let firstMatch;
     if (
-      modelValue.value &&
       countMatch(modelValue.value, (value) => {
         firstMatch = value;
       }) === 1
     ) {
-      modelValue.value = firstMatch;
+      modelValue.value = firstMatch!;
       popupVisible.value = false;
     }
   },

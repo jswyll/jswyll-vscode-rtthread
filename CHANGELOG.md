@@ -1,5 +1,17 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-04-10 - v0.3.18
+
+- 优化 生成配置：
+
+  - 优化 如果RT-Thread Studio安装在`D:\RT-ThreadStudio`，则自动填写。
+
+  - 优化 检测RT-Thread Studio中的Env以供选择。
+
+  - 调整 生成配置面板不显示默认构建任务的配置，移到扩展设置。
+
+  - 调整 生成配置的Env工具路径默认为空。
+
 ## 2025-04-09 - v0.3.17
 
 - 优化 调用`scons --target=vsc`时添加`--silent`参数。
