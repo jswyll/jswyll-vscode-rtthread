@@ -282,8 +282,7 @@ export class MenuConfig {
             }
             const result = changeNode(node, strValue);
             if (result) {
-              this.menuTreeBuilder = new MenuTreeBuilder(this.kconfig);
-              const menus: TMenuItem[] = this.menuTreeBuilder.build();
+              const menus: TMenuItem[] = this.menuTreeBuilder!.build();
               this.hasChanged = true;
               this.webviewPanel?.postMessage({
                 command: 'setMenuconfigData',

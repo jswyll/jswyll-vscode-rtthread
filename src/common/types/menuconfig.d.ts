@@ -109,7 +109,7 @@ export interface MenuItemHex extends MenuItemBase<string> {
 /**
  * 菜单项 - 选择
  */
-export interface MenuItemChoice<T extends TMenuItemValue = TMenuItemValue> extends MenuItemBase<T> {
+export interface MenuItemChoice<T = TMenuItemValue | undefined> extends MenuItemBase<T> {
   type: 'CHOICE';
   /**
    * 选项

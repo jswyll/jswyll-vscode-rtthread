@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { debounce, escapeRegExp } from 'lodash';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import {
   DialogPlugin,
   BackTop as TBackTop,
@@ -74,9 +74,19 @@ const { t } = useI18n<[menuconfigZhCnMessageSchema & typeof pageI18n], 'zh'>({
 const { startLoading, stopLoading } = useFullscreenLoading();
 
 /**
+ * 树控件的引用
+ */
+const treeRef = ref<InstanceType<typeof TTree>>();
+
+/**
  * 菜单节点数据
  */
 const treeItems = ref<TMenuItem[]>([]);
+
+/**
+ * 高亮的菜单节点编号
+ */
+const actived = ref<number[]>([]);
 
 /**
  * 菜单节点编号展开状态
@@ -87,6 +97,11 @@ const expanded = ref<number[]>([]);
  * 过滤条件
  */
 const filter = ref<TreeProps['filter']>(undefined);
+
+/**
+ * 搜索文本
+ */
+const searchText = ref('');
 
 /**
  * 菜单节点编号-错误信息
@@ -104,14 +119,6 @@ let isHasChanged = false;
 const bottomTip = ref<string>('');
 
 /**
- * 处理点击菜单节点
- */
-const handleClickTree: TreeProps['onClick'] = (node) => {
-  const treeItem = node.node.data as TMenuItem;
-  bottomTip.value = treeItem.info;
-};
-
-/**
  * 消抖搜索
  */
 const searchDebounced = debounce(
@@ -119,7 +126,7 @@ const searchDebounced = debounce(
     const searchText = keyword.trim();
     const regex = new RegExp(escapeRegExp(searchText), 'i');
 
-    if (!searchText) {
+    if ((!searchText || searchText.length < 3) && filter.value !== undefined) {
       filter.value = undefined;
       return;
     }
@@ -134,9 +141,33 @@ const searchDebounced = debounce(
       );
     };
   },
-  100,
-  { trailing: true, leading: true },
+  300,
+  { leading: false, trailing: true },
 );
+
+/**
+ * 处理点击菜单节点
+ */
+const handleClickTree: TreeProps['onClick'] = async (node) => {
+  const treeItem = node.node.data as TMenuItem;
+  bottomTip.value = treeItem.info;
+  if (searchText.value) {
+    // 取消过滤状态并跳转到目标节点
+    searchText.value = '';
+    filter.value = undefined;
+    await nextTick();
+    const paths = treeRef.value!.getPath(treeItem.id);
+    expanded.value = paths.map((v) => v.data.id);
+    await nextTick();
+    setTimeout(() => {
+      const element = document.getElementById(`m-menuconfig-${treeItem.id}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
+  }
+  actived.value = [treeItem.id];
+};
 
 /**
  * 处理Symbol或Choice的值发生变化
@@ -256,6 +287,7 @@ async function handleReload() {
  * 处理搜索
  */
 function handleSearchTextChange(keyword: InputValue) {
+  actived.value = [];
   searchDebounced(keyword.toString());
 }
 
@@ -362,6 +394,7 @@ onUnmounted(() => {
       </TCol>
       <TCol class="m-page-serach">
         <TInput
+          v-model="searchText"
           clearable
           :placeholder="t('Search configuration, which supports entering keywords in name, title, or help')"
           @change="handleSearchTextChange"
@@ -375,7 +408,10 @@ onUnmounted(() => {
     <div class="m-page-body">
       <TForm>
         <TTree
+          ref="treeRef"
+          v-model:actived="actived"
           v-model:expanded="expanded"
+          activable
           :data="treeItems"
           :expand-level="0"
           expand-on-click-node
@@ -387,97 +423,102 @@ onUnmounted(() => {
           @click="handleClickTree"
         >
           <template #label="{ node }: { node: { data: TMenuItem } }">
-            <TFormItem
-              v-if="node.data.type === 'CHOICE'"
-              class="mb1"
-              :label="node.data.translatedPrompt || node.data.prompt"
-              label-align="top"
-              :name="node.data.name"
-            >
-              <TSelect v-model="node.data.controlValue" @change="handleChoiceChange(node.data.options, $event)">
-                <TOption
-                  v-for="(item, index) in node.data.options"
-                  :key="item.id"
-                  :label="item.prompt"
-                  :value="index"
-                ></TOption>
-              </TSelect>
-              <template v-if="node.data.help" #help>
-                {{ node.data.translatedHelp || node.data.help }}
-              </template>
-            </TFormItem>
-            <TFormItem
-              v-else-if="node.data.type === 'BOOL'"
-              :class="{ mb1: node.data.help }"
-              label-align="left"
-              label-width="0"
-              :name="node.data.name"
-            >
-              <TRow :align="'center'">
-                <TCol class="m-row--center">
-                  <TCheckbox v-model="node.data.controlValue" @change="handleBoolChange(node.data, $event)"></TCheckbox>
-                </TCol>
-                <TCol>
-                  {{ node.data.translatedPrompt || node.data.prompt }}
-                </TCol>
-              </TRow>
-              <template v-if="node.data.help" #help>
-                {{ node.data.translatedHelp || node.data.help }}
-              </template>
-            </TFormItem>
-            <TFormItem
-              v-else-if="node.data.type === 'STRING'"
-              class="mb1"
-              :label="node.data.translatedPrompt || node.data.prompt"
-              label-align="top"
-              :name="node.data.name"
-            >
-              <TInput v-model="node.data.controlValue" @blur="handleStringChange(node.data, $event)"></TInput>
-              <template v-if="node.data.help" #help>
-                {{ node.data.translatedHelp || node.data.help }}
-              </template>
-            </TFormItem>
-            <TFormItem
-              v-else-if="node.data.type === 'HEX'"
-              class="mb1"
-              :label="node.data.translatedPrompt || node.data.prompt"
-              label-align="top"
-              :name="node.data.name"
-            >
-              <InputHex
-                v-model="node.data.controlValue"
-                :min="node.data.range?.[0]"
-                :max="node.data.range?.[1]"
-                @blur="handleIntChange(node.data, $event)"
-              ></InputHex>
-              <div class="mb3"></div>
-              <template v-if="node.data.help" #help>
-                {{ node.data.translatedHelp || node.data.help }}
-              </template>
-            </TFormItem>
-            <TFormItem
-              v-else-if="node.data.type === 'INT'"
-              class="mb1"
-              :label="node.data.translatedPrompt || node.data.prompt"
-              label-align="top"
-              :name="node.data.name"
-            >
-              <TInputNumber
-                v-model="node.data.controlValue"
-                :decimal-places="0"
-                :min="node.data.range?.[0]"
-                :max="node.data.range?.[1]"
-                theme="normal"
-                style="width: 100%"
-                @blur="handleIntChange(node.data, $event)"
-              ></TInputNumber>
-              <template v-if="node.data.help" #help>
-                {{ node.data.translatedHelp || node.data.help }}
-              </template>
-            </TFormItem>
-            <span v-else :class="{ 'm-page-comment': node.data.type === 'COMMENT' }">
-              {{ node.data.translatedPrompt || node.data.prompt }}
-            </span>
+            <div :id="'m-menuconfig-' + node.data.id">
+              <TFormItem
+                v-if="node.data.type === 'CHOICE'"
+                class="mb1"
+                :label="node.data.translatedPrompt || node.data.prompt"
+                label-align="top"
+                :name="node.data.name"
+              >
+                <TSelect v-model="node.data.controlValue" @change="handleChoiceChange(node.data.options, $event)">
+                  <TOption
+                    v-for="(item, index) in node.data.options"
+                    :key="item.id"
+                    :label="item.prompt"
+                    :value="index"
+                  ></TOption>
+                </TSelect>
+                <template v-if="node.data.help" #help>
+                  {{ node.data.translatedHelp || node.data.help }}
+                </template>
+              </TFormItem>
+              <TFormItem
+                v-else-if="node.data.type === 'BOOL'"
+                :class="{ mb1: node.data.help }"
+                label-align="left"
+                label-width="0"
+                :name="node.data.name"
+              >
+                <TRow :align="'center'">
+                  <TCol class="m-row--center">
+                    <TCheckbox
+                      v-model="node.data.controlValue"
+                      @change="handleBoolChange(node.data, $event)"
+                    ></TCheckbox>
+                  </TCol>
+                  <TCol>
+                    {{ node.data.translatedPrompt || node.data.prompt }}
+                  </TCol>
+                </TRow>
+                <template v-if="node.data.help" #help>
+                  {{ node.data.translatedHelp || node.data.help }}
+                </template>
+              </TFormItem>
+              <TFormItem
+                v-else-if="node.data.type === 'STRING'"
+                class="mb1"
+                :label="node.data.translatedPrompt || node.data.prompt"
+                label-align="top"
+                :name="node.data.name"
+              >
+                <TInput v-model="node.data.controlValue" @blur="handleStringChange(node.data, $event)"></TInput>
+                <template v-if="node.data.help" #help>
+                  {{ node.data.translatedHelp || node.data.help }}
+                </template>
+              </TFormItem>
+              <TFormItem
+                v-else-if="node.data.type === 'HEX'"
+                class="mb1"
+                :label="node.data.translatedPrompt || node.data.prompt"
+                label-align="top"
+                :name="node.data.name"
+              >
+                <InputHex
+                  v-model="node.data.controlValue"
+                  :min="node.data.range?.[0]"
+                  :max="node.data.range?.[1]"
+                  @blur="handleIntChange(node.data, $event)"
+                ></InputHex>
+                <div class="mb3"></div>
+                <template v-if="node.data.help" #help>
+                  {{ node.data.translatedHelp || node.data.help }}
+                </template>
+              </TFormItem>
+              <TFormItem
+                v-else-if="node.data.type === 'INT'"
+                class="mb1"
+                :label="node.data.translatedPrompt || node.data.prompt"
+                label-align="top"
+                :name="node.data.name"
+              >
+                <TInputNumber
+                  v-model="node.data.controlValue"
+                  :decimal-places="0"
+                  :min="node.data.range?.[0]"
+                  :max="node.data.range?.[1]"
+                  theme="normal"
+                  style="width: 100%"
+                  @blur="handleIntChange(node.data, $event)"
+                ></TInputNumber>
+                <template v-if="node.data.help" #help>
+                  {{ node.data.translatedHelp || node.data.help }}
+                </template>
+              </TFormItem>
+              <span v-else :class="{ 'm-page-comment': node.data.type === 'COMMENT' }">
+                {{ node.data.translatedPrompt || node.data.prompt }}
+              </span>
+            </div>
           </template>
         </TTree>
       </TForm>
