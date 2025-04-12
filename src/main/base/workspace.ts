@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { delimiter, join, relative, sep } from 'path';
-import { ExtensionConfiguration } from './type';
+import { ExtensionSettings, VscodeSettings } from './type';
 import { EXTENSION_ID } from '../../common/constants';
 import { toUnixPath, isAbsolutePath, windowsAbsolutePathPattern } from '../../common/platform';
 import { Logger } from './logger';
@@ -35,6 +35,21 @@ interface WorkspaceState {
 const logger = new Logger('main/base/workspace');
 
 /**
+ * 本扩展用到的vscode设置的键
+ */
+export const vscodeSettingsKeys: Array<keyof VscodeSettings> = [
+  'files.exclude',
+  'files.associations',
+  'terminal.integrated.env.windows',
+  'terminal.integrated.env.osx',
+  'terminal.integrated.env.linux',
+  'terminal.integrated.profiles.windows',
+  'terminal.integrated.profiles.osx',
+  'terminal.integrated.profiles.linux',
+  'terminal.integrated.defaultProfile.osx',
+] as const;
+
+/**
  * 配置是否由扩展更改的
  */
 let isConfigUpdateByExtension = false;
@@ -44,7 +59,7 @@ let isConfigUpdateByExtension = false;
  */
 const unsetIsConfigUpdateByExtension = debounce(() => {
   isConfigUpdateByExtension = false;
-}, 1000);
+}, 3000);
 
 /**
  * 扩展的上下文
@@ -158,10 +173,10 @@ export async function getOrPickAWorkspaceFolder() {
  * - `false` 配置项是当前扩展的节点，即`${EXTENSION_ID}.${key}`
  * - `true` 配置项是全局的节点，即`${key}`
  */
-export function getConfig<T extends keyof ExtensionConfiguration>(
+export function getConfig<T extends keyof ExtensionSettings>(
   scope: vscode.ConfigurationScope | null,
   key: T,
-  defaultValue: ExtensionConfiguration[T],
+  defaultValue: ExtensionSettings[T],
   allSection: boolean = false,
 ) {
   const section = allSection ? undefined : EXTENSION_ID;
@@ -178,10 +193,10 @@ export function getConfig<T extends keyof ExtensionConfiguration>(
  * - `false` 配置项是当前扩展的节点，即`${EXTENSION_ID}.${key}`
  * - `true` 配置项是全局的节点，即`${key}`
  */
-export async function updateConfig<T extends keyof ExtensionConfiguration>(
+export async function updateConfig<T extends keyof ExtensionSettings>(
   scope: vscode.ConfigurationScope | null,
   key: T,
-  value: ExtensionConfiguration[T],
+  value: ExtensionSettings[T],
   allSection: boolean = false,
 ) {
   const section = allSection ? undefined : EXTENSION_ID;
@@ -191,10 +206,46 @@ export async function updateConfig<T extends keyof ExtensionConfiguration>(
 }
 
 /**
+ * 获取vscode的设置。
+ * @param scope 作用域
+ * @param key 键
+ * @param defaultValue 值不存在时，返回的默认值
+ */
+export function getVscodeConfig<T extends keyof VscodeSettings>(
+  scope: vscode.ConfigurationScope | null,
+  key: T,
+  defaultValue: VscodeSettings[T],
+) {
+  return vscode.workspace.getConfiguration(undefined, scope).get(key, defaultValue);
+}
+
+/**
+ * 更新vscode的设置。
+ * @param scope 作用域
+ * @param key 键
+ * @param value 值
+ */
+export async function updateVscodeConfig<T extends keyof VscodeSettings>(
+  scope: vscode.ConfigurationScope | null,
+  key: T,
+  value: VscodeSettings[T],
+) {
+  await vscode.workspace.getConfiguration(undefined, scope).update(key, value);
+}
+
+/**
  * 获取是否由扩展更改的配置。
  */
 export function getIsConfigUpdateByExtension() {
   return isConfigUpdateByExtension;
+}
+
+/**
+ * 设置配置是否由扩展更改的
+ * @param value 新的布尔值
+ */
+export function setIsConfigUpdateByExtension(value: boolean) {
+  isConfigUpdateByExtension = value;
 }
 
 /**

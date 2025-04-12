@@ -11,6 +11,8 @@ import {
   updateConfig,
   inEnvironmentPath,
   getAllFullPathsInEnvironmentPath,
+  getVscodeConfig,
+  updateVscodeConfig,
 } from '../base/workspace';
 import { getErrorMessage } from '../../common/error';
 import { TASKS, CONFIG_GROUP, TASKS_JSON_RELATIVE_PATH } from '../base/constants';
@@ -253,7 +255,7 @@ async function parseBuildConfigs(wsFolder: vscode.Uri) {
 }
 
 /**
- * 获取生成组的扩展配置。
+ * 获取生成组的扩展设置。
  * @param scope 作用域
  * @param key 键
  * @param defaultValue 值不存在时，返回的默认值
@@ -382,7 +384,7 @@ function getElfFilePathForWorkspace(params: GenerateParamsInternal) {
  *
  * - 根据BuildConfig.excludingPaths向'files.exclude'配置项更新排除列表
  *
- * - 更新{@link ExtensionConfiguration['files.associations']}配置项：
+ * - 更新{@link VscodeSettings['files.associations']}配置项：
  *
  *     - `*.h`关联为`c`语言类型， 避免每打开一个`.h`文件都被vscode自动单独添加关联设置
  *
@@ -395,14 +397,14 @@ function getElfFilePathForWorkspace(params: GenerateParamsInternal) {
 async function updateFilesAssociationsAndExclude(params: GenerateParamsInternal) {
   logger.info('updateFilesAssociationsAndExclude...');
   const { wsFolder } = params;
-  const filesAssociations = getConfig(wsFolder, 'files.associations', {}, true);
+  const filesAssociations = getVscodeConfig(wsFolder, 'files.associations', {});
   filesAssociations['*.h'] = 'c';
   filesAssociations['.cproject'] = 'xml';
   filesAssociations['.project'] = 'xml';
   filesAssociations['makefile.init'] = 'makefile';
   filesAssociations['makefile.defs'] = 'makefile';
   filesAssociations['makefile.targets'] = 'makefile';
-  await updateConfig(wsFolder, 'files.associations', filesAssociations, true);
+  await updateVscodeConfig(wsFolder, 'files.associations', filesAssociations);
 
   if (params.settings.projectType === 'RT-Thread Studio') {
     const { excludingPaths } = params.buildConfig!;
@@ -418,7 +420,7 @@ async function updateFilesAssociationsAndExclude(params: GenerateParamsInternal)
       v = normalizePathForWorkspace(wsFolder, join(wsFolder.fsPath, v));
       filesExclude[v] = true;
     });
-    await updateConfig(wsFolder, 'files.exclude', filesExclude, true);
+    await updateVscodeConfig(wsFolder, 'files.exclude', filesExclude);
   }
 }
 
@@ -831,7 +833,7 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
   const exraPathsOfGit: typeof exraPaths = [];
 
   const envPathParsed = parsePath(envPath);
-  const terminalIntegratedEnv = getConfig(wsFolder, `terminal.integrated.env.${envOs}`, {}, true);
+  const terminalIntegratedEnv = getVscodeConfig(wsFolder, `terminal.integrated.env.${envOs}`, {});
 
   function normalizeEnvSubPath(p: string) {
     p = toUnixPath(p);
@@ -922,58 +924,43 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
     extraVar['PKGS_ROOT'] = normalizeEnvSubPath(join(envPathParsed, 'packages'));
 
     if (envOs === 'windows') {
-      await updateConfig(
-        wsFolder,
-        'terminal.integrated.profiles.windows',
-        {
-          'RT-Thread Env': {
-            path: 'cmd.exe',
-            args: ['/K', 'chcp 437'],
-          },
+      await updateVscodeConfig(wsFolder, 'terminal.integrated.profiles.windows', {
+        'RT-Thread Env': {
+          path: 'cmd.exe',
+          args: ['/K', 'chcp 437'],
         },
-        true,
-      );
+      });
     } else if (envOs === 'osx') {
-      await updateConfig(
-        wsFolder,
-        'terminal.integrated.profiles.osx',
-        {
-          'RT-Thread Env': {
-            overrideName: true,
-            path: 'zsh',
-            env: {
-              ...terminalIntegratedEnv,
-              ...params.extraVar,
-              PATH: calculateEnvPathString(
-                [
-                  ...params.exraPaths,
-                  '/usr/local/bin',
-                  '/usr/local/bin',
-                  '/usr/bin',
-                  '/bin',
-                  '/usr/sbin',
-                  '/sbin',
-                  ...exraPathsOfGit,
-                ],
-                ':',
-              ),
-            },
+      await updateVscodeConfig(wsFolder, 'terminal.integrated.profiles.osx', {
+        'RT-Thread Env': {
+          overrideName: true,
+          path: 'zsh',
+          env: {
+            ...terminalIntegratedEnv,
+            ...params.extraVar,
+            PATH: calculateEnvPathString(
+              [
+                ...params.exraPaths,
+                '/usr/local/bin',
+                '/usr/local/bin',
+                '/usr/bin',
+                '/bin',
+                '/usr/sbin',
+                '/sbin',
+                ...exraPathsOfGit,
+              ],
+              ':',
+            ),
           },
         },
-        true,
-      );
-      await updateConfig(wsFolder, 'terminal.integrated.defaultProfile.osx', 'RT-Thread Env', true);
+      });
+      await updateVscodeConfig(wsFolder, 'terminal.integrated.defaultProfile.osx', 'RT-Thread Env');
     } else {
-      await updateConfig(
-        wsFolder,
-        'terminal.integrated.profiles.linux',
-        {
-          'RT-Thread Env': {
-            path: 'bash',
-          },
+      await updateVscodeConfig(wsFolder, 'terminal.integrated.profiles.linux', {
+        'RT-Thread Env': {
+          path: 'bash',
         },
-        true,
-      );
+      });
     }
 
     if (envPathOld !== envPath) {
@@ -984,27 +971,31 @@ async function updateTerminalIntegratedEnv(params: GenerateParamsInternal, envOs
   params.extraVar = { ...extraVar, ...customExtraVars };
   params.exraPaths = [...customExtraPathVar, ...exraPaths];
   if (envOs === 'windows') {
-    await updateConfig(
-      wsFolder,
-      `terminal.integrated.env.${envOs}`,
-      {
-        ...terminalIntegratedEnv,
-        ...params.extraVar,
-        PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}', ...exraPathsOfGit], ';'),
-      },
-      true,
-    );
+    await updateVscodeConfig(wsFolder, `terminal.integrated.env.${envOs}`, {
+      ...terminalIntegratedEnv,
+      ...params.extraVar,
+      PATH: calculateEnvPathString([...params.exraPaths, '${env:PATH}', ...exraPathsOfGit], ';'),
+    });
   } else {
-    await updateConfig(
-      wsFolder,
-      `terminal.integrated.env.${envOs}`,
-      {
-        ...terminalIntegratedEnv,
-        ...params.extraVar,
-        PATH: calculateEnvPathString([...params.exraPaths, '/usr/local/bin', '${env:PATH}', ...exraPathsOfGit], ':'),
-      },
-      true,
-    );
+    await updateVscodeConfig(wsFolder, `terminal.integrated.env.${envOs}`, {
+      ...terminalIntegratedEnv,
+      ...params.extraVar,
+      PATH: calculateEnvPathString([...params.exraPaths, '/usr/local/bin', '${env:PATH}', ...exraPathsOfGit], ':'),
+    });
+  }
+}
+
+/**
+ * 备份工作区文件（如果是工作区），用于恢复工作区配置。
+ *
+ * @param params 生成参数
+ */
+async function backupWorkspaceFile(params: GenerateParamsInternal) {
+  const workspaceFile = vscode.workspace.workspaceFile;
+  if (workspaceFile) {
+    const backupUri = vscode.Uri.joinPath(params.wsFolder, '.vscode/workspaceFile.bak');
+    const content = await readTextFile(workspaceFile);
+    await writeTextFile(backupUri, content);
   }
 }
 
@@ -1085,6 +1076,8 @@ async function startGenerate(params: GenerateParamsInternal) {
       await updateConfig(wsFolder, section, value);
     }
   }
+
+  await backupWorkspaceFile(params);
 
   // 等待webview接收结果并处理
   setTimeout(() => {

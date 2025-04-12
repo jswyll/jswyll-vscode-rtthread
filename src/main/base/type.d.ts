@@ -239,7 +239,7 @@ export interface TasksJson {
 }
 
 /**
- * 扩展配置 - makefile处理
+ * 扩展设置 - makefile处理
  */
 interface MakefileProcessorSettings {
   /**
@@ -249,7 +249,7 @@ interface MakefileProcessorSettings {
 }
 
 /**
- * 扩展配置 - RT-Thread Env
+ * 扩展设置 - RT-Thread Env
  */
 interface RttEnvSettings {
   /**
@@ -269,7 +269,7 @@ interface AppearanceSettings {
 }
 
 /**
- * 生成的参数的扩展配置，每个键都添加了`generate.`前缀
+ * 生成的参数的扩展设置，每个键都添加了`generate.`前缀
  *
  * TODO: 使用脚本检查package.json中是否已定义配置项
  */
@@ -278,7 +278,31 @@ export type ExtensionGenerateSettings = {
 };
 
 /**
- * 扩展配置 - 自动诊断中断
+ * 非本扩展设置
+ */
+interface AutoDiagnosticInterruptSettings {
+  /**
+   * vscode - 是否启用自动诊断中断函数
+   */
+  'autoDiagnosticInterrupt.enable': boolean;
+
+  /**
+   * vscode - 自动诊断中断函数的文件路径Glob表达式
+   */
+  'autoDiagnosticInterrupt.globPattern': string;
+}
+
+/**
+ * 扩展使用到的的配置
+ */
+type ExtensionSettings = ExtensionGenerateSettings &
+  MakefileProcessorSettings &
+  AutoDiagnosticInterruptSettings &
+  RttEnvSettings &
+  AppearanceSettings;
+
+/**
+ * 非本扩展设置的vscode设置
  */
 interface VscodeSettings {
   /**
@@ -388,42 +412,22 @@ interface VscodeSettings {
   };
 
   /**
-   * 集成终端默认配置 - windows平台
-   */
-  'terminal.integrated.defaultProfile.windows': string;
-
-  /**
    * 集成终端默认配置 - macOS平台
    */
   'terminal.integrated.defaultProfile.osx': string;
-
-  /**
-   * 默认终端配置 - Linux平台
-   */
-  'terminal.integrated.defaultProfile.linux': string;
 }
 
 /**
- * 非本扩展配置
+ * .code-workspace工作区文件
  */
-interface AutoDiagnosticInterruptSettings {
+export interface WorkspaceFile {
   /**
-   * vscode - 是否启用自动诊断中断函数
+   * 工作区文件夹
    */
-  'autoDiagnosticInterrupt.enable': boolean;
+  folders: unknown[];
 
   /**
-   * vscode - 自动诊断中断函数的文件路径Glob表达式
+   * 工作区设置
    */
-  'autoDiagnosticInterrupt.globPattern': string;
+  settings?: VscodeSettings & ExtensionSettings;
 }
-
-/**
- * 扩展使用到的的配置
- */
-type ExtensionConfiguration = ExtensionGenerateSettings &
-  MakefileProcessorSettings &
-  AutoDiagnosticInterruptSettings &
-  RttEnvSettings &
-  AppearanceSettings &
-  VscodeSettings;

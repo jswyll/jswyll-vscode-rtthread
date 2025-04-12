@@ -6,7 +6,7 @@ import * as kconfiglib from '../kconfig/kconfiglib';
 import { join } from 'path';
 import { Logger } from '../base/logger';
 import { existsAsync, readTextFile, writeTextFile } from '../base/fs';
-import { getConfig, parsePath } from '../base/workspace';
+import { getVscodeConfig, parsePath } from '../base/workspace';
 import { isAbsolutePath } from '../../common/platform';
 import { platform } from 'os';
 import { MenuTreeBuilder } from '../kconfig/tree';
@@ -230,11 +230,11 @@ export class MenuConfig {
           const osPlatform = platform();
           let envVars: Record<string, string>;
           if (osPlatform === 'win32') {
-            envVars = getConfig(wsFolder, 'terminal.integrated.env.windows', {}, true);
+            envVars = getVscodeConfig(wsFolder, 'terminal.integrated.env.windows', {});
           } else if (osPlatform === 'darwin') {
-            envVars = getConfig(wsFolder, 'terminal.integrated.env.osx', {}, true);
+            envVars = getVscodeConfig(wsFolder, 'terminal.integrated.env.osx', {});
           } else {
-            envVars = getConfig(wsFolder, 'terminal.integrated.env.linux', {}, true);
+            envVars = getVscodeConfig(wsFolder, 'terminal.integrated.env.linux', {});
           }
           for (const key in envVars) {
             if (key === 'PATH') {

@@ -8,7 +8,10 @@ import {
   parsePath,
   pickWorkspaceFolder,
   setExtensionContext,
+  setIsConfigUpdateByExtension,
   updateGlobalState,
+  updateVscodeConfig,
+  vscodeSettingsKeys,
   workspaceFolderChangeEmitter,
 } from './base/workspace';
 import { checkAndOpenGenerateWebview, onDidEnvRootChange, parseSelectedBuildConfigs } from './project/generate';
@@ -22,12 +25,13 @@ import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './p
 import { MenuConfig } from './project/menuconfig';
 import { basename, dirname, join, resolve } from 'path';
 import { spawn } from 'child_process';
-import { existsAsync, getFileType } from './base/fs';
+import { existsAsync, getFileType, parseJsonFile } from './base/fs';
 import { platform } from 'os';
 import { debounce } from 'lodash';
 import { openChangeLog } from './project/markdown';
 import { AppVersion } from '../common/version';
 import { getErrorMessage } from '../common/error';
+import { WorkspaceFile } from './base/type';
 
 /**
  * 日志记录器
@@ -56,7 +60,7 @@ let coverageWriter: any;
 const debouncedPkgsUpdate = debounce(
   async () => {
     await runTaskAndHandle(TASKS.PKGS_UPDATE.name);
-    await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
+    debouncedUpdateVsc();
   },
   3000,
   { leading: true, trailing: true },
@@ -67,7 +71,33 @@ const debouncedPkgsUpdate = debounce(
  */
 const debouncedUpdateVsc = debounce(
   async () => {
-    await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
+    const workspaceFile = vscode.workspace.workspaceFile;
+    let backupSettings: WorkspaceFile['settings'] | undefined = undefined;
+    if (workspaceFile) {
+      const wsFolder = await getOrPickWorkspaceFolder();
+      const backupUri = vscode.Uri.joinPath(wsFolder.uri, '.vscode/workspaceFile.bak');
+      try {
+        const json = await parseJsonFile<WorkspaceFile>(backupUri);
+        backupSettings = json.settings;
+        setIsConfigUpdateByExtension(true);
+      } catch (error) {
+        logger.debug('parseJsonFile workspaceFile.bak error', error);
+      }
+    }
+    try {
+      await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
+    } finally {
+      // FIX: 插件生成了设置，但是一调用RT-Thread的scons --target=vsc就把vscode.code-workspace清除了
+      if (workspaceFile && backupSettings) {
+        for (const key of vscodeSettingsKeys) {
+          const v = backupSettings[key];
+          if (v !== undefined) {
+            await updateVscodeConfig(workspaceFile, key, v);
+          }
+        }
+        setIsConfigUpdateByExtension(false);
+      }
+    }
   },
   2000,
   { leading: false, trailing: true },
@@ -155,7 +185,7 @@ async function doCheckAndOpenGenerateWebview(wsFolder: vscode.Uri) {
   await changeFeature(wsFolder, true);
   const projectType = getConfig(wsFolder, 'generate.projectType', 'RT-Thread Studio');
   if (projectType === 'Env') {
-    await runTaskAndHandle(TASKS.SCONS_TARGET_VSC.name);
+    debouncedUpdateVsc();
   }
 }
 
