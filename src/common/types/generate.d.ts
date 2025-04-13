@@ -124,6 +124,11 @@ export interface GenerateSettings {
   debuggerInterface: 'SWD' | 'JTAG';
 
   /**
+   * STLink外部算法文件的路径，留空则表示不使用。可以是绝对路径或与项目根目录的相对路径。
+   */
+  stlinkExtload: string;
+
+  /**
    * 用于下载或调试程序的芯片名称，对于STM32应至少为11字符（例如`STM32F407ZG`）
    */
   chipName: string;
@@ -192,6 +197,11 @@ export interface InputGenerateParams {
    * 可供选择的调试服务器的文件路径
    */
   debuggerServerPaths: string[];
+
+  /**
+   * 可供选择的外部算法文件的路径
+   */
+  stlinkExtloadPaths: string[];
 
   /**
    * 可供选择的pack的文件路径

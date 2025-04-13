@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { load } from 'cheerio';
-import { basename, extname, join } from 'path';
+import { basename, extname, join, relative } from 'path';
 import { Logger } from '../base/logger';
 import { ExtensionToWebviewDatas, WebviewToExtensionData } from '../../common/types/type';
 import {
@@ -289,6 +289,7 @@ function getLastGenerateSettings(wsFolder: vscode.Uri): GenerateSettings {
     compilerPath: getGenerateConfig(wsFolder, 'compilerPath', ''),
     debuggerAdapter: getGenerateConfig(wsFolder, 'debuggerAdapter', 'STLink'),
     debuggerInterface: getGenerateConfig(wsFolder, 'debuggerInterface', 'SWD'),
+    stlinkExtload: getGenerateConfig(wsFolder, 'stlinkExtload', ''),
     chipName: getGenerateConfig(wsFolder, 'chipName', ''),
     debuggerServerPath: getGenerateConfig(wsFolder, 'debuggerServerPath', ''),
     cmsisPack: getGenerateConfig(wsFolder, 'cmsisPack', ''),
@@ -670,6 +671,9 @@ async function processTasksJson(params: GenerateParamsInternal) {
       downloadArgs.push(chipName);
     } else {
       downloadArgs = ['-c', `port=${debuggerInterface}`, '-d', getElfFilePathForWorkspace(params), '-s'];
+      if (settings.stlinkExtload) {
+        downloadArgs.splice(2, 0, '--extload', settings.stlinkExtload);
+      }
     }
     const downloadToolPath = await getDebuggerDownloadToolPath(debuggerServerPath);
     const downloadCommand = removeExeSuffix(toUnixPath(downloadToolPath));
@@ -1274,6 +1278,20 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
           compilerPaths: Array.from(compilerPaths),
           debuggerServerPaths: Array.from(debuggerServerPaths),
           envPaths: Array.from(envPaths),
+        },
+      });
+
+      const stlinkExtloadUris = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(vscode.Uri.joinPath(wsFolder), '**/*.stldr'),
+      );
+      const stlinkExtloadPaths: string[] = [];
+      for (const uri of stlinkExtloadUris) {
+        stlinkExtloadPaths.push(toUnixPath(relative(wsFolder.fsPath, uri.fsPath)));
+      }
+      postMessageToWebview({
+        command: msg.command,
+        params: {
+          stlinkExtloadPaths: stlinkExtloadPaths,
         },
       });
       break;

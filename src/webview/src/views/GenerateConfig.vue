@@ -93,6 +93,9 @@ const { t } = useI18n({
       'Debugger Server': '调试服务器',
       'The path to the server used for downloading or debugging. Support `openocd`, `pyocd`, `JLink` and `ST-LINK_gdbserver`.':
         '用于下载或调试的服务器的路径。支持`openocd`、`pyocd`、`JLink`和`ST-LINK_gdbserver`。',
+      'External algorithm': '外部算法',
+      'STLink external algorithm file path. If you leave it blank, it indicates that it is not used. This can be an absolute path or a relative path to the project root.':
+        'STLink外部算法文件的路径，留空则表示不使用。可以是绝对路径或与项目根目录的相对路径。',
       'Cmsis Pack': 'Cmsis包',
       'File path of the Cmsis package corresponding to the chip. **If the name of the chip is not [pyOCD Built-in targets] (https://pyocd.io/docs/builtin-targets.html) should be specified.** Built-in packages can be added via the `pyocd pack` related commands.':
         '芯片对应的Cmsis包的文件路径。**如果芯片名称不是[pyocd内置目标](https://pyocd.io/docs/builtin-targets.html)则应指定。** 可以通过`pyocd pack`相关命令添加内置包。',
@@ -138,6 +141,7 @@ const data = ref<InputGenerateParams & DoGenerateParams>({
     compilerPath: '',
     debuggerAdapter: 'STLink',
     debuggerInterface: 'SWD',
+    stlinkExtload: '',
     chipName: '',
     debuggerServerPath: 'pyocd',
     cmsisPack: '',
@@ -148,6 +152,7 @@ const data = ref<InputGenerateParams & DoGenerateParams>({
   compilerPaths: [],
   makeToolPaths: [],
   debuggerServerPaths: [],
+  stlinkExtloadPaths: [],
   cmsisPackPaths: [],
   cprojectBuildConfigs: [],
   workspaceFolderPicked: undefined,
@@ -281,7 +286,7 @@ const formRules = computed<FormRules>(() => {
     cmsisPack: [
       {
         validator: async (value: string) => {
-          if (!isPyocdServer.value || !value) {
+          if (debuggerServerType.value !== 'pyocd' || !value) {
             return true;
           }
 
@@ -341,24 +346,10 @@ const debuggerInterfaceOptions = [
 ];
 
 /**
- * 是否为stlink服务器
+ * 调试服务器的类型
  */
-const isStlinkServer = computed(() => {
-  return getDebugServerType(data.value.settings.debuggerServerPath) === 'stlink';
-});
-
-/**
- * 是否为jlink服务器
- */
-const isJlinkServer = computed(() => {
-  return getDebugServerType(data.value.settings.debuggerServerPath) === 'jlink';
-});
-
-/**
- * 是否需要提供cmsis pack的文件路径
- */
-const isPyocdServer = computed(() => {
-  return getDebugServerType(data.value.settings.debuggerServerPath) === 'pyocd';
+const debuggerServerType = computed(() => {
+  return getDebugServerType(data.value.settings.debuggerServerPath);
 });
 
 /**
@@ -896,7 +887,7 @@ onUnmounted(() => {
           <TFormItem :label="t('Debugger type')" name="settings.debuggerAdapter">
             <TSelect
               v-model="data.settings.debuggerAdapter"
-              :disabled="isJlinkServer || isStlinkServer"
+              :disabled="debuggerServerType === 'stlink' || debuggerServerType === 'jlink'"
               :options="debuggerAdapterOptions"
               :popup-props="{ overlayInnerStyle: getSelectPopupWidth }"
             >
@@ -906,7 +897,7 @@ onUnmounted(() => {
                 inline
                 :markdown-text="
                   t('The type of debugger to download or debug.') +
-                  (isPyocdServer ? t('pyocd can be automatically detected, optional.') : '')
+                  (debuggerServerType === 'pyocd' ? t('pyocd can be automatically detected, optional.') : '')
                 "
               ></MMarkdown>
             </template>
@@ -927,6 +918,30 @@ onUnmounted(() => {
         </TCol>
       </TRow>
 
+      <template v-if="debuggerServerType === 'stlink'">
+        <div class="mt2"></div>
+        <TFormItem :label="t('External algorithm')" name="settings.stlinkExtload">
+          <MSelectInput
+            v-model="data.settings.stlinkExtload"
+            :m-show-all-options="false"
+            :options="data.stlinkExtloadPaths"
+            @blur="data.settings.stlinkExtload = toUnixPath($event)"
+          >
+          </MSelectInput>
+          <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('stlinkExtload')" />
+          <template #help>
+            <MMarkdown
+              inline
+              :markdown-text="
+                t(
+                  'STLink external algorithm file path. If you leave it blank, it indicates that it is not used. This can be an absolute path or a relative path to the project root.',
+                )
+              "
+            ></MMarkdown>
+          </template>
+        </TFormItem>
+      </template>
+
       <div class="mt2"></div>
       <TFormItem :label="t('Chip Name')" name="settings.chipName">
         <MSelectInput v-model="data.settings.chipName" :m-show-all-options="false" :options="chipNames"> </MSelectInput>
@@ -938,7 +953,7 @@ onUnmounted(() => {
         </template>
       </TFormItem>
 
-      <template v-if="isPyocdServer">
+      <template v-if="debuggerServerType === 'pyocd'">
         <div class="mt2"></div>
         <TFormItem :label="t('Cmsis Pack')" name="settings.cmsisPack">
           <MSelectInput

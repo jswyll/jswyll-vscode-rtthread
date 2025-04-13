@@ -16,7 +16,7 @@
   "jswyll-vscode-rtthread.makefileProcessor.watch.markdownDescription": "监听makefile文件的变化并处理。",
   "jswyll-vscode-rtthread.action.tasks.build": "运行默认的构建任务",
   "jswyll-vscode-rtthread.command.developmentTest": "开发测试命令",
-  "jswyll-vscode-rtthread.command.diagnosticInterrupt":"jswyll-vscode-rtthread: 诊断中断函数",
+  "jswyll-vscode-rtthread.command.diagnosticInterrupt": "jswyll-vscode-rtthread: 诊断中断函数",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.title": "自动诊断中断",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.enable.description": "如果启用，路径符合`#jswyll-vscode-rtthread.diagnosticInterrupt.globPattern#`的文件出现RT-Thread片段时将自动诊断中断函数是否已调用了 `rt_interrupt_enter()` 和 `rt_interrupt_leave()` 。",
   "jswyll-vscode-rtthread.autoDiagnosticInterrupt.globPattern.description": "自动诊断的文件相对路径的[Glob表达式](https://code.visualstudio.com/docs/editor/glob-patterns)。",
@@ -45,5 +45,6 @@
   "jswyll-vscode-rtthread.defaultBuildTask.notSet": "不设置",
   "jswyll-vscode-rtthread.defaultBuildTask.build": "构建",
   "jswyll-vscode-rtthread.defaultBuildTask.buildAndDownload": "构建并下载",
-  "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "重新构建"
+  "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "重新构建",
+  "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink外部算法文件的路径，留空则表示不使用。可以是绝对路径或与项目根目录的相对路径。"
 }
