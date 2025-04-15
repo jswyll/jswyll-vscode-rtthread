@@ -15,7 +15,7 @@ import {
 } from 'tdesign-vue-next';
 import FolderOpenIcon from 'tdesign-icons-vue-next/esm/components/folder-open';
 import HelpCircleIcon from 'tdesign-icons-vue-next/esm/components/help-circle';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MMarkdown from '@webview/components/MMarkdown.vue';
 import { useWebview } from '@webview/components/vscode';
@@ -620,7 +620,6 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
           }
         } catch {}
         stopLoading();
-        await nextTick();
       }
       break;
 
@@ -641,6 +640,17 @@ onMounted(async () => {
       } else if (serverType === 'stlink') {
         data.value.settings.debuggerAdapter = 'STLink';
       }
+    },
+  );
+  watch(
+    () => data.value.settings.projectType,
+    async () => {
+      try {
+        await validateStudioInstallPath(data.value.settings.studioInstallPath);
+        if (data.value.settings.envPath) {
+          await validateEnvPath(data.value.settings.envPath);
+        }
+      } catch {}
     },
   );
   requestExtension({ command: 'requestInitialValues', params: {} });
