@@ -290,6 +290,7 @@ export function updateWorkspaceState<K extends keyof WorkspaceState>(key: K, val
  * 如果已经是相对路径，则返回规范化后的原路径。
  *
  * 如果在同一个盘符内内则为相对路径，否则为绝对路径。
+ * TODO: 对于工具，改为如果是在工作区文件夹内才转为相对路径，否则为绝对路径。
  *
  * 如果指定的路径是工作区文件夹，则返回空字符串。
  *

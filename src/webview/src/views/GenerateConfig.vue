@@ -15,7 +15,7 @@ import {
 } from 'tdesign-vue-next';
 import FolderOpenIcon from 'tdesign-icons-vue-next/esm/components/folder-open';
 import HelpCircleIcon from 'tdesign-icons-vue-next/esm/components/help-circle';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MMarkdown from '@webview/components/MMarkdown.vue';
 import { useWebview } from '@webview/components/vscode';
@@ -143,7 +143,7 @@ const data = ref<InputGenerateParams & DoGenerateParams>({
     debuggerInterface: 'SWD',
     stlinkExtload: '',
     chipName: '',
-    debuggerServerPath: 'pyocd',
+    debuggerServerPath: '',
     cmsisPack: '',
     defaultBuildTask: `${EXTENSION_ID}: build`,
     customExtraPathVar: [],
@@ -181,25 +181,6 @@ const formRules = computed<FormRules>(() => {
       },
       {
         validator: validateEnvPath,
-      },
-    ],
-    rttDir: [
-      {
-        required: data.value.settings.projectType === 'Env',
-        message: t('"{0}" is required', [t('RTT Root Path')]),
-        type: 'error',
-      },
-      {
-        validator: async (value: string) => {
-          // TODO: 尝试推导：从BSP_DIR逐级往上
-          const { validateResult } = await requestExtension({
-            command: 'validateRttDir',
-            params: {
-              path: value,
-            },
-          });
-          return validateResult;
-        },
       },
     ],
     buildConfigName: [
@@ -542,17 +523,6 @@ async function onSelectEnvPath() {
 }
 
 /**
- * 选择RTT根目录
- */
-async function onSelectRttDir() {
-  const { folderPath } = await requestExtension({
-    command: 'selectFolder',
-    params: {},
-  });
-  data.value.settings.rttDir = toUnixPath(folderPath);
-}
-
-/**
  * 处理点击生成按钮
  */
 async function onFormSubmit() {
@@ -644,13 +614,13 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
       data.value = { ...data.value, ...msg.params };
       if (isLoading.value) {
         try {
-          if (data.value.settings.projectType === 'RT-Thread Studio') {
-            await validateStudioInstallPath(data.value.settings.studioInstallPath);
-          } else {
+          await validateStudioInstallPath(data.value.settings.studioInstallPath);
+          if (data.value.settings.projectType === 'Env') {
             await validateEnvPath(data.value.settings.envPath);
           }
         } catch {}
         stopLoading();
+        await nextTick();
       }
       break;
 
@@ -662,6 +632,17 @@ async function handleWindowMessage(m: MessageEvent<ExtensionToWebviewDatas>) {
 onMounted(async () => {
   window.addEventListener('message', handleWindowMessage);
   startLoading(t('Parsing project information...'));
+  watch(
+    () => data.value.settings.debuggerServerPath,
+    (v) => {
+      const serverType = getDebugServerType(v);
+      if (serverType === 'jlink') {
+        data.value.settings.debuggerAdapter = 'JLink';
+      } else if (serverType === 'stlink') {
+        data.value.settings.debuggerAdapter = 'STLink';
+      }
+    },
+  );
   requestExtension({ command: 'requestInitialValues', params: {} });
   if (import.meta.env.DEV) {
     data.value.compilerPaths = [
@@ -682,28 +663,6 @@ onMounted(async () => {
       'd:/RT-ThreadStudio/repo/Extract/Debugger_Support_Packages/RealThread/PyOCD/0.1.3/packs/Keil.STM32F0xx_DFP.2.1.0-small.pack',
     ];
   }
-  watch(
-    () => data.value.settings.debuggerServerPath,
-    (v) => {
-      const serverType = getDebugServerType(v);
-      if (serverType === 'jlink') {
-        data.value.settings.debuggerAdapter = 'JLink';
-      } else if (serverType === 'stlink') {
-        data.value.settings.debuggerAdapter = 'STLink';
-      }
-    },
-  );
-  watch(
-    () => data.value.settings.projectType,
-    async () => {
-      try {
-        await validateStudioInstallPath(data.value.settings.studioInstallPath);
-        if (data.value.settings.envPath) {
-          await validateEnvPath(data.value.settings.envPath);
-        }
-      } catch {}
-    },
-  );
 });
 
 onUnmounted(() => {
@@ -766,24 +725,6 @@ onUnmounted(() => {
               :markdown-text="
                 t('The root directory of the Env tool, the first level of which should contain the `tools` folder.')
               "
-            ></MMarkdown>
-          </template>
-        </TFormItem>
-
-        <div class="mt2"></div>
-        <TFormItem :label="t('RTT Root Path')" name="settings.rttDir">
-          <TInput
-            v-model="data.settings.rttDir"
-            clearable
-            :placeholder="t('Input or select a folder')"
-            @blur="data.settings.rttDir = toUnixPath($event as string)"
-          >
-          </TInput>
-          <FolderOpenIcon class="m-folderopen-icon" @click="onSelectRttDir" />
-          <template #help>
-            <MMarkdown
-              inline
-              :markdown-text="t('The root directory of the RT-Thread source code (RTT_DIR).')"
             ></MMarkdown>
           </template>
         </TFormItem>

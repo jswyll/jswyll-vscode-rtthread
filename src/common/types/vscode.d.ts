@@ -119,21 +119,6 @@ export interface WebviewToExtensionDataMap {
   };
 
   /**
-   * 检查RTT_DIR
-   */
-  validateRttDir: {
-    /**
-     * 参数
-     */
-    params: {
-      /**
-       * 输入或选择的文件夹路径
-       */
-      path: string;
-    };
-  };
-
-  /**
    * 检查调试服务器
    */
   validateDebuggerServer: {
@@ -390,21 +375,6 @@ export interface ExtensionToWebviewDataMap {
        * 可供选择的调试服务器的文件路径
        */
       debuggerServerPaths: string[];
-    };
-  };
-
-  /**
-   * 检查RTT_DIR
-   */
-  validateRttDir: {
-    /**
-     * 参数
-     */
-    params: {
-      /**
-       * 校验结果
-       */
-      validateResult: TdesignCustomValidateResult;
     };
   };
 

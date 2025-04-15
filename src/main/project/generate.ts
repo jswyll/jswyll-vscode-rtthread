@@ -1004,6 +1004,64 @@ async function backupWorkspaceFile(params: GenerateParamsInternal) {
 }
 
 /**
+ * 获取RTT的版本号。
+ *
+ * @param uri RTT的根目录
+ */
+async function getRttVersion(uri: vscode.Uri): Promise<AppVersion | undefined> {
+  const rtdefUri = vscode.Uri.joinPath(uri, 'include/rtdef.h');
+  if (!(await existsAsync(rtdefUri))) {
+    return undefined;
+  }
+
+  const fileContent = await readTextFile(rtdefUri);
+  // 新版本的版本号定义格式
+  let majorMatch = fileContent.match(/#define\s+RT_VERSION_MAJOR\s+(\d+)/);
+  let minorMatch = fileContent.match(/#define\s+RT_VERSION_MINOR\s+(\d+)/);
+  let patchMatch = fileContent.match(/#define\s+RT_VERSION_PATCH\s+(\d+)/);
+  if (!majorMatch || !minorMatch || !patchMatch) {
+    // 旧版本的版本号定义格式
+    majorMatch = fileContent.match(/#define\s+RT_VERSION\s+(\d+)/);
+    minorMatch = fileContent.match(/#define\s+RT_SUBVERSION\s+(\d+)/);
+    patchMatch = fileContent.match(/#define\s+RT_REVISION\s+(\d+)/);
+  }
+  if (!majorMatch || !minorMatch || !patchMatch) {
+    return undefined;
+  }
+
+  const versionString = `${majorMatch[1]}.${minorMatch[1]}.${patchMatch[1]}`;
+  logger.info(`RT-Thread version: ${versionString}`);
+  return new AppVersion(versionString);
+}
+
+/**
+ * 自动查找RT-Thread源码的根目录。
+ *
+ * @param wsFolder 工作区文件夹
+ */
+async function findRttRoot(wsFolder: vscode.Uri) {
+  let currentUri = vscode.Uri.joinPath(wsFolder, 'rt-thread');
+  if (await getRttVersion(currentUri)) {
+    return currentUri;
+  }
+
+  currentUri = wsFolder;
+  while (currentUri) {
+    if (await getRttVersion(currentUri)) {
+      return currentUri;
+    }
+
+    const parentUri = vscode.Uri.joinPath(currentUri, '..');
+    if (parentUri.fsPath === currentUri.fsPath) {
+      break;
+    }
+    currentUri = parentUri;
+  }
+
+  return undefined;
+}
+
+/**
  * 处理点击webview面板的生成按钮，开始生成项目配置文件。
  *
  * 1. 更新vscode文件关联与排除{@link updateFilesAssociationsAndExclude}。
@@ -1036,6 +1094,12 @@ async function startGenerate(params: GenerateParamsInternal) {
   const vscodeFolder = vscode.Uri.joinPath(wsFolder, '.vscode');
   if (!(await existsAsync(vscodeFolder))) {
     await vscode.workspace.fs.createDirectory(vscodeFolder);
+  }
+
+  if (settings.projectType === 'Env') {
+    const rttDirUri = await findRttRoot(params.wsFolder);
+    assertParam(rttDirUri, vscode.l10n.t('The path "{0}" does not exists', [vscode.l10n.t('RT-Thread Source')]));
+    settings.rttDir = toUnixPath(relative(wsFolder.fsPath, rttDirUri.fsPath));
   }
 
   const platformType = getPlatformType();
@@ -1601,39 +1665,6 @@ async function handleWebviewMessage(wsFolder: vscode.Uri, msg: WebviewToExtensio
             }
           }
         }
-      });
-      break;
-    }
-
-    case 'validateRttDir': {
-      const { path } = msg.params;
-      const parsedPath = parsePath(path);
-      withFormitemValidate(msg, async () => {
-        assertParam(await pathExists(parsedPath, wsFolder), vscode.l10n.t('The path "{0}" does not exists', [path]));
-        let rtdefPath = join(parsedPath, 'include/rtdef.h');
-        assertParam(
-          await pathExists(rtdefPath, wsFolder),
-          vscode.l10n.t('The path "{0}" does not exists', [rtdefPath]),
-        );
-        if (!isAbsolutePath(rtdefPath)) {
-          rtdefPath = join(wsFolder.fsPath, rtdefPath);
-        }
-        const fileContent = await readTextFile(vscode.Uri.file(rtdefPath));
-        let majorMatch = fileContent.match(/#define\s+RT_VERSION_MAJOR\s+(\d+)/);
-        let minorMatch = fileContent.match(/#define\s+RT_VERSION_MINOR\s+(\d+)/);
-        let patchMatch = fileContent.match(/#define\s+RT_VERSION_PATCH\s+(\d+)/);
-        if (!majorMatch || !minorMatch || !patchMatch) {
-          // 尝试匹配旧版本的版本号定义格式
-          majorMatch = fileContent.match(/#define\s+RT_VERSION\s+(\d+)/);
-          minorMatch = fileContent.match(/#define\s+RT_SUBVERSION\s+(\d+)/);
-          patchMatch = fileContent.match(/#define\s+RT_REVISION\s+(\d+)/);
-        }
-        if (!majorMatch || !minorMatch || !patchMatch) {
-          throw new Error(vscode.l10n.t('Failed to parse RT-Thread version from {0}', [rtdefPath]));
-        }
-
-        logger.info(`RT-Thread version: ${majorMatch[1]}.${minorMatch[1]}.${patchMatch[1]}`);
-        return true;
       });
       break;
     }
