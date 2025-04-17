@@ -36,6 +36,12 @@ const emit = defineEmits<{
    * @param value 绑定值
    */
   blur: [value: string];
+
+  /**
+   * 选择下拉选项
+   * @param value 下拉选项值
+   */
+  select: [value: string];
 }>();
 
 /**
@@ -125,7 +131,8 @@ const computedProps = computed<AutoCompleteProps>(() => ({
       popupVisible.value = true;
     }
   },
-  onSelect() {
+  onSelect(value: string) {
+    emit('select', value);
     popupVisible.value = false;
   },
   popupProps: {

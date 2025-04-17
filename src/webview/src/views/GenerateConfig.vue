@@ -22,7 +22,7 @@ import { useWebview } from '@webview/components/vscode';
 import type { ExtensionToWebviewDatas } from '../../../common/types/type';
 import { EXTENSION_ID } from '../../../common/constants';
 import { assertParam } from '../../../common/assert';
-import { toUnixPath } from '../../../common/platform';
+import { removeExeSuffix, toUnixPath } from '../../../common/platform';
 import { addToSet } from '../../../common/utils';
 import MSelectInput from '@webview/components/MSelectInput.vue';
 import type { InputGenerateParams, DoGenerateParams, GenerateSettings } from '../../../common/types/generate';
@@ -656,8 +656,8 @@ onMounted(async () => {
   requestExtension({ command: 'requestInitialValues', params: {} });
   if (import.meta.env.DEV) {
     data.value.compilerPaths = [
-      'd:/RT-ThreadStudio/platform/env_released/env/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc',
-      'd:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc',
+      'd:/RT-ThreadStudio/platform/env_released/env/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc.exe',
+      'd:/RT-ThreadStudio/repo/Extract/ToolChain_Support_Packages/ARM/GNU_Tools_for_ARM_Embedded_Processors/5.4.1/bin/arm-none-eabi-gcc.exe',
     ];
     data.value.debuggerServerPaths = [
       'd:/RT-ThreadStudio/repo/Extract/Debugger_Support_Packages/SEGGER/J-Link/v7.92/JLink',
@@ -775,6 +775,7 @@ onUnmounted(() => {
           m-show-all-options
           :options="data.compilerPaths"
           @blur="data.settings.compilerPath = toUnixPath($event)"
+          @select="data.settings.compilerPath = toUnixPath(removeExeSuffix($event))"
         >
         </MSelectInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('compilerPath')" />
@@ -817,6 +818,7 @@ onUnmounted(() => {
           m-show-all-options
           :options="data.debuggerServerPaths"
           @blur="data.settings.debuggerServerPath = toUnixPath($event)"
+          @select="data.settings.debuggerServerPath = toUnixPath(removeExeSuffix($event))"
         >
         </MSelectInput>
         <FolderOpenIcon class="m-folderopen-icon" @click="onSelectFilePath('debuggerServerPath')" />
