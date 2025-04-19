@@ -50,6 +50,7 @@
   "There is no workspace folder open for the current window": "当前窗口没有打开工作区文件夹",
   "last used": "上次使用",
   "No workspace folder selected for use": "未选择工作区文件夹",
+  "An error occurred: ": "发生错误：",
   "An error occurred while read text file \"{0}\": {1}": "读取文本文件\"{0}\"时出现错误: {1}",
   "Update Packages": "更新软件包",
   "Generate VSCode Workspace": "生成或更新C/C++配置",

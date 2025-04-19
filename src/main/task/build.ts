@@ -18,7 +18,17 @@ const logger = new Logger('main/task/build');
 /**
  * 构建相关的串行任务管理器
  */
-const buildTaskManager = new SerialTaskManager();
+export const buildTaskManager = new SerialTaskManager();
+
+/**
+ * 构建任务管理器是否被锁定
+ */
+let isLocked = false;
+
+/**
+ * 解锁构建任务管理器的事件
+ */
+const unlockEmitter = new vscode.EventEmitter<void>();
 
 /**
  * 在工作区文件夹的`.vscode/tasks.json`中查找任务。
@@ -50,7 +60,7 @@ async function fetchTask(workspaceFolder: vscode.WorkspaceFolder, name: string) 
  * @param name 任务名称
  * @throws `.vscode/tasks.json`文件不存在时抛出{@link Error}
  */
-async function findTaskInTasksJson(workspaceFolder: vscode.WorkspaceFolder, name: string) {
+export async function findTaskInTasksJson(workspaceFolder: vscode.WorkspaceFolder, name: string) {
   const tasksJson = await parseJsonFile<TasksJson>(vscode.Uri.joinPath(workspaceFolder.uri, TASKS_JSON_RELATIVE_PATH));
   const task = tasksJson.tasks.find((task) => task.label === name);
   if (task) {
@@ -65,92 +75,118 @@ async function findTaskInTasksJson(workspaceFolder: vscode.WorkspaceFolder, name
  * @param taskName 任务在tasks.json中的label
  */
 export async function runBuildTask(workspaceFolder: vscode.WorkspaceFolder, taskName: string) {
-  logger.debug('runBuildTask:', taskName);
-  const [task, taskJson] = await Promise.all([
-    fetchTask(workspaceFolder, taskName),
-    findTaskInTasksJson(workspaceFolder, taskName),
-  ]);
-  logger.debug('task:', task);
-  logger.info('taskJson:', taskJson);
-  assertParam(
-    task && taskJson,
-    new TaskNotFoundError(vscode.l10n.t('Not found task {0} in {1}', [taskName, 'tasks.json'])),
-  );
-
-  if (taskJson.dependsOn?.length) {
-    const promises: Promise<void>[] = [];
-    for (const dependency of taskJson.dependsOn) {
-      const promise = runBuildTask(workspaceFolder, dependency);
-      if (taskJson.dependsOrder === 'sequence') {
-        logger.debug('dependency:', dependency);
-        await promise;
-      } else {
-        promises.push(promise);
-      }
-    }
-    await Promise.all(promises);
-  } else if (!task.execution) {
-    throw new Error(vscode.l10n.t('Task {0} has no execution and no dependencies', [taskName]));
-  }
-
-  if (task.execution) {
-    task.presentationOptions.showReuseMessage = false;
-    let problemMatchers: string | string[] | undefined = undefined;
-    if (typeof taskJson.problemMatcher === 'string') {
-      problemMatchers = [taskJson.problemMatcher];
-    } else if (Array.isArray(taskJson.problemMatcher)) {
-      problemMatchers = taskJson.problemMatcher.filter((matcher) => typeof matcher === 'string');
-    }
-    buildTaskManager.addTask(
-      {
-        type: EXTENSION_ID,
-        id: taskName,
-        command: 'build',
-      },
-      workspaceFolder,
-      taskName.replace(BUILD_TASKS_LABEL_PREFIX, ''),
-      EXTENSION_ID,
-      task.execution,
-      problemMatchers,
-      task.presentationOptions,
+  try {
+    logger.debug('runBuildTask:', taskName);
+    isLocked = true;
+    const [task, taskJson] = await Promise.all([
+      fetchTask(workspaceFolder, taskName),
+      findTaskInTasksJson(workspaceFolder, taskName),
+    ]);
+    logger.trace('task:', task);
+    logger.trace('taskJson:', taskJson);
+    assertParam(
+      task && taskJson,
+      new TaskNotFoundError(vscode.l10n.t('Not found task {0} in {1}', [taskName, 'tasks.json'])),
     );
-    const startTimestamp = Date.now();
-    let resultText = '';
-    try {
-      await buildTaskManager.runTasks();
-      const buildTime = ((Date.now() - startTimestamp) / 1000).toFixed(3);
-      resultText = `\x1b[32m${formatTime('HH:mm:ss')} ${taskJson.label} finished. (took ${buildTime}s)\x1b[0m`;
-    } catch (error) {
-      let errorType = 'fail';
-      if (error instanceof ExecuteTaskError && error.exitCode === undefined) {
-        errorType = 'cancelled';
+
+    if (taskJson.dependsOn?.length) {
+      const promises: Promise<void>[] = [];
+      for (const dependency of taskJson.dependsOn) {
+        const promise = runBuildTask(workspaceFolder, dependency);
+        if (taskJson.dependsOrder === 'sequence') {
+          logger.debug('dependency:', dependency);
+          await promise;
+        } else {
+          promises.push(promise);
+        }
       }
-      const buildTime = ((Date.now() - startTimestamp) / 1000).toFixed(3);
-      resultText = `\x1b[31m${formatTime('HH:mm:ss')} ${taskJson.label} ${errorType}. (took ${buildTime}s)\x1b[0m`;
-      throw error;
-    } finally {
+      await Promise.all(promises);
+    } else if (!task.execution) {
+      throw new Error(vscode.l10n.t('Task {0} has no execution and no dependencies', [taskName]));
+    }
+
+    if (task.execution) {
+      task.presentationOptions.showReuseMessage = false;
+      let problemMatchers: string | string[] | undefined = undefined;
+      if (typeof taskJson.problemMatcher === 'string') {
+        problemMatchers = [taskJson.problemMatcher];
+      } else if (Array.isArray(taskJson.problemMatcher)) {
+        problemMatchers = taskJson.problemMatcher.filter((matcher) => typeof matcher === 'string');
+      }
       buildTaskManager.addTask(
         {
           type: EXTENSION_ID,
-          id: `${taskName} - result`,
-          command: 'echo',
-          args: [' '],
+          id: taskName,
+          command: 'build',
         },
         workspaceFolder,
-        taskName.replace(BUILD_TASKS_LABEL_PREFIX, '') + ' - result',
+        taskName.replace(BUILD_TASKS_LABEL_PREFIX, ''),
         EXTENSION_ID,
-        new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
-          return new EchoPseudoterminal(resultText);
-        }),
-        [],
-        {
-          echo: false,
-          showReuseMessage: true,
-        },
+        task.execution,
+        problemMatchers,
+        task.presentationOptions,
       );
-      await buildTaskManager.runTasks();
+      const startTimestamp = Date.now();
+      let resultText = '';
+      try {
+        await buildTaskManager.runTasks();
+        const buildTime = ((Date.now() - startTimestamp) / 1000).toFixed(3);
+        resultText = `\x1b[32m${formatTime('HH:mm:ss')} ${taskJson.label} finished. (took ${buildTime}s)\x1b[0m`;
+      } catch (error) {
+        let errorType = 'fail';
+        if (error instanceof ExecuteTaskError && error.exitCode === undefined) {
+          errorType = 'cancelled';
+        }
+        const buildTime = ((Date.now() - startTimestamp) / 1000).toFixed(3);
+        resultText = `\x1b[31m${formatTime('HH:mm:ss')} ${taskJson.label} ${errorType}. (took ${buildTime}s)\x1b[0m`;
+        throw error;
+      } finally {
+        buildTaskManager.addTask(
+          {
+            type: EXTENSION_ID,
+            id: `${taskName} - result`,
+            command: 'echo',
+            args: [' '],
+          },
+          workspaceFolder,
+          taskName.replace(BUILD_TASKS_LABEL_PREFIX, '') + ' - result',
+          EXTENSION_ID,
+          new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
+            return new EchoPseudoterminal(resultText);
+          }),
+          [],
+          {
+            echo: false,
+            showReuseMessage: true,
+          },
+        );
+        await buildTaskManager.runTasks();
+      }
     }
+  } finally {
+    isLocked = false;
+    unlockEmitter.fire();
   }
 }
 
-export { buildTaskManager, findTaskInTasksJson };
+/**
+ * 获取构建任务是否正忙。
+ */
+export function getBuildTaskLocked() {
+  return isLocked;
+}
+
+/**
+ * 等待任务管理器空闲。
+ */
+export async function waitBuildTaskUnlocked() {
+  if (!isLocked) {
+    return;
+  }
+  return new Promise<void>((resolve) => {
+    const disposable = unlockEmitter.event(() => {
+      disposable.dispose();
+      resolve();
+    });
+  });
+}

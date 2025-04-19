@@ -46,5 +46,6 @@
   "jswyll-vscode-rtthread.defaultBuildTask.build": "构建",
   "jswyll-vscode-rtthread.defaultBuildTask.buildAndDownload": "构建并下载",
   "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "重新构建",
-  "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink外部算法文件的路径，留空则表示不使用。可以是绝对路径或与项目根目录的相对路径。"
+  "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink外部算法文件的路径，留空则表示不使用。可以是绝对路径或与项目根目录的相对路径。",
+  "jswyll-vscode-rtthread.command.toggleShowVerboseLog": "jswyll-vscode-rtthread: 切换是否显示详细日志"
 }

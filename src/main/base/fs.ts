@@ -54,7 +54,6 @@ export async function readTextFile(uri: vscode.Uri, defaultValue?: string) {
   try {
     const bytes = await vscode.workspace.fs.readFile(uri);
     const text = Buffer.from(bytes).toString('utf-8');
-    logger.trace(`readTextFile ${uri}:`, text);
     return text;
   } catch (error) {
     if (defaultValue !== undefined) {
@@ -74,7 +73,6 @@ export async function readTextFile(uri: vscode.Uri, defaultValue?: string) {
  * @throws 写入失败时抛出{@link Error}
  */
 export async function writeTextFile(uri: vscode.Uri, text: string) {
-  logger.trace(`writeTextFile ${uri}:`, text);
   await vscode.workspace.fs.writeFile(uri, new Uint8Array(Buffer.from(text)));
 }
 

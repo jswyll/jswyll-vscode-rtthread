@@ -18,7 +18,7 @@ if (require.main === module) {
     execSync(`git flow release start --showcommands v${newVersion}`);
     const changelogContent = readFileSync('CHANGELOG.md', 'utf-8');
     const lines = changelogContent.split(/\r?\n/);
-    lines.splice(2, 0, `## ${formatTime('YYYY-MM-DD')} - v${newVersion}\r\n\r\n\r\n`);
+    lines.splice(2, 0, `## ${formatTime('YYYY-MM-DD')} - v${newVersion}\r\n\r\n- \r\n`);
     writeFileSync('CHANGELOG.md', lines.join('\r\n'));
     logger.info('请更新 CHANGELOG.md ，然后运行npm脚本release:finish');
   } else if (args[0] === '--finish') {

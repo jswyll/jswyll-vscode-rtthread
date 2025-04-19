@@ -19,7 +19,13 @@ import { ExecuteTaskError, TaskNotFoundError } from './base/error';
 import { TASKS, COMMANDS, CONFIG_GROUP } from './base/constants';
 import { EXTENSION_ID } from '../common/constants';
 import { MakefileProcessor } from './project/makefile';
-import { buildTaskManager, findTaskInTasksJson, runBuildTask } from './task/build';
+import {
+  buildTaskManager,
+  findTaskInTasksJson,
+  getBuildTaskLocked,
+  runBuildTask,
+  waitBuildTaskUnlocked,
+} from './task/build';
 import { Logger } from './base/logger';
 import { createInterruptDiagnosticAndQuickfix, doDiagnosticInterrupt } from './project/diagnostic';
 import { MenuConfig } from './project/menuconfig';
@@ -60,6 +66,7 @@ let coverageWriter: any;
 const debouncedPkgsUpdate = debounce(
   async () => {
     await runTaskAndHandle(TASKS.PKGS_UPDATE.name);
+    logger.info('run `scons --target=vsc` due to pkgs update');
     debouncedUpdateVsc();
   },
   3000,
@@ -99,8 +106,8 @@ const debouncedUpdateVsc = debounce(
       }
     }
   },
-  2000,
-  { leading: false, trailing: true },
+  5000,
+  { leading: true, trailing: true },
 );
 
 /**
@@ -118,6 +125,7 @@ function handleWorkspaceFileChange(e: vscode.Uri) {
     MakefileProcessor.HandleFileChange(e);
   } else {
     if (['SConscript', 'SConstruct'].includes(basename(e.fsPath))) {
+      logger.info('run `scons --target=vsc` due to sconscript change');
       debouncedUpdateVsc();
     }
   }
@@ -205,7 +213,8 @@ async function runTaskAndHandle(taskName: string) {
   const workspaceFolder = await getOrPickWorkspaceFolder();
   try {
     // 等待之前的任务运行完成
-    if (buildTaskManager.getSize() > 0) {
+    if (getBuildTaskLocked()) {
+      logger.info('wait for the previous tasks to complete');
       const isCancellationRequested = await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -217,8 +226,7 @@ async function runTaskAndHandle(taskName: string) {
             const disposable = token.onCancellationRequested(() => {
               resolve(true);
             });
-            buildTaskManager
-              .waitAllTasksCompleted()
+            waitBuildTaskUnlocked()
               .then(() => {
                 resolve(token.isCancellationRequested);
               })
@@ -611,6 +619,7 @@ export async function activate(context: vscode.ExtensionContext) {
       doDiagnosticInterrupt(doc);
     }),
   );
+
   // 开发者操作
   if (process.env.NODE_ENV !== 'production') {
     context.subscriptions.push(

@@ -8,6 +8,7 @@ import { disposeWebviewPanel } from '../project/generate';
 import { debounce } from 'lodash';
 import { homedir } from 'os';
 import { existsAsync } from './fs';
+import { getErrorMessage } from '../../common/error';
 
 /**
  * 全局状态
@@ -412,4 +413,20 @@ export async function getAllFullPathsInEnvironmentPath(p: string) {
   }
   const paths = await Promise.all(promises);
   return paths.filter((p) => !!p);
+}
+
+/**
+ * 包装异步函数，如果发生错误，则弹出显示错误提示消息并记录日志。
+ *
+ * @param promise 异步函数
+ */
+export async function withErrorMessage<T = void>(promise: Promise<T>) {
+  try {
+    return await promise;
+  } catch (e) {
+    const errmsg = vscode.l10n.t('An error occurred: ') + getErrorMessage(e);
+    vscode.window.showErrorMessage(errmsg);
+    logger.debug(errmsg);
+    throw e;
+  }
 }

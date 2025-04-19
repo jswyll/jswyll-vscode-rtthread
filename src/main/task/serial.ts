@@ -50,7 +50,7 @@ export class SerialTaskManager implements vscode.Disposable {
   /**
    * 监听所有任务执行完毕。
    */
-  public onAllTasksCompleted = this.allTasksCompletedEmitter.event;
+  private onDidAllTasksCompleted = this.allTasksCompletedEmitter.event;
 
   /**
    * 添加任务。
@@ -157,7 +157,7 @@ export class SerialTaskManager implements vscode.Disposable {
       return;
     }
     return new Promise<void>((resolve) => {
-      const disposable = this.onAllTasksCompleted(() => {
+      const disposable = this.onDidAllTasksCompleted(() => {
         disposable.dispose();
         resolve();
       });

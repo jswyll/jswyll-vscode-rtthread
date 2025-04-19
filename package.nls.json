@@ -46,5 +46,6 @@
   "jswyll-vscode-rtthread.defaultBuildTask.build": "Build",
   "jswyll-vscode-rtthread.defaultBuildTask.buildAndDownload": "Build and Download",
   "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "Rebuild",
-  "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink external algorithm file path. If you leave it blank, it indicates that it is not used. This can be an absolute path or a relative path to the project root."
+  "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink external algorithm file path. If you leave it blank, it indicates that it is not used. This can be an absolute path or a relative path to the project root.",
+  "jswyll-vscode-rtthread.command.toggleShowVerboseLog": "jswyll-vscode-rtthread: Toggle show verbose log"
 }

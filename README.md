@@ -84,6 +84,17 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 >
 > 以下所提到的“工作区文件夹”都是指已选择的根文件夹。如果打开的是单个文件夹或多根工作区下只有一个根文件夹，“工作区文件夹”就是指这个文件夹。
 
+### 名称约定
+
+以下的名词表中每行的各列在本文档中表示同一个意思：
+
+| 名称 | 英文 | 其它常用名称 |
+| 扩展 | extension | 插件 |
+| 项目 | project | 工程 |
+| 构建 | build | 编译（compile） |
+| 下载 | download | 烧写、烧录、闪存（flash） |
+| 根目录 | root dir | 主目录（项目或工具的顶层文件夹） |
+
 ### 扩展激活
 
 启用扩展后，当工作区文件夹中（第一级）有`.cproject`文件或`rt_config.py`文件时，扩展会自动激活。
@@ -96,9 +107,9 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 >
 > - BSP的Kconfig中的路径可能是导入后的，如果在RT-Thread主仓库中的BSP开发，可以尝试使用RT-Thread Studio导入项目或使用`scons --dist`相关命令生成标准的目录结构。
 
-### 导入项目
+### 生成配置
 
-点击状态里的“导入”（生成）来生成vscode的配置文件。
+点击状态里的“导入”来生成vscode的配置文件。
 
 > **说明**
 >
@@ -106,11 +117,11 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 >
 > - 项目可以是已经移动的（不在RT-Thread Studio workspace文件夹中的）。
 
-#### 面板选项
+#### 选项说明
 
-- **项目类型**：项目的构建方式，`RT-Thread Studio`（eclipse Makefile）或`RT-Thread Env`（scons）。
+- **项目类型**：项目的构建方式，`RT-Thread Studio Makefile`（eclipse cdt）或`RT-Thread Env`（scons）。
 
-- **构建配置**：在RT-Thread Studio项目中创建的构建配置。如果只有一个则无需选择。必要项。
+- **构建配置**：在RT-Thread Studio项目中创建的构建配置，例如`Debug`或`Release`。如果只有一个则无需选择。必要项。
 
 - **RT-Thread Studio路径**：你的RT-Thread Studio安装路径（`studio.exe`的所在文件夹）。目前仅用于推导可能的工具位置以供选择。非Windows平台没有这个选项。非必要项。
 
@@ -201,21 +212,25 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 
 > **注意**
 >
-> **切换编译器版本后，应重新编译，以消除编译器版本差异引发不可预料的结果。比如，RT-Thread Studio默认使用的是GCC 5.4.1，在vscode选择RT-Thread Studio内置的env_released/env/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc.exe是GCC 10.3.1，在RT-Thread Studio构建或再次构建过然后又转到vscode构建。在比如，在vscode前后两次生成配置时选择的GCC的版本不一样。**
+> **切换编译器版本后，应重新编译，以消除编译器版本差异引发不可预料的结果。比如，RT-Thread Studio默认使用的是GCC 5.4.1，在vscode选择RT-Thread Studio内置的env_released/env/tools/gnu_gcc/arm_gcc/mingw/bin/arm-none-eabi-gcc.exe是GCC 10.3.1，在RT-Thread Studio构建或再次构建过然后又转到vscode构建。再比如，在vscode前后两次生成配置时选择的GCC的版本不一样。**
 
-### 构建项目
+生成配置成功后状态栏将显示`清除`、`构建`、`下载`、`构建并下载`按钮，可以点击这些来快速执行相应的操作。
 
-可以点击状态栏的图标`清除`、`构建`、`下载`或`构建并下载`来执行构建任务。
+> **提示**
+>
+> vscode支持在状态栏按钮上右键，切换是否显示该按钮，你可以用这个方法隐藏不常用的按钮。另外，其它扩展可能也会显示一堆按钮，你可以在vscode侧边栏->扩展中指定的扩展上右键，选择“禁用（工作区）”来关闭不必要的扩展（例如CMake）。
 
-也可以在菜单栏->终端->运行任务...来选择`重新构建`任务。
+你可以在菜单栏->终端->运行任务...来选择运行指定的任务，例如`重新构建`：
 
 ![images/1735660800017.png](images/1735660800017.png)
 
-[导入项目](#导入项目)时如果指定了默认构建任务，可以按快捷键`Ctrl+Shift+B`来执行。
+### 构建项目
+
+[生成配置](#生成配置)时如果指定了默认构建任务，可以按快捷键`Ctrl+Shift+B`来执行。
 
 ![images/1735660800018.png](images/1735660800018.png)
 
-任务结束时会提示结果及耗时。
+如果是通过状态栏按钮启动任务的，任务结束时会提示结果及耗时。
 
 ![images/1735660800019.png](images/1735660800019.png)
 
@@ -260,6 +275,8 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 选择RT-Thread Studio构建方式时，对于已加入编译的文件夹，当文件夹内（第一级）有新增或移除的文件时，会自动更新对应的makefile规则。
 
 ![images/1735660800023.png](images/1735660800023.png)
+
+选择RT-Thread Env构建方式时，当你修改工作区文件夹中的`SConscript`或`SConstruct`文件时，会自动运行`scons --target=vsc --silent`命令来更新C/C++代码的浏览配置。
 
 可以在扩展设置中关闭。
 
@@ -319,7 +336,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
     └── Kconfig
     ```
 
-### 生成配置
+### 导入项目
 
 1. 点击状态栏的“导入”图标按钮，弹出配置面板：
 
@@ -334,8 +351,6 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
       - `C:/Users/jswyll/.env`或`${userHome}/.env`（v2.x [powershell方式安装](https://github.com/RT-Thread/env)）
 
       - `E:/BaiduNetdiskDownload/env_released_1.3.5_gcc10_python2/env-windows-v1.3.5`（v1.x 无需虚拟环境）
-
-    - **RTT根目录**：`RTT_DIR`，RT-Thread源码的主目录。以前面的BSP`stm32f407-atk-explorer`为例，第一种填`rt-thread`，第二种情况填`../../..`。
 
 2. 其它选项与RT-Thread Studio的配置方式一致。
 
@@ -440,10 +455,6 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 ![images/1735660800043.png](images/1735660800043.png)
 
 ![images/1735660800044.png](images/1735660800044.png)
-
-## 更佳实践
-
-本扩展只实现了一小部分功能，可能不满足实际的需求，可以在生成的基础上进行修改；或者，使用其它扩展进行嵌入式开发。不管怎样，以下的操作和建议应该是通用的。
 
 ### 其它平台
 
@@ -672,6 +683,10 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
         >
         > 此处命令行脚本参考<https://github.com/RT-Thread/env/blob/master/install_macos.sh>并改为虚拟环境的方式。
 
+## 更佳实践
+
+本扩展只实现了一小部分功能，可能不满足实际的需求，可以在生成的基础上进行修改；或者，使用其它扩展进行嵌入式开发。不管怎样，以下的操作和建议应该是通用的。
+
 ### 路径规则
 
 支持的路径表达方式：
@@ -774,7 +789,7 @@ VS Marketplace 链接: https://marketplace.visualstudio.com/items?itemName=ms-vs
 
 扩展设置的作用域分为用户、工作区、工作区文件夹3类。
 
-在导入项目的面板生成配置时，自动保存的相关设置的作用域是工作区文件夹。
+在生成配置的面板生成配置时，自动保存的相关设置的作用域是工作区文件夹。
 
 vscode设置的优先级是`工作区文件夹 > 工作区 > 用户 > 默认值`。可以在“用户”域修改默认值，为新的工作区文件夹提供自定义的默认值，就不需要在每次打开新的项目时重复配置。而且，在“用户”域修改的值不会保存到工作区文件夹中，可以提高团队协作时的项目兼容性。例如：
 
@@ -1063,7 +1078,7 @@ make (e=2): 系统找不到指定的文件。
 
   - 下载[新版本的Segger Jlink](https://www.segger.com/downloads/jlink)并在生成配置时选择。
 
-- 导入项目（生成配置）时，如果选择的调试服务器是Segger Jlink，由于Jlink不直接支持`--version`参数，校验表单时需要多等待约3秒的时间。
+- 生成配置时，如果选择的调试服务器是Segger Jlink，由于Jlink不直接支持`--version`参数，校验表单时需要多等待约3秒的时间。
 
 - 如果之前的构建任务启动失败（例如Makefile构建目录不存在），下次运行会一直弹出等待进度（请重启vscode）。
 

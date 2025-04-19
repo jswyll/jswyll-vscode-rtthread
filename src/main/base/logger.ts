@@ -35,9 +35,9 @@ export class Logger {
    * @param args 参数
    */
   trace(message: string, ...args: unknown[]) {
-    logOutputChannel.trace(message, ...args);
+    logOutputChannel.debug(message, ...args);
     if (logOutputChannel.logLevel !== vscode.LogLevel.Off && logOutputChannel.logLevel <= vscode.LogLevel.Trace) {
-      this.consoleLog(console.trace, message, ...args);
+      this.consoleLog(console.debug, message, ...args);
     }
   }
 

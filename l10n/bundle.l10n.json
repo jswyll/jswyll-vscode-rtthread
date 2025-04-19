@@ -50,6 +50,7 @@
   "There is no workspace folder open for the current window": "There is no workspace folder open for the current window",
   "last used": "last used",
   "No workspace folder selected for use": "No workspace folder selected for use",
+  "An error occurred: ": "An error occurred: ",
   "An error occurred while read text file \"{0}\": {1}": "An error occurred while read text file \"{0}\": {1}",
   "Update Packages": "Update Packages",
   "Generate VSCode Workspace": "Generate VSCode Workspace",
