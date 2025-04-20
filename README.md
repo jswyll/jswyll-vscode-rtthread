@@ -89,6 +89,7 @@ vscode支持[多根工作区](https://code.visualstudio.com/docs/editor/multi-ro
 以下的名词表中每行的各列在本文档中表示同一个意思：
 
 | 名称 | 英文 | 其它常用名称 |
+| ---- | ----- | ----------- |
 | 扩展 | extension | 插件 |
 | 项目 | project | 工程 |
 | 构建 | build | 编译（compile） |
