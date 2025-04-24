@@ -86,7 +86,7 @@ export function isJsonObject(value: unknown) {
 
 /**
  * 将一个值添加到数组中，如果数组中已经存在该值，则不添加。
- * @param array 数组
+ * @param array 被添加的数组
  * @param value 要添加的值
  * @param prepend 是否在数组开头添加，默认为否
  */

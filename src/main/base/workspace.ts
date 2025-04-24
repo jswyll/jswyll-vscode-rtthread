@@ -41,6 +41,7 @@ const logger = new Logger('main/base/workspace');
 export const vscodeSettingsKeys: Array<keyof VscodeSettings> = [
   'files.exclude',
   'files.associations',
+  'python.analysis.extraPaths',
   'terminal.integrated.env.windows',
   'terminal.integrated.env.osx',
   'terminal.integrated.env.linux',

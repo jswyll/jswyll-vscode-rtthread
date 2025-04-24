@@ -1,5 +1,9 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-04-24 - v0.3.27
+
+- 优化 添加RT-Thread源码根目录的tools文件夹到python分析的额外文件夹，消除SConscript的GetCurrentDir等警告
+
 ## 2025-04-20 - v0.3.26
 
 - 文档 修正“名词约定”表格的markdown格式

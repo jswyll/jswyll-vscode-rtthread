@@ -26,7 +26,7 @@ import {
   removeExeSuffix,
 } from '../../common/platform';
 import { readTextFile, writeJsonFile, writeTextFile, parseJsonFile, existsAsync } from '../base/fs';
-import { isJsonObject } from '../../common/utils';
+import { addToSet, isJsonObject } from '../../common/utils';
 import { TdesignValidateError } from '../base/error';
 import { MakefileProcessor } from './makefile';
 import { ExtensionGenerateSettings, TasksJson } from '../base/type';
@@ -1100,6 +1100,9 @@ async function startGenerate(params: GenerateParamsInternal) {
     const rttDirUri = await findRttRoot(params.wsFolder);
     assertParam(rttDirUri, vscode.l10n.t('The path "{0}" does not exists', [vscode.l10n.t('RT-Thread Source')]));
     settings.rttDir = toUnixPath(relative(wsFolder.fsPath, rttDirUri.fsPath));
+    const pythonAnalysisExtraPaths = getVscodeConfig(wsFolder, 'python.analysis.extraPaths', []);
+    addToSet(pythonAnalysisExtraPaths, [`\${workspaceFolder}/${settings.rttDir}/tools/`]);
+    await updateVscodeConfig(wsFolder, 'python.analysis.extraPaths', pythonAnalysisExtraPaths);
   }
 
   const platformType = getPlatformType();

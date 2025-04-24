@@ -316,6 +316,11 @@ interface VscodeSettings {
   'files.associations': Record<string, string>;
 
   /**
+   * python插件分析的额外文件夹
+   */
+  'python.analysis.extraPaths': string[];
+
+  /**
    * 集成终端的环境变量 - windows平台
    */
   'terminal.integrated.env.windows': Record<string, string>;
