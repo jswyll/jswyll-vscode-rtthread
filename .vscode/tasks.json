@@ -36,6 +36,20 @@
             "detail": "启动所有测试任务并监听源码变化",
             "label": "watch:all",
             "problemMatcher": []
+        },
+        {
+            "label": "npm: release:start",
+            "detail": "准备发布修订版本",
+            "problemMatcher": [],
+            "script": "release:start",
+            "type": "npm"
+        },
+        {
+            "label": "npm: release:finish",
+            "detail": "确认发布版本",
+            "problemMatcher": [],
+            "script": "release:finish",
+            "type": "npm"
         }
     ]
 }

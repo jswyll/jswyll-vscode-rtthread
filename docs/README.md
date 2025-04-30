@@ -27,7 +27,7 @@ jswyll-vscode-rtthread/
 │   │   ├── utils.ts                       # 工具
 │   │   └── version.ts                     # 应用版本处理
 │   ├── dev/                           # 开发辅助脚本
-│   │   ├── checkTranslation.ts            # 检查翻译是否完整
+│   │   ├── check-translation.ts           # 检查翻译是否完整
 │   │   ├── esbuild.ts                     # 构建扩展进程
 │   │   ├── must-use-await-for-function.js # eslint插件 - 必须await或then函数调用
 │   │   └── translate.ts                   # 有道翻译

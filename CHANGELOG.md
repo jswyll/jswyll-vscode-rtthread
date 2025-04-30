@@ -1,5 +1,9 @@
 # RT-Thread项目助手 - 更新日志
 
+## 2025-04-30 - v0.3.28
+
+- 优化 菜单配置 - 新增一些翻译，人工修正部分翻译
+
 ## 2025-04-24 - v0.3.27
 
 - 优化 添加RT-Thread源码根目录的tools文件夹到python分析的额外文件夹，消除SConscript的GetCurrentDir等警告
