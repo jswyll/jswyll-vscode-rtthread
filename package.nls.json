@@ -28,7 +28,7 @@
   "jswyll-vscode-rtthread.rttDir.markdownDescription": "The root directory of the RT-Thread source code (RTT_DIR).",
   "jswyll-vscode-rtthread.RttEnv.title": "RT-Thread Env",
   "jswyll-vscode-rtthread.RttEnv.autoUpdatePackages.markdownDescription": "Whether to automatically update packages when the save menu configuration is successful.",
-  "jswyll-vscode-rtthread.generate.artifactPath.markdownDescription": "Relative or absolute path to the Env build artifact, such as `build/rt-thread.elf`.",
+  "jswyll-vscode-rtthread.generate.artifactPath.markdownDescription": "The relative or absolute path of the artifact referenced when downloading or debugging in the Env build mode, such as `build/rt-thread.elf`.",
   "jswyll-vscode-rtthread.appearance.title": "Appearance",
   "jswyll-vscode-rtthread.appearance.showStatusBarTitle.markdownDescription": "Whether to display the status bar title.",
   "jswyll-vscode-rtthread.action.pickAWorkspaceFolder": "jswyll-vscode-rtthread: Choose a workspace folder",

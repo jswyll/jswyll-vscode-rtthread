@@ -28,7 +28,7 @@
   "jswyll-vscode-rtthread.rttDir.markdownDescription": "RT-Thread源码的根目录（RTT_DIR）。",
   "jswyll-vscode-rtthread.RttEnv.title": "RT-Thread Env",
   "jswyll-vscode-rtthread.RttEnv.autoUpdatePackages.markdownDescription": "是否在保存菜单配置成功后自动更新软件包。",
-  "jswyll-vscode-rtthread.generate.artifactPath.markdownDescription": "Env构建方式的产物的相对路径或绝对路径，例如`build/rt-thread.elf`，用于下载或调试。",
+  "jswyll-vscode-rtthread.generate.artifactPath.markdownDescription": "Env构建方式的下载或调试时所引用的产物的相对路径或绝对路径，例如`build/rt-thread.elf`。",
   "jswyll-vscode-rtthread.appearance.title": "外观",
   "jswyll-vscode-rtthread.appearance.showStatusBarTitle.markdownDescription": "是否显示状态栏标题。",
   "jswyll-vscode-rtthread.action.pickAWorkspaceFolder": "jswyll-vscode-rtthread: 选择一个工作区文件夹",

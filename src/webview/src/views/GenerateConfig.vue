@@ -104,13 +104,15 @@ const { t } = useI18n({
       'Generating...': '生成...',
       'The form fails the validation': '表单校验不通过',
       'Not set': '不设置',
-      'Project Type': '项目类型',
-      'The way to build project.': '构建项目的方式。',
+      'Project Type': '构建方式',
+      'The way to build project.': '构建项目的方式，建议学习官方推荐的Env Scons方式。',
       'Env Tool Path': 'Env工具路径',
       'The root directory of the Env tool, the first level of which should contain the `tools` folder.':
         'Env工具的根目录，其第一级应包含`tools`文件夹。',
       'RTT Root Path': 'RTT根目录',
       'The root directory of the RT-Thread source code (RTT_DIR).': 'RT-Thread源码的根目录（RTT_DIR）。',
+      'The default artifact path referenced during download and debugging is `rtthread.elf`, which can be modified in the extended Settings.':
+        '下载或调试时所引用的产物路径默认是`rtthread.elf`，可在扩展设置中修改。',
     },
   },
 });
@@ -695,7 +697,17 @@ onUnmounted(() => {
           <TRadioButton value="Env">RT-Thread Env</TRadioButton>
         </TRadioGroup>
         <template #help>
-          <MMarkdown inline :markdown-text="t('The way to build project.')"></MMarkdown>
+          <MMarkdown
+            inline
+            :markdown-text="
+              t('The way to build project.') +
+              (data.settings.projectType === 'Env'
+                ? t(
+                    'The default artifact path referenced during download and debugging is `rtthread.elf`, which can be modified in the extended Settings.',
+                  )
+                : '')
+            "
+          ></MMarkdown>
         </template>
       </TFormItem>
 
