@@ -3,7 +3,7 @@
   "displayName": "RT-Thread Project Assistant",
   "description": "RT-Thread项目助手，可生成vscode的代码浏览、编辑、编译、下载、调试的配置文件。RT-Thread project assistant, can generate vscode code browsing, editing, compiling, downloading, debugging configuration files.",
   "icon": "icon.png",
-  "version": "0.3.30",
+  "version": "0.3.31",
   "publisher": "jswyll",
   "license": "Apache-2.0",
   "repository": {
@@ -98,6 +98,12 @@
         "properties": {
           "jswyll-vscode-rtthread.makefileProcessor.watch": {
             "markdownDescription": "%jswyll-vscode-rtthread.makefileProcessor.watch.markdownDescription%",
+            "type": "boolean",
+            "default": true,
+            "scope": "resource"
+          },
+          "jswyll-vscode-rtthread.makefileProcessor.promptCleanWhenBuildByStudio": {
+            "markdownDescription": "%jswyll-vscode-rtthread.makefileProcessor.promptCleanWhenBuildByStudio.markdownDescription%",
             "type": "boolean",
             "default": true,
             "scope": "resource"
@@ -400,6 +406,7 @@
     "install": "cd src/webview && npm install",
     "postinstall": "patch-package",
     "dev:webview": "vite src/webview --port 5177",
+    "watch:main": "tsx src/dev/esbuild.ts --watch",
     "watch:test": "tsc-watch -p ./src/test --onSuccess \"npm run coverage:instrument\"",
     "watch:webview": "vite build src/webview --mode vscode-development-watch --watch",
     "check:eslint": "eslint src",
@@ -424,7 +431,7 @@
     "report:open": "allure open ",
     "test-report": "npm run test:clean && npm run test && npm run coverage:merge && npm run coverage:report:main && npm run coverage:report && npm run report:generate",
     "vscode:prepublish": "npm run check && npm run build",
-    "package": "vsce package -o jswyll-vscode-rtthread.vsix",
+    "package": "vsce package -o jswyll-vscode-rtthread.vsix && tsx src/dev/ci.ts",
     "install-extension": "code --install-extension jswyll-vscode-rtthread.vsix",
     "publish": "vsce publish",
     "release:start": "tsx src/dev/release.ts --start",

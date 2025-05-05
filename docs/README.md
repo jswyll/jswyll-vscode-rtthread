@@ -132,15 +132,33 @@ jswyll-vscode-rtthread/
 
 3. 修改源码，运行，验证；
 
-4. 打包或发布扩展。
+4. 打包扩展。
 
     ```sh
     npm run package
     ```
 
-    ```sh
-    npm run publish
-    ```
+    > **说明**
+    >
+    > 可以本地安装打包的扩展：`npm run install-extension`。使用本地安装的方式可能会被关闭自动更新在线的版本，可以在安装后手动启用。
+
+### 作者发布
+
+1. 在develop分支，修改并测试后提交；
+
+2. 运行vscode任务`准备发布修订版本`；
+
+3. 填写`CHANGELOG.md`；
+
+4. 运行vscode任务`确认发布`。这将会：
+
+    1. 打包并发布到vscode市场；
+
+    2. 使用git flow命令发布版本；
+
+    3. 推送到github；
+
+    4. github ci自动创建release。
 
 ### 测试步骤
 

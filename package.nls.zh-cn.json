@@ -47,5 +47,6 @@
   "jswyll-vscode-rtthread.defaultBuildTask.buildAndDownload": "构建并下载",
   "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "重新构建",
   "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink外部算法文件的路径，留空则表示不使用。可以是绝对路径或与项目根目录的相对路径。",
-  "jswyll-vscode-rtthread.command.toggleShowVerboseLog": "jswyll-vscode-rtthread: 切换是否显示详细日志"
+  "jswyll-vscode-rtthread.command.toggleShowVerboseLog": "jswyll-vscode-rtthread: 切换是否显示详细日志",
+  "jswyll-vscode-rtthread.makefileProcessor.promptCleanWhenBuildByStudio.markdownDescription": "在使用RT-Thread Studio构建后提示运行清理任务。**请注意：切换编译器版本后（在本扩展的配置面板选择的GCC版本和RT-Thread Studio的不一样，或前后两次在本扩展的配置面板选择GCC版本不一样，先后编译），应重新编译，以消除编译器版本差异引发不可预料的结果。**"
 }

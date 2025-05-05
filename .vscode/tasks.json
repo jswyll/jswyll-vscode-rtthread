@@ -33,7 +33,7 @@
             "dependsOn": [
                 "npm: watch:webview"
             ],
-            "detail": "启动所有测试任务并监听源码变化",
+            "detail": "启动所有任务并监听源码变化",
             "label": "watch:all",
             "problemMatcher": []
         },

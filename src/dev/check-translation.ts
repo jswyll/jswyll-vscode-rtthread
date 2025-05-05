@@ -31,13 +31,13 @@ function checkPackageTranslationCompleteness(file: string) {
 function checkL10nTranslationCompleteness() {
   const errors: string[] = [];
   const bundleL10n = JSON.parse(readFileSync('l10n/bundle.l10n.json', 'utf-8'));
-  const bundleL10nZhcn = JSON.parse(readFileSync('l10n/bundle.l10n.zh-CN.json', 'utf-8'));
+  const bundleL10nZhcn = JSON.parse(readFileSync('l10n/bundle.l10n.zh-cn.json', 'utf-8'));
 
   const sortedKeys = Object.keys(bundleL10n);
   const sortedBundleL10nZhcn: { [key: string]: unknown } = {};
   for (const key of sortedKeys) {
     if (!bundleL10nZhcn[key]) {
-      errors.push(`Key "${key}" is not implemented in l10n/bundle.l10n.zh-CN.json`);
+      errors.push(`Key "${key}" is not implemented in l10n/bundle.l10n.zh-cn.json`);
       sortedBundleL10nZhcn[key] = '';
     } else {
       sortedBundleL10nZhcn[key] = bundleL10nZhcn[key];
@@ -48,12 +48,12 @@ function checkL10nTranslationCompleteness() {
       console.warn(`Key "${key}" is not used in l10n/bundle.l10n.json, removing it`);
     }
   }
-  writeFileSync('l10n/bundle.l10n.zh-CN.json', JSON.stringify(sortedBundleL10nZhcn, null, 2));
+  writeFileSync('l10n/bundle.l10n.zh-cn.json', JSON.stringify(sortedBundleL10nZhcn, null, 2));
   if (errors.length > 0) {
     throw new Error(errors.join('\n'));
   }
 }
 
 checkPackageTranslationCompleteness('package.nls.json');
-checkPackageTranslationCompleteness('package.nls.zh-CN.json');
+checkPackageTranslationCompleteness('package.nls.zh-cn.json');
 checkL10nTranslationCompleteness();

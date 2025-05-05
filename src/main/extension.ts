@@ -111,6 +111,25 @@ const debouncedUpdateVsc = debounce(
 );
 
 /**
+ * 提示清除构建
+ */
+const debouncedPromptClean = debounce(
+  async () => {
+    logger.debug('OnDidChangeAbsolutePathToReleative');
+    const message = vscode.l10n.t(
+      'You might have built it using RT-Thread Studio GCC. Do you want to run the cleanup task (to avoid problems caused by compiler inconsistency)?',
+    );
+    const confirmText = vscode.l10n.t('Yes');
+    const selectedAction = await vscode.window.showWarningMessage(message, confirmText, vscode.l10n.t('No'));
+    if (selectedAction === confirmText) {
+      await runTaskAndHandle(TASKS.CLEAN.name);
+    }
+  },
+  3000,
+  { leading: false, trailing: true },
+);
+
+/**
  * 处理工作区文件增加、变化、删除。
  *
  * @param e 文件Uri
@@ -569,6 +588,14 @@ export async function activate(context: vscode.ExtensionContext) {
       MakefileProcessor.AddIncludePaths([uri.fsPath]);
     }),
   );
+  context.subscriptions.push(
+    MakefileProcessor.OnDidChangeAbsolutePathToReleative(async () => {
+      const workspaceFolder = await getOrPickWorkspaceFolder();
+      if (getConfig(workspaceFolder, 'makefileProcessor.promptCleanWhenBuildByStudio', true)) {
+        debouncedPromptClean();
+      }
+    }),
+  );
 
   // 监听vscode设置变化
   context.subscriptions.push(
@@ -652,6 +679,7 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   rtthreadEnvTerminal?.dispose();
   MenuConfig.Dispose();
+  MakefileProcessor.Dispose();
   if (process.env.NODE_ENV !== 'production') {
     getCoverage();
   }

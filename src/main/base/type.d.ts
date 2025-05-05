@@ -246,6 +246,11 @@ interface MakefileProcessorSettings {
    * makefile变化时自动重新优化
    */
   'makefileProcessor.watch': boolean;
+
+  /**
+   * 在使用RT-Thread Studio构建后提示运行清理任务
+   */
+  'makefileProcessor.promptCleanWhenBuildByStudio': boolean;
 }
 
 /**

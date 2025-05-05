@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { resolve } from 'path';
 import { config as dotenvConfig } from 'dotenv';
 import { formatTime } from '../common/utils';
+import { checkChangelog } from './ci';
 
 const logger = new MyLogger('dev/release', MyLoggerLevel.Info);
 
@@ -20,8 +21,9 @@ if (require.main === module) {
     const lines = changelogContent.split(/\r?\n/);
     lines.splice(2, 0, `## ${formatTime('YYYY-MM-DD')} - v${newVersion}\r\n\r\n- \r\n`);
     writeFileSync('CHANGELOG.md', lines.join('\r\n'));
-    logger.info('请更新 CHANGELOG.md ，然后运行npm脚本release:finish');
+    logger.info('请更新 CHANGELOG.md ，然后运行任务"确认发布版本"');
   } else if (args[0] === '--finish') {
+    checkChangelog();
     execSync('git add .');
     execSync(`git commit -m "release v${v.toString()}"`);
     execSync(`git flow release finish --showcommands -S v${v.toString()}`);

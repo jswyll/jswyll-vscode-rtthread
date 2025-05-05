@@ -86,6 +86,11 @@ export class MakefileProcessor {
   private static IsWatchMakefile: boolean;
 
   /**
+   * 把绝对路径转为相对路径的事件发射器。
+   */
+  private static ChangeAbsolutePathToReleativeEmitter = new vscode.EventEmitter<void>();
+
+  /**
    * 设置要处理的环境，应在初始时和切换配置时调用。
    * @param wsFolder 工作区文件夹
    * @param buildConfig 选择的构建配置
@@ -94,7 +99,7 @@ export class MakefileProcessor {
     logger.info('SetBuildConfig for workspaceFolder:', wsFolder.fsPath);
     this.CurrentProjectRoot = wsFolder;
     this.BuildConfig = buildConfig;
-    // 尝试分析原项目的根路径，然后让用户其确认
+    // 尝试分析原项目的根路径，然后让用户确认
     const wsFolderPath = toUnixPath(wsFolder.fsPath);
     const originProjectRoot = await this.GuessOriginProjectRoot();
     if (originProjectRoot) {
@@ -262,6 +267,7 @@ export class MakefileProcessor {
       if (oldContent !== newContent) {
         await writeTextFile(uri, newContent);
         logger.debug(`change ${uri.fsPath} to: ${newContent}'`);
+        this.ChangeAbsolutePathToReleativeEmitter.fire();
       }
     } catch (error) {
       logger.error(`An error occurred while processing ${uri}:`, error);
@@ -586,5 +592,17 @@ export class MakefileProcessor {
       this.DebouncedHandleMap.set(relativePathDir, debouncedPopulateMakefile);
     }
     debouncedPopulateMakefile(relativePathDir);
+  }
+
+  /**
+   * 监听已经把makefile的绝对路径转为相对路径。
+   */
+  public static OnDidChangeAbsolutePathToReleative = this.ChangeAbsolutePathToReleativeEmitter.event;
+
+  /**
+   * 释放资源。
+   */
+  public static Dispose() {
+    this.ChangeAbsolutePathToReleativeEmitter.dispose();
   }
 }

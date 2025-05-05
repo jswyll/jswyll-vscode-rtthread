@@ -1,4 +1,7 @@
 {
+  "You might have built it using RT-Thread Studio GCC. Do you want to run the cleanup task (to avoid problems caused by compiler inconsistency)?": "You might have built it using RT-Thread Studio GCC. Do you want to run the cleanup task (to avoid problems caused by compiler inconsistency)?",
+  "Yes": "Yes",
+  "No": "No",
   "Wait for the previous tasks to complete": "Wait for the previous tasks to complete",
   "Running tasks...": "Running tasks...",
   "Choose a workspace folder": "Choose a workspace folder",
@@ -18,8 +21,6 @@
   "Open ConEmu": "Open ConEmu",
   "The path \"{0}\" does not exists": "The path \"{0}\" does not exists",
   "It won't work until the next time you import it, so do you want to do it again?": "It won't work until the next time you import it, so do you want to do it again?",
-  "Yes": "Yes",
-  "No": "No",
   "The Settings have changed and the window needs to be reloaded to apply the changes.": "The Settings have changed and the window needs to be reloaded to apply the changes.",
   "Reload Now": "Reload Now",
   "An error occurred while executing the task \"{0}\", exit code: {1}": "An error occurred while executing the task \"{0}\", exit code: {1}",

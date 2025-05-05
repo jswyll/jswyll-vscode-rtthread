@@ -47,5 +47,6 @@
   "jswyll-vscode-rtthread.defaultBuildTask.buildAndDownload": "Build and Download",
   "jswyll-vscode-rtthread.defaultBuildTask.rebuild": "Rebuild",
   "jswyll-vscode-rtthread.stlinkExtload.markdownDescription": "STLink external algorithm file path. If you leave it blank, it indicates that it is not used. This can be an absolute path or a relative path to the project root.",
-  "jswyll-vscode-rtthread.command.toggleShowVerboseLog": "jswyll-vscode-rtthread: Toggle show verbose log"
+  "jswyll-vscode-rtthread.command.toggleShowVerboseLog": "jswyll-vscode-rtthread: Toggle show verbose log",
+  "jswyll-vscode-rtthread.makefileProcessor.promptCleanWhenBuildByStudio.markdownDescription": "Prompt to run the cleaning task after building with RT-Thread Studio. Please note: After switching the compiler version (the GCC version selected in the configuration panel of this extension is different from that of RT-Thread Studio, or the GCC version selected in the configuration panel of this extension twice is different and compiled successively), it should be recompiled to eliminate the unexpected results caused by the differences in compiler versions. **"
 }

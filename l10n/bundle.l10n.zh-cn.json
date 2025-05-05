@@ -1,4 +1,7 @@
 {
+  "You might have built it using RT-Thread Studio GCC. Do you want to run the cleanup task (to avoid problems caused by compiler inconsistency)?": "你可能使用RT-Thread Studio的GCC编译器构建了，是否要运行清除任务（以避免编译器不一致导致的问题）？",
+  "Yes": "是",
+  "No": "否",
   "Wait for the previous tasks to complete": "等待之前的任务执行完成",
   "Running tasks...": "运行任务...",
   "Choose a workspace folder": "选择一个工作区文件夹",
@@ -18,8 +21,6 @@
   "Open ConEmu": "打开ConEmu",
   "The path \"{0}\" does not exists": "路径 \"{0}\" 不存在",
   "It won't work until the next time you import it, so do you want to do it again?": "下次生成配置才会生效，立即重新生成？",
-  "Yes": "是",
-  "No": "否",
   "The Settings have changed and the window needs to be reloaded to apply the changes.": "设置已更改，需要重新加载窗口以应用更改。",
   "Reload Now": "立即重新加载",
   "An error occurred while executing the task \"{0}\", exit code: {1}": "执行任务 \"{0}\" 时出现错误, 退出代码: {1}",
