@@ -1100,9 +1100,11 @@ async function startGenerate(params: GenerateParamsInternal) {
     const rttDirUri = await findRttRoot(params.wsFolder);
     assertParam(rttDirUri, vscode.l10n.t('The path "{0}" does not exists', [vscode.l10n.t('RT-Thread Source')]));
     settings.rttDir = toUnixPath(relative(wsFolder.fsPath, rttDirUri.fsPath));
-    const pythonAnalysisExtraPaths = getVscodeConfig(wsFolder, 'python.analysis.extraPaths', []);
-    addToSet(pythonAnalysisExtraPaths, [`\${workspaceFolder}/${settings.rttDir}/tools/`]);
-    await updateVscodeConfig(wsFolder, 'python.analysis.extraPaths', pythonAnalysisExtraPaths);
+    if (vscode.extensions.getExtension('ms-python.vscode-pylance')) {
+      const pythonAnalysisExtraPaths = getVscodeConfig(wsFolder, 'python.analysis.extraPaths', []);
+      addToSet(pythonAnalysisExtraPaths, [`\${workspaceFolder}/${settings.rttDir}/tools/`]);
+      await updateVscodeConfig(wsFolder, 'python.analysis.extraPaths', pythonAnalysisExtraPaths);
+    }
   }
 
   const platformType = getPlatformType();
